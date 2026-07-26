@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\OpenRei\OpenRei.csproj" />
+    <ProjectReference Include="..\..\OpenRei\OpenRei.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
