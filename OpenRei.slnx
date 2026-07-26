@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/OpenRei.Demo/OpenRei.Demo.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/OpenRei/OpenRei.csproj" />
+  </Folder>
+</Solution>
