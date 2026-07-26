@@ -1,0 +1,18 @@
+# .NET Build artifacts
+bin/
+obj/
+*.user
+*.userossc
+*.sln.docstates
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.suo
+
+# Native binaries / temp output
+*.dll
+*.so
+*.dylib
+*.exe
