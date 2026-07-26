@@ -10,6 +10,9 @@
   <ItemGroup>
     <PackageReference Include="FFmpeg.AutoGen" Version="8.1.0" />
     <PackageReference Include="Silk.NET.OpenAL" Version="2.23.0" />
+    <PackageReference Include="ppy.SDL3-CS" Version="2026.722.0" />
+    <PackageReference Include="ppy.SDL3_ttf-CS" Version="2026.722.0" />
+    <PackageReference Include="ppy.SDL3_image-CS" Version="2026.722.0" />
   </ItemGroup>
 
 </Project>

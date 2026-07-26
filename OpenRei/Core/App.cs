@@ -1,12 +1,12 @@
 using OpenRei.Elements;
 using OpenRei.InputSystem;
 using OpenRei.Types;
+using SDL;
 
 namespace OpenRei.Core;
 
 /// <summary>
-/// Main application engine entry point and window lifecycle manager.
-/// Syntax: App.Window(new Vector2D(1920, 1080), "Title", WindowFlags.Resizable)... App.Run();
+/// Main application engine entry point and native SDL3 window lifecycle manager.
 /// </summary>
 public class App
 {
@@ -52,44 +52,100 @@ public class App
         return this;
     }
 
-    /// <summary>
-    /// Opt-in virtual tick method on App level. Override this in custom App sub-classes.
-    /// </summary>
     protected virtual void Tick(float deltaTime)
     {
     }
 
     /// <summary>
-    /// Starts the main application event loop and render pipeline.
+    /// Starts the main SDL3 window event loop and render pipeline.
     /// </summary>
     public void Run()
     {
         IsRunning = true;
-        Console.WriteLine($"[OpenRei App] Launching Window '{Title}' ({Size.X}x{Size.Y}) with Flags: {Flags}");
+        Console.WriteLine($"[OpenRei App] Initializing SDL3 Window '{Title}' ({Size.X}x{Size.Y})...");
 
-        float lastTime = 0.0f;
-
-        // Simulated game loop execution
-        for (int frame = 0; frame < 3; frame++)
+        // Initialize SDL3 Video & Gamepad subsystems
+        if (!SDL3.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO | SDL_InitFlags.SDL_INIT_GAMEPAD))
         {
-            float currentTime = (frame + 1) * 0.016f;
-            float deltaTime = currentTime - lastTime;
-            lastTime = currentTime;
-
-            // 1. Process continuous held inputs
-            Input.TriggerHold(deltaTime);
-
-            // 2. Opt-in virtual tick execution
-            Tick(deltaTime);
-
-            // 3. Scene graph hierarchy update pass
-            RootElement.Size = UDim2.FromOffset(Size.X, Size.Y);
-            RootElement.Update(deltaTime);
-
-            // 4. Render pass
-            RootElement.Render();
+            Console.WriteLine($"[SDL3 Error] Failed to initialize SDL3: {SDL3.SDL_GetError()}");
+            return;
         }
 
-        Console.WriteLine("[OpenRei App] Event loop executed cleanly.");
+        SDL_WindowFlags sdlWindowFlags = SDL_WindowFlags.SDL_WINDOW_HIGH_PIXEL_DENSITY;
+        if (Flags.HasFlag(WindowFlags.Resizable)) sdlWindowFlags |= SDL_WindowFlags.SDL_WINDOW_RESIZABLE;
+        if (Flags.HasFlag(WindowFlags.Fullscreen)) sdlWindowFlags |= SDL_WindowFlags.SDL_WINDOW_FULLSCREEN;
+        if (Flags.HasFlag(WindowFlags.Borderless)) sdlWindowFlags |= SDL_WindowFlags.SDL_WINDOW_BORDERLESS;
+
+        unsafe
+        {
+            var window = SDL3.SDL_CreateWindow(Title, (int)Size.X, (int)Size.Y, sdlWindowFlags);
+            if (window == null)
+            {
+                Console.WriteLine($"[SDL3 Error] Failed to create window: {SDL3.SDL_GetError()}");
+                SDL3.SDL_Quit();
+                return;
+            }
+
+            Console.WriteLine("[OpenRei App] Native SDL3 Window created successfully! Entering main loop...");
+
+            ulong lastTicks = SDL3.SDL_GetTicks();
+
+            while (IsRunning)
+            {
+                // Calculate Delta Time in seconds
+                ulong currentTicks = SDL3.SDL_GetTicks();
+                float deltaTime = MathF.Max((currentTicks - lastTicks) / 1000.0f, 0.0001f);
+                lastTicks = currentTicks;
+
+                // Process Native SDL3 OS Event Queue
+                while (SDL3.SDL_PollEvent(out SDL_Event sdlEvent))
+                {
+                    if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_QUIT)
+                    {
+                        IsRunning = false;
+                    }
+                    else if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_KEY_DOWN)
+                    {
+                        Input.TriggerBegin(KeyType.Space);
+                        if (sdlEvent.key.key == SDL_Keycode.SDLK_ESCAPE)
+                        {
+                            IsRunning = false;
+                        }
+                    }
+                    else if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_KEY_UP)
+                    {
+                        Input.TriggerEnded(KeyType.Space);
+                    }
+                    else if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_MOUSE_MOTION)
+                    {
+                        Input.MousePosition = new Vector2D(sdlEvent.motion.x, sdlEvent.motion.y);
+                    }
+                    else if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_WINDOW_RESIZED)
+                    {
+                        Size = new Vector2D(sdlEvent.window.data1, sdlEvent.window.data2);
+                    }
+                }
+
+                // 1. Process continuous held inputs
+                Input.TriggerHold(deltaTime);
+
+                // 2. Opt-in virtual tick execution
+                Tick(deltaTime);
+
+                // 3. Scene graph hierarchy update pass
+                RootElement.Size = UDim2.FromOffset(Size.X, Size.Y);
+                RootElement.Update(deltaTime);
+
+                // 4. Render pass
+                RootElement.Render();
+
+                // Cap frame rate slightly for smooth CPU loop if GPU vsync is inactive
+                SDL3.SDL_Delay(1);
+            }
+
+            SDL3.SDL_DestroyWindow(window);
+            SDL3.SDL_Quit();
+            Console.WriteLine("[OpenRei App] Native window destroyed. Application shut down cleanly.");
+        }
     }
 }

@@ -6,23 +6,22 @@ using OpenRei.Layout;
 using OpenRei.Splines;
 using OpenRei.Types;
 
-Console.WriteLine("=== OpenRei Engine App Lifecycle Demo ===");
+Console.WriteLine("=== OpenRei Engine SDL3 Window Demo ===");
 
 // 1. Setup event-driven Input listeners
 Input.Begin += (key) => Console.WriteLine($"[Input Event] Key Pressed: {key}");
-Input.Hold += (key, dt) => Console.WriteLine($"[Input Event] Key Holding: {key} (dt: {dt:F4}s)");
 Input.Ended += (key) => Console.WriteLine($"[Input Event] Key Released: {key}");
 
 // 2. Initialize application entry point:
-// App.Window(new Vector2D(1920, 1080), "title", WindowFlags)
-var app = App.Window(new Vector2D(1920, 1080), "OpenRei Engine Game", WindowFlags.Resizable | WindowFlags.VSync);
+// App.Window(new Vector2D(1280, 720), "title", WindowFlags)
+var app = App.Window(new Vector2D(1280, 720), "OpenRei 2D Engine", WindowFlags.Resizable | WindowFlags.VSync);
 
 // <-- game / app code lives here -->
 
 var mainCard = new Panel
 {
     Name = "MainCard",
-    Size = UDim2.FromScale(0.4f, 0.6f),
+    Size = UDim2.FromScale(0.5f, 0.6f),
     Position = UDim2.FromScale(0.5f, 0.5f),
     Anchor = Anchor.Center,
     Color = Color.FromRgba(32, 34, 42, 255),
@@ -34,17 +33,27 @@ var mainCard = new Panel
     Layout = new UIListLayout
     {
         FillDirection = FillDirection.Vertical,
-        Padding = UDim.FromOffset(12),
+        Padding = UDim.FromOffset(16),
         HorizontalAlignment = HorizontalAlignment.Center
     }
 };
-
 app.RootElement.AddChild(mainCard);
+
+var titleLabel = new Label
+{
+    Name = "TitleLabel",
+    Text = "OpenRei Native Window",
+    FontSize = 24.0f,
+    TextColor = Color.White,
+    Size = UDim2.FromScale(1.0f, 0.2f),
+    ZIndex = 1
+};
+mainCard.AddChild(titleLabel);
 
 var helloButton = new Button
 {
     Name = "HelloButton",
-    Size = UDim2.FromOffset(220, 44),
+    Size = UDim2.FromOffset(240, 48),
     Position = UDim2.FromScale(0.5f, 0.5f),
     Anchor = Anchor.Center,
     Color = Color.FromRgba(0, 150, 255, 255),
@@ -57,12 +66,7 @@ var helloButton = new Button
 helloButton.OnClick += () => Console.WriteLine("[Event] Hello Button Clicked!");
 mainCard.AddChild(helloButton);
 
-// Simulate input triggering
-Input.TriggerBegin(KeyType.Space);
-Input.TriggerBegin(KeyType.MouseLeft);
+Console.WriteLine("Launching native SDL3 desktop window... Press ESC or close window to exit.");
 
-// 3. Launch application loop
+// 3. Launch native SDL3 window loop
 app.Run();
-
-Input.TriggerEnded(KeyType.Space);
-Input.TriggerEnded(KeyType.MouseLeft);
