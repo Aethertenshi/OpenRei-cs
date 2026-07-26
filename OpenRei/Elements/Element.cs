@@ -85,8 +85,16 @@ public class Element
         return _children.OrderBy(c => c.ZIndex).ToList();
     }
 
+    /// <summary>
+    /// Opt-in frame update callback. Override this in custom element subclasses to execute game/element frame logic.
+    /// </summary>
+    protected virtual void Tick(float deltaTime)
+    {
+    }
+
     public virtual void Update(float deltaTime)
     {
+        Tick(deltaTime);
         Layout?.UpdateLayout(this);
 
         foreach (var child in _children)

@@ -1,22 +1,25 @@
+using OpenRei.Core;
 using OpenRei.Elements;
 using OpenRei.Filters;
+using OpenRei.InputSystem;
 using OpenRei.Layout;
 using OpenRei.Splines;
 using OpenRei.Types;
 
-Console.WriteLine("=== OpenRei Engine Demo ===");
+Console.WriteLine("=== OpenRei Engine App Lifecycle Demo ===");
 
-// 1. Create root screen container (1920x1080 viewport)
-var rootScreen = new Panel
-{
-    Name = "RootScreen",
-    Size = UDim2.FromOffset(1920, 1080),
-    Position = UDim2.Zero,
-    Color = Color.FromRgba(18, 18, 24, 255)
-};
+// 1. Setup event-driven Input listeners
+Input.Begin += (key) => Console.WriteLine($"[Input Event] Key Pressed: {key}");
+Input.Hold += (key, dt) => Console.WriteLine($"[Input Event] Key Holding: {key} (dt: {dt:F4}s)");
+Input.Ended += (key) => Console.WriteLine($"[Input Event] Key Released: {key}");
 
-// 2. Create card panel with rounded corners and filters
-var card = new Panel
+// 2. Initialize application entry point:
+// App.Window(new Vector2D(1920, 1080), "title", WindowFlags)
+var app = App.Window(new Vector2D(1920, 1080), "OpenRei Engine Game", WindowFlags.Resizable | WindowFlags.VSync);
+
+// <-- game / app code lives here -->
+
+var mainCard = new Panel
 {
     Name = "MainCard",
     Size = UDim2.FromScale(0.4f, 0.6f),
@@ -26,8 +29,7 @@ var card = new Panel
     CornerRadius = 16.0f,
     ZIndex = 5,
     Filters = {
-        new DropShadowFilter(offset: new Vector2D(0, 8), blurRadius: 16.0f, color: Color.Black.WithAlpha(0.5f)),
-        new BlurFilter(radius: 2.0f)
+        new DropShadowFilter(offset: new Vector2D(0, 8), blurRadius: 16.0f, color: Color.Black.WithAlpha(0.5f))
     },
     Layout = new UIListLayout
     {
@@ -36,21 +38,9 @@ var card = new Panel
         HorizontalAlignment = HorizontalAlignment.Center
     }
 };
-rootScreen.AddChild(card);
 
-// 3. Add Title Label
-var titleLabel = new Label
-{
-    Name = "TitleLabel",
-    Text = "OpenRei 2D Engine",
-    FontSize = 24.0f,
-    TextColor = Color.White,
-    Size = UDim2.FromScale(1.0f, 0.15f),
-    ZIndex = 1
-};
-card.AddChild(titleLabel);
+app.RootElement.AddChild(mainCard);
 
-// 4. Add Button using user's declarative initialization syntax
 var helloButton = new Button
 {
     Name = "HelloButton",
@@ -61,36 +51,18 @@ var helloButton = new Button
     CornerRadius = 8.0f,
     Text = "hello",
     TextColor = Color.White,
-    ZIndex = 10,
-    Filters = new List<Filter>()
+    ZIndex = 10
 };
 
-helloButton.OnClick += () => Console.WriteLine("Hello Button Clicked!");
-card.AddChild(helloButton);
+helloButton.OnClick += () => Console.WriteLine("[Event] Hello Button Clicked!");
+mainCard.AddChild(helloButton);
 
-// 5. Add Cubic Bezier Spline
-var spline = new SplineElement
-{
-    Name = "ConnectorSpline",
-    Type = SplineType.CubicBezier,
-    StrokeWidth = 4.0f,
-    StrokeColor = Color.FromRgba(0, 220, 130, 255),
-    ZIndex = 20,
-    ControlPoints = {
-        new Vector2D(10, 10),
-        new Vector2D(100, 200),
-        new Vector2D(300, 50),
-        new Vector2D(400, 300)
-    }
-};
-rootScreen.AddChild(spline);
+// Simulate input triggering
+Input.TriggerBegin(KeyType.Space);
+Input.TriggerBegin(KeyType.MouseLeft);
 
-// Run layout update pass
-rootScreen.Update(0.016f);
+// 3. Launch application loop
+app.Run();
 
-Console.WriteLine($"Root Screen Absolute Bounds: {rootScreen.AbsoluteBounds}");
-Console.WriteLine($"Card Absolute Bounds: {card.AbsoluteBounds}");
-Console.WriteLine($"Button Absolute Position: {helloButton.AbsolutePosition}");
-Console.WriteLine($"Spline Evaluated Points: {spline.GenerateEvaluatedPoints().Count} vertices");
-
-Console.WriteLine("\n[OpenRei Engine Architecture Initialized & Tested Successfully!]");
+Input.TriggerEnded(KeyType.Space);
+Input.TriggerEnded(KeyType.MouseLeft);
