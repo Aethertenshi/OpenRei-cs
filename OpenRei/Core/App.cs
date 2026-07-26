@@ -98,13 +98,15 @@ public class App
                 lastTicks = currentTicks;
 
                 // Process Native SDL3 OS Event Queue
-                while (SDL3.SDL_PollEvent(out SDL_Event sdlEvent))
+                SDL_Event sdlEvent;
+                while (SDL3.SDL_PollEvent(&sdlEvent))
                 {
-                    if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_QUIT)
+                    var eventType = (SDL_EventType)sdlEvent.type;
+                    if (eventType == SDL_EventType.SDL_EVENT_QUIT)
                     {
                         IsRunning = false;
                     }
-                    else if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_KEY_DOWN)
+                    else if (eventType == SDL_EventType.SDL_EVENT_KEY_DOWN)
                     {
                         Input.TriggerBegin(KeyType.Space);
                         if (sdlEvent.key.key == SDL_Keycode.SDLK_ESCAPE)
@@ -112,15 +114,15 @@ public class App
                             IsRunning = false;
                         }
                     }
-                    else if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_KEY_UP)
+                    else if (eventType == SDL_EventType.SDL_EVENT_KEY_UP)
                     {
                         Input.TriggerEnded(KeyType.Space);
                     }
-                    else if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_MOUSE_MOTION)
+                    else if (eventType == SDL_EventType.SDL_EVENT_MOUSE_MOTION)
                     {
                         Input.MousePosition = new Vector2D(sdlEvent.motion.x, sdlEvent.motion.y);
                     }
-                    else if (sdlEvent.Type == (uint)SDL_EventType.SDL_EVENT_WINDOW_RESIZED)
+                    else if (eventType == SDL_EventType.SDL_EVENT_WINDOW_RESIZED)
                     {
                         Size = new Vector2D(sdlEvent.window.data1, sdlEvent.window.data2);
                     }
