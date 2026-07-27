@@ -34,7 +34,7 @@ public class Label : Element
         // Draw background if color is non-transparent
         base.Render(context);
 
-        // Draw text quad
-        context.DrawQuad(AbsoluteBounds, TextColor, 0f, ZIndex + 1);
+        // Submit text render command
+        context.DrawText(Font, Text, AbsoluteBounds, TextColor);
     }
 }

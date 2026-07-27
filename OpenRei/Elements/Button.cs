@@ -1,3 +1,4 @@
+using OpenRei.Graphics;
 using OpenRei.Types;
 
 namespace OpenRei.Elements;
@@ -12,6 +13,7 @@ public class Button : Element
     public float FontSize { get; set; } = 16.0f;
     public Color HoverColor { get; set; } = Color.FromRgba(220, 220, 220, 255);
     public Color PressColor { get; set; } = Color.FromRgba(180, 180, 180, 255);
+    public Font? Font { get; set; }
 
     public bool IsHovered { get; private set; }
     public bool IsPressed { get; private set; }
@@ -52,6 +54,20 @@ public class Button : Element
             {
                 OnClick?.Invoke();
             }
+        }
+    }
+
+    public override void Render(RenderContext context)
+    {
+        if (!Visible) return;
+
+        // Render button background quad
+        base.Render(context);
+
+        // Submit button text command
+        if (!string.IsNullOrEmpty(Text))
+        {
+            context.DrawText(Font, Text, AbsoluteBounds, TextColor);
         }
     }
 }

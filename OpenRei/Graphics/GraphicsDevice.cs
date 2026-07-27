@@ -1,3 +1,4 @@
+using OpenRei.Types;
 using SDL;
 
 namespace OpenRei.Graphics;
@@ -34,9 +35,45 @@ public unsafe class GraphicsDevice : IDisposable
     }
 
     /// <summary>
-    /// Executes a hardware GPU render pass consuming QuadInstances from the RenderQueue.
+    /// Renders text using SDL3_ttf blended font surface.
     /// </summary>
-    public void RenderPass(RenderQueue queue)
+    public void RenderText(Font? font, string text, Rect bounds, Color color)
+    {
+        font ??= FontEngine.DefaultFont;
+        if (!IsInitialized || _renderer == null || font == null || font.Handle == null || string.IsNullOrEmpty(text)) return;
+
+        byte[] textBytes = System.Text.Encoding.UTF8.GetBytes(text + "\0");
+        SDL_Color fgColor = new SDL_Color
+        {
+            r = (byte)(color.R * 255),
+            g = (byte)(color.G * 255),
+            b = (byte)(color.B * 255),
+            a = (byte)(color.A * 255)
+        };
+
+        fixed (byte* tPtr = textBytes)
+        {
+            SDL_Surface* surface = SDL3_ttf.TTF_RenderText_Blended(font.Handle, tPtr, (nuint)text.Length, fgColor);
+            if (surface == null) return;
+
+            SDL_Texture* texture = SDL3.SDL_CreateTextureFromSurface(_renderer, surface);
+            float textW = surface->w;
+            float textH = surface->h;
+            SDL3.SDL_DestroySurface(surface);
+
+            if (texture != null)
+            {
+                // Center text inside bounds
+                float posX = bounds.X + (bounds.Width - textW) * 0.5f;
+                float posY = bounds.Y + (bounds.Height - textH) * 0.5f;
+
+                SDL_FRect destRect = new SDL_FRect { x = posX, y = posY, w = textW, h = textH };
+                SDL3.SDL_RenderTexture(_renderer, texture, null, &destRect);
+                SDL3.SDL_DestroyTexture(texture);
+            }
+        }
+    }
+    public void RenderPass(RenderQueue queue, RenderContext context)
     {
         if (!IsInitialized || _renderer == null) return;
 
@@ -64,7 +101,13 @@ public unsafe class GraphicsDevice : IDisposable
             SDL3.SDL_RenderFillRect(_renderer, &rect);
         }
 
-        // 3. Swap buffers (Present frame to window display)
+        // 3. Render all TextCommands
+        foreach (var textCmd in context.TextCommands)
+        {
+            RenderText(textCmd.Font, textCmd.Text, textCmd.Bounds, textCmd.Color);
+        }
+
+        // 4. Swap buffers (Present frame to window display)
         SDL3.SDL_RenderPresent(_renderer);
     }
 

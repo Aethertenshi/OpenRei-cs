@@ -15,4 +15,10 @@
     <PackageReference Include="ppy.SDL3_image-CS" Version="2026.722.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="GoogleSans-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

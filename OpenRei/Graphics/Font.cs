@@ -12,6 +12,7 @@ public unsafe class Font : IDisposable
     private bool _isDisposed;
 
     public float Size { get; }
+    public TTF_Font* Handle => _fontHandle;
 
     public Font(string path, float pointSize)
     {

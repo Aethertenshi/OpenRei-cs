@@ -148,7 +148,7 @@ public class App
                 renderQueue.SwapBuffers();
 
                 // 5. Hardware GPU Render Pass Execution
-                graphicsDevice.RenderPass(renderQueue);
+                graphicsDevice.RenderPass(renderQueue, renderContext);
 
                 // Cap frame rate slightly for smooth CPU loop if GPU vsync is inactive
                 SDL3.SDL_Delay(1);

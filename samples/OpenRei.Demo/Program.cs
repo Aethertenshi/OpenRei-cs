@@ -59,7 +59,7 @@ var helloButton = new Button
     Color = Color.FromRgba(0, 150, 255, 255),
     CornerRadius = 8.0f,
     Text = "hello",
-    TextColor = Color.White,
+    TextColor = Color.Black,
     ZIndex = 10
 };
 

@@ -11,6 +11,8 @@ public static class FontEngine
 
     public static bool IsInitialized => _isInitialized;
 
+    public static Font? DefaultFont { get; set; }
+
     public static void Initialize()
     {
         if (_isInitialized) return;
@@ -19,6 +21,15 @@ public static class FontEngine
         {
             _isInitialized = true;
             Console.WriteLine("[OpenRei FontEngine] SDL3_ttf initialized successfully.");
+
+            string fontPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "OpenRei", "GoogleSans-Regular.ttf");
+            if (!File.Exists(fontPath)) fontPath = "OpenRei/GoogleSans-Regular.ttf";
+
+            if (File.Exists(fontPath))
+            {
+                DefaultFont = new Font(fontPath, 22.0f);
+                Console.WriteLine($"[OpenRei FontEngine] Default font '{fontPath}' loaded successfully.");
+            }
         }
         else
         {

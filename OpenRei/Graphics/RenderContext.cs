@@ -2,12 +2,30 @@ using OpenRei.Types;
 
 namespace OpenRei.Graphics;
 
+public readonly struct TextCommand
+{
+    public readonly Font? Font;
+    public readonly string Text;
+    public readonly Rect Bounds;
+    public readonly Color Color;
+
+    public TextCommand(Font? font, string text, Rect bounds, Color color)
+    {
+        Font = font;
+        Text = text;
+        Bounds = bounds;
+        Color = color;
+    }
+}
+
 /// <summary>
 /// Execution context passed down scene graph elements to submit 2D quad instances to the RenderQueue.
 /// </summary>
 public class RenderContext
 {
     private readonly RenderQueue _queue;
+
+    public List<TextCommand> TextCommands { get; } = new();
 
     public RenderContext(RenderQueue queue)
     {
@@ -17,6 +35,14 @@ public class RenderContext
     public void DrawQuad(Rect bounds, Color color, float cornerRadius = 0.0f, float zIndex = 1.0f)
     {
         _queue.Enqueue(new QuadInstance(bounds, color, cornerRadius, zIndex));
+    }
+
+    public void DrawText(Font? font, string text, Rect bounds, Color color)
+    {
+        if (!string.IsNullOrEmpty(text))
+        {
+            TextCommands.Add(new TextCommand(font, text, bounds, color));
+        }
     }
 
     public void DrawSpline(List<Vector2D> points, float strokeWidth, Color color, float zIndex = 1.0f)
