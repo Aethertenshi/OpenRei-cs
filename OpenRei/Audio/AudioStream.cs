@@ -31,17 +31,47 @@ public class AudioStream
 
     public AudioStream()
     {
-        if (AudioEngine.IsInitialized)
+        InitHandles();
+    }
+
+    public AudioStream(string filePath) : this()
+    {
+        var data = AudioDecoder.DecodeFile(filePath);
+        LoadPcmData(data);
+    }
+
+    public AudioStream(DecodedAudioData data) : this()
+    {
+        LoadPcmData(data);
+    }
+
+    public AudioStream(byte[] pcmData, int sampleRate, int channels = 2, int bitsPerSample = 16) : this()
+    {
+        LoadPcmData(pcmData, sampleRate, channels, bitsPerSample);
+    }
+
+    private void InitHandles()
+    {
+        if (AudioEngine.IsInitialized && _sourceId == 0)
         {
             _sourceId = AudioEngine.AL.GenSource();
             _bufferId = AudioEngine.AL.GenBuffer();
         }
     }
 
-    public void LoadPcmData(byte[] pcmData, int sampleRate, int channels, int bitsPerSample)
+    public void LoadPcmData(DecodedAudioData data)
+    {
+        if (data != null)
+        {
+            LoadPcmData(data.PcmData, data.SampleRate, data.Channels, data.BitsPerSample);
+        }
+    }
+
+    public void LoadPcmData(byte[] pcmData, int sampleRate, int channels = 2, int bitsPerSample = 16)
     {
         _sampleRate = sampleRate;
-        if (!AudioEngine.IsInitialized) return;
+        InitHandles();
+        if (!AudioEngine.IsInitialized || pcmData.Length == 0) return;
 
         BufferFormat format = (channels, bitsPerSample) switch
         {

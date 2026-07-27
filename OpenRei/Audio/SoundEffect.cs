@@ -11,11 +11,40 @@ public class SoundEffect
     private readonly List<uint> _sourcePool = new();
     private int _poolIndex;
 
+    public SoundEffect() { }
+
+    public SoundEffect(string filePath, int poolSize = 8)
+    {
+        var data = AudioDecoder.DecodeFile(filePath);
+        LoadPcmData(data, poolSize);
+    }
+
+    public SoundEffect(DecodedAudioData data, int poolSize = 8)
+    {
+        LoadPcmData(data, poolSize);
+    }
+
     public SoundEffect(byte[] pcmData, int sampleRate, int channels = 2, int bitsPerSample = 16, int poolSize = 8)
     {
-        if (!AudioEngine.IsInitialized) return;
+        LoadPcmData(pcmData, sampleRate, channels, bitsPerSample, poolSize);
+    }
 
-        _bufferId = AudioEngine.AL.GenBuffer();
+    public void LoadPcmData(DecodedAudioData data, int poolSize = 8)
+    {
+        if (data != null)
+        {
+            LoadPcmData(data.PcmData, data.SampleRate, data.Channels, data.BitsPerSample, poolSize);
+        }
+    }
+
+    public void LoadPcmData(byte[] pcmData, int sampleRate, int channels = 2, int bitsPerSample = 16, int poolSize = 8)
+    {
+        if (!AudioEngine.IsInitialized || pcmData.Length == 0) return;
+
+        if (_bufferId == 0)
+        {
+            _bufferId = AudioEngine.AL.GenBuffer();
+        }
 
         BufferFormat format = (channels, bitsPerSample) switch
         {
@@ -35,11 +64,14 @@ public class SoundEffect
         }
 
         // Initialize voice pool for simultaneous hitsounds
-        for (int i = 0; i < poolSize; i++)
+        if (_sourcePool.Count == 0)
         {
-            uint source = AudioEngine.AL.GenSource();
-            AudioEngine.AL.SetSourceProperty(source, SourceInteger.Buffer, (int)_bufferId);
-            _sourcePool.Add(source);
+            for (int i = 0; i < poolSize; i++)
+            {
+                uint source = AudioEngine.AL.GenSource();
+                AudioEngine.AL.SetSourceProperty(source, SourceInteger.Buffer, (int)_bufferId);
+                _sourcePool.Add(source);
+            }
         }
     }
 
