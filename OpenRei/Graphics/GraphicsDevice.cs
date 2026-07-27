@@ -12,6 +12,8 @@ public unsafe class GraphicsDevice : IDisposable
     private SDL_Window* _window;
     private bool _isDisposed;
 
+    private BlurPipeline? _blurPipeline;
+
     public SDL_Renderer* RendererHandle => _renderer;
     public bool IsInitialized => _renderer != null;
 
@@ -34,7 +36,10 @@ public unsafe class GraphicsDevice : IDisposable
         // Initialize FontEngine and default font
         FontEngine.Initialize();
 
-        Console.WriteLine("[GraphicsDevice] Hardware-Accelerated 2D GPU Renderer initialized successfully.");
+        // Initialize Multi-Pass Gaussian Blur FBO Pipeline
+        _blurPipeline = new BlurPipeline(_renderer);
+
+        Console.WriteLine("[GraphicsDevice] Hardware-Accelerated 2D GPU Renderer & BlurPipeline initialized successfully.");
     }
 
     /// <summary>
@@ -145,13 +150,19 @@ public unsafe class GraphicsDevice : IDisposable
             RenderImage(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color);
         }
 
-        // 4. Render all TextCommands
+        // 4. Execute Multi-pass Gaussian Blur Pipeline (osu!-framework style)
+        foreach (var blurCmd in context.BlurCommands)
+        {
+            _blurPipeline?.ApplyBlur(blurCmd.Bounds, blurCmd.Filter);
+        }
+
+        // 5. Render all TextCommands
         foreach (var textCmd in context.TextCommands)
         {
             RenderText(textCmd.Font, textCmd.Text, textCmd.Bounds, textCmd.Color);
         }
 
-        // 5. Swap buffers (Present frame to window display)
+        // 6. Swap buffers (Present frame to window display)
         SDL3.SDL_RenderPresent(_renderer);
     }
 
@@ -159,6 +170,7 @@ public unsafe class GraphicsDevice : IDisposable
     {
         if (!_isDisposed)
         {
+            _blurPipeline?.Dispose();
             if (_renderer != null)
             {
                 SDL3.SDL_DestroyRenderer(_renderer);

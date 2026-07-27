@@ -1,3 +1,4 @@
+using OpenRei.Filters;
 using OpenRei.Types;
 
 namespace OpenRei.Graphics;
@@ -34,8 +35,20 @@ public readonly struct ImageCommand
     }
 }
 
+public readonly struct BlurCommand
+{
+    public readonly Rect Bounds;
+    public readonly BlurFilter Filter;
+
+    public BlurCommand(Rect bounds, BlurFilter filter)
+    {
+        Bounds = bounds;
+        Filter = filter;
+    }
+}
+
 /// <summary>
-/// Execution context passed down scene graph elements to submit 2D quad instances, text, and images to the RenderQueue.
+/// Execution context passed down scene graph elements to submit 2D quad instances, text, images, and blur post-processing filters.
 /// </summary>
 public class RenderContext
 {
@@ -43,6 +56,7 @@ public class RenderContext
 
     public List<TextCommand> TextCommands { get; } = new();
     public List<ImageCommand> ImageCommands { get; } = new();
+    public List<BlurCommand> BlurCommands { get; } = new();
 
     public RenderContext(RenderQueue queue)
     {
@@ -67,6 +81,14 @@ public class RenderContext
         if (texture != null && texture.IsValid)
         {
             ImageCommands.Add(new ImageCommand(texture, destBounds, sourceRect, color ?? Color.White));
+        }
+    }
+
+    public void ApplyBlur(Rect bounds, BlurFilter filter)
+    {
+        if (filter != null && filter.Enabled && filter.Radius > 0f)
+        {
+            BlurCommands.Add(new BlurCommand(bounds, filter));
         }
     }
 

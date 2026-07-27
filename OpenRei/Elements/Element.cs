@@ -132,6 +132,15 @@ public class Element
             context.DrawQuad(AbsoluteBounds, Color, CornerRadius, ZIndex);
         }
 
+        // Submit element filters (e.g. BlurFilter)
+        foreach (var filter in Filters)
+        {
+            if (filter is BlurFilter blurFilter && blurFilter.Enabled)
+            {
+                context.ApplyBlur(AbsoluteBounds, blurFilter);
+            }
+        }
+
         // Render children according to local ZIndex stacking order
         var sortedChildren = GetSortedChildren();
         foreach (var child in sortedChildren)
