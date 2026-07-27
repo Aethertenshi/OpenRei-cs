@@ -24,7 +24,13 @@ public static class Input
     /// </summary>
     public static event Action<KeyType>? Ended;
 
+    /// <summary>
+    /// Fired when the mouse wheel is scrolled. Delta is screen-relative (positive = scroll up/left).
+    /// </summary>
+    public static event Action<Vector2D>? MouseWheel;
+
     public static Vector2D MousePosition { get; set; } = Vector2D.Zero;
+    public static Vector2D MouseWheelDelta { get; set; } = Vector2D.Zero;
 
     public static bool IsKeyDown(KeyType key) => ActiveKeys.Contains(key);
 
@@ -50,5 +56,16 @@ public static class Input
         {
             Ended?.Invoke(key);
         }
+    }
+
+    public static void TriggerMouseWheel(Vector2D delta)
+    {
+        MouseWheelDelta = new Vector2D(MouseWheelDelta.X + delta.X, MouseWheelDelta.Y + delta.Y);
+        MouseWheel?.Invoke(delta);
+    }
+
+    public static void ResetMouseWheelDelta()
+    {
+        MouseWheelDelta = Vector2D.Zero;
     }
 }

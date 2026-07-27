@@ -17,5 +17,13 @@ obj/
 *.dylib
 *.exe
 
+# Except ThirdParty redistributed native libraries
+!OpenRei/ThirdParty/**/*.dll
+!OpenRei/ThirdParty/**/*.so
+!OpenRei/ThirdParty/**/*.dylib
+!OpenRei/ThirdParty/*.dll
+!OpenRei/ThirdParty/*.so
+!OpenRei/ThirdParty/*.dylib
+
 # Custom scripts build directory
 scripts/

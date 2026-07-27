@@ -1,5 +1,6 @@
 using OpenRei.Filters;
 using OpenRei.Types;
+using SDL;
 
 namespace OpenRei.Graphics;
 
@@ -54,6 +55,8 @@ public class RenderContext
 {
     private readonly RenderQueue _queue;
 
+    internal unsafe SDL_Renderer* RendererHandle { get; set; }
+
     public List<TextCommand> TextCommands { get; } = new();
     public List<ImageCommand> ImageCommands { get; } = new();
     public List<BlurCommand> BlurCommands { get; } = new();
@@ -61,6 +64,23 @@ public class RenderContext
     public RenderContext(RenderQueue queue)
     {
         _queue = queue;
+    }
+
+    public unsafe void PushClipRect(Rect bounds)
+    {
+        if (RendererHandle == null) return;
+        SDL_Rect clipRect = new SDL_Rect
+        {
+            x = (int)bounds.X, y = (int)bounds.Y,
+            w = (int)bounds.Width, h = (int)bounds.Height
+        };
+        SDL3.SDL_SetRenderClipRect(RendererHandle, &clipRect);
+    }
+
+    public unsafe void PopClipRect()
+    {
+        if (RendererHandle == null) return;
+        SDL3.SDL_SetRenderClipRect(RendererHandle, null);
     }
 
     public void DrawQuad(Rect bounds, Color color, float cornerRadius = 0.0f, float zIndex = 1.0f)

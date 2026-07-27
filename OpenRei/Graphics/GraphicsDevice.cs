@@ -120,6 +120,9 @@ public unsafe class GraphicsDevice : IDisposable
         // Process background texture uploads within 2.0ms main-thread frame budget
         TextureEngine.ProcessPendingUploads(this, 2.0f);
 
+        // Attach renderer handle to context for inline clip rect operations
+        context.RendererHandle = _renderer;
+
         // 1. Clear background to dark theme color
         SDL3.SDL_SetRenderDrawColor(_renderer, 18, 18, 24, 255);
         SDL3.SDL_RenderClear(_renderer);

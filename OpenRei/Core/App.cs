@@ -211,6 +211,10 @@ public class App
                             }
                         }
                     }
+                    else if (eventType == SDL_EventType.SDL_EVENT_MOUSE_WHEEL)
+                    {
+                        Input.TriggerMouseWheel(new Vector2D(sdlEvent.wheel.x, sdlEvent.wheel.y));
+                    }
                     else if (eventType == SDL_EventType.SDL_EVENT_WINDOW_RESIZED)
                     {
                         Size = new Vector2D(sdlEvent.window.data1, sdlEvent.window.data2);
@@ -232,6 +236,9 @@ public class App
                 // 3. Scene graph hierarchy update pass
                 RootElement.Size = UDim2.FromOffset(Size.X, Size.Y);
                 RootElement.Update(deltaTime);
+
+                // Reset per-frame input state after update phase
+                Input.ResetMouseWheelDelta();
 
                 // 4. Zero-allocation Render pass
                 using var renderQueue = new RenderQueue();

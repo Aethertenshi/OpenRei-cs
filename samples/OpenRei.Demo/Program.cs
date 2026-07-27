@@ -44,12 +44,6 @@ var mainCard = new Panel
     Filters = {
         new DropShadowFilter(offset: new Vector2D(0, 8), blurRadius: 16.0f, color: Color.Black.WithAlpha(0.5f))
     },
-    Layout = new UIListLayout
-    {
-        FillDirection = FillDirection.Vertical,
-        Padding = UDim.FromOffset(16),
-        HorizontalAlignment = HorizontalAlignment.Center
-    }
 };
 app.RootElement.AddChild(mainCard);
 
@@ -95,14 +89,21 @@ helloButton.OnClick += () =>
 };
 mainCard.AddChild(helloButton);
 
-var demoSprite = new Sprite
+var scroll = new ScrollingFrame
 {
-    Name = "DemoSprite",
-    Size = UDim2.FromOffset(128, 128),
-    ScaleType = ScaleType.Cover,
-    TexturePath = "test.png"
+    Size = UDim2.FromScale(.35f, 1.0f),
+    Position = UDim2.FromScale(1f, .5f),
+    VerticalScrollbarPosition = ScrollbarPlacement.End,
+    Anchor = Anchor.CenterRight,
+    ScrollSmoothness = 14f,
+    PaddingBetween = UDim.FromOffset(20),
+    FillDirection = FillDirection.Vertical,
+    ZIndex = 6,
+    Color = Color.Black
 };
-mainCard.AddChild(demoSprite);
+for (int i = 0; i < 20; i++)
+    scroll.AddChild(new Label { Size = UDim2.FromOffset(380, 40), Text = $"Item {i}", Color = Color.Red });
+app.RootElement.AddChild(scroll);
 
 Console.WriteLine("Launching native SDL3 desktop window... Press ESC or close window to exit.");
 
