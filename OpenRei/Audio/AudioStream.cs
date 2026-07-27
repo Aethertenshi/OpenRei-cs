@@ -16,6 +16,19 @@ public class AudioStream
     public float Volume { get; set; } = 1.0f;
 
     /// <summary>
+    /// Indicates whether the audio stream is currently playing.
+    /// </summary>
+    public bool IsPlaying
+    {
+        get
+        {
+            if (!AudioEngine.IsInitialized || _sourceId == 0) return false;
+            AudioEngine.AL.GetSourceProperty(_sourceId, GetSourceInteger.SourceState, out int state);
+            return state == (int)SourceState.Playing;
+        }
+    }
+
+    /// <summary>
     /// Returns the sub-millisecond audio hardware playback position for rhythm timing.
     /// </summary>
     public double PositionMs

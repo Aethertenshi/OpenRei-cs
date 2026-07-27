@@ -10,6 +10,22 @@ public class SoundEffect
     private uint _bufferId;
     private readonly List<uint> _sourcePool = new();
     private int _poolIndex;
+    /// <summary>
+    /// Indicates whether any voice in this sound effect pool is currently playing.
+    /// </summary>
+    public bool IsPlaying
+    {
+        get
+        {
+            if (!AudioEngine.IsInitialized || _sourcePool.Count == 0) return false;
+            foreach (var source in _sourcePool)
+            {
+                AudioEngine.AL.GetSourceProperty(source, GetSourceInteger.SourceState, out int state);
+                if (state == (int)SourceState.Playing) return true;
+            }
+            return false;
+        }
+    }
 
     public SoundEffect() { }
 
