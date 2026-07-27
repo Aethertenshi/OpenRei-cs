@@ -3,6 +3,7 @@ using OpenRei.Elements;
 using OpenRei.Filters;
 using OpenRei.Graphics;
 using OpenRei.InputSystem;
+using OpenRei.IO;
 using OpenRei.Layout;
 using OpenRei.Rhythm;
 using OpenRei.Splines;
@@ -11,9 +12,19 @@ using OpenRei.Types;
 
 Console.WriteLine("=== OpenRei Engine SDL3 Window Demo ===");
 
-// 1. Setup event-driven Input listeners
+// 1. Setup event-driven Input & Drag-and-Drop listeners
 Input.Begin += (key) => Console.WriteLine($"[Input Event] Key Pressed: {key}");
 Input.Ended += (key) => Console.WriteLine($"[Input Event] Key Released: {key}");
+
+OszDropHandler.OnFileDropped += (file) =>
+{
+    Console.WriteLine($"[Drag-and-Drop Event] File Dropped onto Window: {file}");
+    if (OszImporter.IsOszFile(file))
+    {
+        string? songFolder = OszImporter.Import(file, "Songs");
+        Console.WriteLine($"[OszImporter] Song extracted to: {songFolder}");
+    }
+};
 
 // 2. Initialize application entry point:
 // App.Window(new Vector2D(1280, 720), "title", WindowFlags)

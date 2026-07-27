@@ -1,0 +1,89 @@
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using SDL;
+
+namespace OpenRei.IO;
+
+/// <summary>
+/// Hooks into native SDL3 drag-and-drop file events and queues dropped .osz paths for main-thread beatmap ingestion.
+/// </summary>
+public static class OszDropHandler
+{
+    private static readonly ConcurrentQueue<string> _pending = new();
+    private static bool _initialized;
+
+    /// <summary>
+    /// Event triggered when a valid file is dropped onto the window.
+    /// </summary>
+    public static event Action<string>? OnFileDropped;
+
+    /// <summary>
+    /// Registers the SDL3 drop-file event watcher. Call once after SDL window creation.
+    /// </summary>
+    public static unsafe void Initialize()
+    {
+        if (_initialized) return;
+
+        SDL3.SDL_SetEventEnabled((uint)SDL_EventType.SDL_EVENT_DROP_FILE, true);
+        SDL3.SDL_AddEventWatch(&DropEventFilter, IntPtr.Zero);
+
+        _initialized = true;
+        Console.WriteLine("[OszDropHandler] SDL3 Drag-and-Drop file listener initialized successfully.");
+    }
+
+    /// <summary>
+    /// Removes the SDL3 event watcher.
+    /// </summary>
+    public static unsafe void Shutdown()
+    {
+        if (!_initialized) return;
+
+        SDL3.SDL_RemoveEventWatch(&DropEventFilter, IntPtr.Zero);
+        _initialized = false;
+    }
+
+    /// <summary>
+    /// Enqueues a file drop path directly into the processing queue.
+    /// </summary>
+    public static void Enqueue(string path)
+    {
+        if (!string.IsNullOrEmpty(path))
+        {
+            _pending.Enqueue(path);
+            OnFileDropped?.Invoke(path);
+        }
+    }
+
+    /// <summary>
+    /// Drains queued file paths on the main thread and invokes processing callbacks.
+    /// </summary>
+    public static void DrainQueue(Action<string> onFile)
+    {
+        while (_pending.TryDequeue(out string? path))
+        {
+            if (!string.IsNullOrEmpty(path))
+            {
+                onFile(path);
+            }
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static unsafe SDLBool DropEventFilter(IntPtr userdata, SDL_Event* evt)
+    {
+        if (evt == null || evt->type != (uint)SDL_EventType.SDL_EVENT_DROP_FILE)
+            return true;
+
+        byte* data = evt->drop.data;
+        if (data == null) return true;
+
+        string? path = Marshal.PtrToStringUTF8((IntPtr)data);
+        if (!string.IsNullOrEmpty(path) && path.EndsWith(".osz", StringComparison.OrdinalIgnoreCase))
+        {
+            _pending.Enqueue(path);
+        }
+
+        return true;
+    }
+}
