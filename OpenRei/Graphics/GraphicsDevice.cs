@@ -3,80 +3,34 @@ using SDL;
 namespace OpenRei.Graphics;
 
 /// <summary>
-/// Controls SDL_GPU hardware device, pipeline states, and low-latency swapchain presentation modes.
+/// Controls hardware-accelerated 2D GPU rendering, swapchain presentation, and pipeline execution.
 /// </summary>
 public unsafe class GraphicsDevice : IDisposable
 {
-    private SDL_GPUDevice* _device;
+    private SDL_Renderer* _renderer;
     private SDL_Window* _window;
     private bool _isDisposed;
 
-    public SDL_GPUDevice* DeviceHandle => _device;
-    public bool IsInitialized => _device != null;
+    public SDL_Renderer* RendererHandle => _renderer;
+    public bool IsInitialized => _renderer != null;
 
     public GraphicsDevice(SDL_Window* window)
     {
         _window = window;
 
-        // Create SDL_GPU Device supporting Vulkan, Direct3D 12, and Metal
-        _device = SDL3.SDL_CreateGPUDevice(
-            SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV |
-            SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_DXIL |
-            SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_MSL,
-            true,
-            (byte*)null
-        );
+        // Create Hardware-Accelerated SDL3 Renderer (Vulkan / Direct3D 12 / Metal)
+        _renderer = SDL3.SDL_CreateRenderer(_window, (byte*)null);
 
-        if (_device == null)
+        if (_renderer == null)
         {
-            Console.WriteLine($"[SDL_GPU Warning] Could not initialize native GPU device: {SDL3.SDL_GetError()}");
+            Console.WriteLine($"[SDL3 Warning] Could not initialize native GPU renderer: {SDL3.SDL_GetError()}");
             return;
         }
 
-        // Claim window swapchain
-        if (!SDL3.SDL_ClaimWindowForGPUDevice(_device, _window))
-        {
-            Console.WriteLine($"[SDL_GPU Warning] Could not claim window for GPU device: {SDL3.SDL_GetError()}");
-            return;
-        }
+        // Enable VSync / Mailbox presentation mode
+        SDL3.SDL_SetRenderVSync(_renderer, 1);
 
-        // Set low-latency Mailbox triple buffering swapchain mode
-        SDL3.SDL_SetGPUSwapchainParameters(
-            _device,
-            _window,
-            SDL_GPUSwapchainComposition.SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
-            SDL_GPUPresentMode.SDL_GPU_PRESENTMODE_MAILBOX
-        );
-
-        Console.WriteLine("[SDL_GPU] Hardware Graphics Device initialized with Mailbox Triple Buffering.");
-    }
-
-    public void BeginFrame(out SDL_GPUCommandBuffer* cmdBuffer, out SDL_GPUTexture* swapchainTexture)
-    {
-        cmdBuffer = null;
-        swapchainTexture = null;
-
-        if (!IsInitialized) return;
-
-        cmdBuffer = SDL3.SDL_AcquireGPUCommandBuffer(_device);
-        if (cmdBuffer == null) return;
-
-        uint width = 0, height = 0;
-        SDL_GPUTexture* swapTexture = null;
-        if (!SDL3.SDL_WaitAndAcquireGPUSwapchainTexture(cmdBuffer, _window, &swapTexture, &width, &height))
-        {
-            return;
-        }
-
-        swapchainTexture = swapTexture;
-    }
-
-    public void EndFrame(SDL_GPUCommandBuffer* cmdBuffer)
-    {
-        if (cmdBuffer != null)
-        {
-            SDL3.SDL_SubmitGPUCommandBuffer(cmdBuffer);
-        }
+        Console.WriteLine("[GraphicsDevice] Hardware-Accelerated 2D GPU Renderer initialized successfully.");
     }
 
     /// <summary>
@@ -84,37 +38,44 @@ public unsafe class GraphicsDevice : IDisposable
     /// </summary>
     public void RenderPass(RenderQueue queue)
     {
-        if (!IsInitialized) return;
+        if (!IsInitialized || _renderer == null) return;
 
-        BeginFrame(out var cmdBuffer, out var swapchainTexture);
-        if (cmdBuffer == null || swapchainTexture == null) return;
+        // 1. Clear background to dark theme color
+        SDL3.SDL_SetRenderDrawColor(_renderer, 18, 18, 24, 255);
+        SDL3.SDL_RenderClear(_renderer);
 
-        SDL_GPUColorTargetInfo colorTarget = new SDL_GPUColorTargetInfo
+        // 2. Render all QuadInstances from persistent NativeMemory buffer
+        int instanceCount = queue.ActiveReadCount;
+        QuadInstance* instances = queue.ActiveReadBuffer;
+
+        for (int i = 0; i < instanceCount; i++)
         {
-            texture = swapchainTexture,
-            clear_color = new SDL_FColor { r = 0.07f, g = 0.07f, b = 0.09f, a = 1.0f },
-            load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR,
-            store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE
-        };
+            var quad = instances[i];
 
-        var renderPass = SDL3.SDL_BeginGPURenderPass(cmdBuffer, &colorTarget, 1, null);
-        if (renderPass != null)
-        {
-            SDL3.SDL_EndGPURenderPass(renderPass);
+            SDL_FRect rect = new SDL_FRect
+            {
+                x = quad.Bounds.X,
+                y = quad.Bounds.Y,
+                w = quad.Bounds.Width,
+                h = quad.Bounds.Height
+            };
+
+            SDL3.SDL_SetRenderDrawColorFloat(_renderer, quad.Color.R, quad.Color.G, quad.Color.B, quad.Color.A);
+            SDL3.SDL_RenderFillRect(_renderer, &rect);
         }
 
-        EndFrame(cmdBuffer);
+        // 3. Swap buffers (Present frame to window display)
+        SDL3.SDL_RenderPresent(_renderer);
     }
 
     public void Dispose()
     {
         if (!_isDisposed)
         {
-            if (_device != null && _window != null)
+            if (_renderer != null)
             {
-                SDL3.SDL_ReleaseWindowFromGPUDevice(_device, _window);
-                SDL3.SDL_DestroyGPUDevice(_device);
-                _device = null;
+                SDL3.SDL_DestroyRenderer(_renderer);
+                _renderer = null;
             }
             _isDisposed = true;
         }
