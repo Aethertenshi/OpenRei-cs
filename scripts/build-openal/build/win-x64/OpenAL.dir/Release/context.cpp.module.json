@@ -1,0 +1,13 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "OpenAL.dir\\Release\\core/context.cpp.obj",
+            "outputs": [
+                "OpenAL.dir\\Release\\"
+            ],
+            "requires": []
+        }
+    ]
+}

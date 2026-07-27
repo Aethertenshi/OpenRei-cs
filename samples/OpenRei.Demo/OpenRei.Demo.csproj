@@ -8,6 +8,10 @@
     <Content Include="GoogleSans-Regular.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\OpenRei\ThirdParty\soft_oal.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>soft_oal.dll</Link>
+    </Content>
   </ItemGroup>
 
   <PropertyGroup>

@@ -247,6 +247,7 @@ public class App
             }
 
             OpenRei.IO.FileDropHandler.Shutdown();
+            OpenRei.Audio.AudioEngine.Shutdown();
             SDL3.SDL_DestroyWindow(window);
             SDL3.SDL_Quit();
             Console.WriteLine("[OpenRei App] Native window destroyed. Application shut down cleanly.");

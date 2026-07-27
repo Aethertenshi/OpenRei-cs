@@ -1,0 +1,10 @@
+^E:\PROJECTTEMP-SERVER\OPENREI-CS\SCRIPTS\BUILD-OPENAL\BUILD\WIN-X64\CMAKEFILES\EC3A30FC57E01376C82D37A326EEC671\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2 -BE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64 --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/OpenAL.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

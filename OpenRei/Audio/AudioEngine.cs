@@ -11,6 +11,9 @@ public static class AudioEngine
     private static ALContext? _alc;
     private static bool _isInitialized;
 
+    private static unsafe Device* _device;
+    private static unsafe Context* _context;
+
     public static AL AL => _al ?? throw new InvalidOperationException("AudioEngine is not initialized.");
     public static ALContext ALC => _alc ?? throw new InvalidOperationException("AudioEngine is not initialized.");
 
@@ -27,15 +30,35 @@ public static class AudioEngine
 
             unsafe
             {
-                var device = _alc.OpenDevice(null);
-                if (device != null)
+                _device = _alc.OpenDevice(null);
+                if (_device == null)
                 {
-                    var context = _alc.CreateContext(device, null);
-                    _alc.MakeContextCurrent(context);
-                    _isInitialized = true;
-                    Console.WriteLine("[OpenRei AudioEngine] OpenAL Soft initialized successfully.");
+                    Console.WriteLine("[OpenRei AudioEngine Warning] OpenAL Soft could not open a default audio device.");
+                    return;
+                }
+
+                _context = _alc.CreateContext(_device, null);
+                if (_context == null)
+                {
+                    Console.WriteLine("[OpenRei AudioEngine Warning] OpenAL Soft could not create a context.");
+                    _alc.CloseDevice(_device);
+                    _device = null;
+                    return;
+                }
+
+                if (!_alc.MakeContextCurrent(_context))
+                {
+                    Console.WriteLine("[OpenRei AudioEngine Warning] OpenAL Soft could not make context current.");
+                    _alc.DestroyContext(_context);
+                    _context = null;
+                    _alc.CloseDevice(_device);
+                    _device = null;
+                    return;
                 }
             }
+
+            _isInitialized = true;
+            Console.WriteLine("[OpenRei AudioEngine] OpenAL Soft initialized successfully.");
         }
         catch (Exception ex)
         {
@@ -47,5 +70,29 @@ public static class AudioEngine
     {
         if (!_isInitialized) return;
         _al?.SetListenerProperty(ListenerFloat.Gain, Math.Clamp(volume, 0f, 1f));
+    }
+
+    public static void Shutdown()
+    {
+        if (!_isInitialized) return;
+
+        unsafe
+        {
+            if (_context != null)
+            {
+                _alc!.MakeContextCurrent(null);
+                _alc.DestroyContext(_context);
+                _context = null;
+            }
+
+            if (_device != null)
+            {
+                _alc!.CloseDevice(_device);
+                _device = null;
+            }
+        }
+
+        _isInitialized = false;
+        Console.WriteLine("[OpenRei AudioEngine] OpenAL Soft shut down.");
     }
 }

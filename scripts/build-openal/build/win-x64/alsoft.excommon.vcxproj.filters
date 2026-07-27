@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\examples\common\alhelpers.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\examples\common\alhelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\examples\common\alhelpers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{AFF07138-39ED-3C36-A32A-443D3776D80A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{3088B675-22FF-39F9-8F1A-119557BB1B44}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

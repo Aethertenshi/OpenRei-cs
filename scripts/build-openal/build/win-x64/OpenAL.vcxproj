@@ -1,0 +1,672 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{2DEAFB2A-449E-319F-85CE-2DF4C125C649}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>OpenAL</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">OpenAL.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">OpenAL32</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">OpenAL.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">OpenAL32</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">OpenAL.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">OpenAL32</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">OpenAL.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">OpenAL32</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4127;4324;4373</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_MSVC_STL_HARDENING=1;CMAKE_INTDIR="Debug";OpenAL_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_MSVC_STL_HARDENING=1;CMAKE_INTDIR=\"Debug\";OpenAL_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>Debug\alsoft.common.lib;avrt.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/Debug/OpenAL32.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/Debug/OpenAL32.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <Version>1.25</Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>4127;4324;4373</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_MSVC_STL_HARDENING=1;CMAKE_INTDIR="Release";OpenAL_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_MSVC_STL_HARDENING=1;CMAKE_INTDIR=\"Release\";OpenAL_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>Release\alsoft.common.lib;avrt.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/Release/OpenAL32.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/Release/OpenAL32.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <Version>1.25</Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>4127;4324;4373</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_MSVC_STL_HARDENING=1;CMAKE_INTDIR="MinSizeRel";OpenAL_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_MSVC_STL_HARDENING=1;CMAKE_INTDIR=\"MinSizeRel\";OpenAL_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>MinSizeRel\alsoft.common.lib;avrt.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/MinSizeRel/OpenAL32.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/MinSizeRel/OpenAL32.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <Version>1.25</Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4127;4324;4373</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_MSVC_STL_HARDENING=1;CMAKE_INTDIR="RelWithDebInfo";OpenAL_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>true</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_MSVC_STL_HARDENING=1;CMAKE_INTDIR=\"RelWithDebInfo\";OpenAL_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\common;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\gsl\include;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\fmt-11.2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>RelWithDebInfo\alsoft.common.lib;avrt.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/RelWithDebInfo/OpenAL32.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/RelWithDebInfo/OpenAL32.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <Version>1.25</Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2 -BE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64 --check-stamp-file E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCCompilerABI.c;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCompilerIdDetection.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerSupport.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeFindBinUtils.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseImplicitIncludeInfo.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseLibraryArchitecture.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestRCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckFunctionExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckLinkerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckStructHasMember.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ADSP-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ARMCC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ARMClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\AppleClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Borland-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Clang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Cray-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CrayClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Diab-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GHS-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GNU-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\HP-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IAR-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Intel-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\LCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\NVHPC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\OrangeC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\PGI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\PathScale-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Renesas-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SCO-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TIClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Tasking-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Watcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XL-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\zOS-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files\CMake\share\cmake-4.3\Modules\FindGit.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPkgConfig.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeDetermineLinkerId.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeInspectCLinker.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeInspectCXXLinker.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckFlagCommonConfig.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckLinkerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\FeatureTesting.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Determine-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\WriteBasicConfigVersionFile.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeCCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeCXXCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeRCCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeSystem.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\OpenALConfig.cmake.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindJACK.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindOpenSL.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindPortAudio.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindPulseAudio.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config_backends.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config_simd.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\openal.pc.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\version.h.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2 -BE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64 --check-stamp-file E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCCompilerABI.c;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCompilerIdDetection.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerSupport.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeFindBinUtils.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseImplicitIncludeInfo.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseLibraryArchitecture.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestRCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckFunctionExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckLinkerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckStructHasMember.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ADSP-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ARMCC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ARMClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\AppleClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Borland-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Clang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Cray-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CrayClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Diab-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GHS-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GNU-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\HP-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IAR-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Intel-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\LCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\NVHPC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\OrangeC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\PGI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\PathScale-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Renesas-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SCO-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TIClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Tasking-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Watcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XL-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\zOS-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files\CMake\share\cmake-4.3\Modules\FindGit.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPkgConfig.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeDetermineLinkerId.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeInspectCLinker.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeInspectCXXLinker.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckFlagCommonConfig.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckLinkerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\FeatureTesting.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Determine-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\WriteBasicConfigVersionFile.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeCCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeCXXCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeRCCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeSystem.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\OpenALConfig.cmake.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindJACK.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindOpenSL.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindPortAudio.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindPulseAudio.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config_backends.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config_simd.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\openal.pc.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\version.h.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2 -BE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64 --check-stamp-file E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCCompilerABI.c;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCompilerIdDetection.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerSupport.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeFindBinUtils.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseImplicitIncludeInfo.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseLibraryArchitecture.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestRCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckFunctionExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckLinkerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckStructHasMember.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ADSP-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ARMCC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ARMClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\AppleClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Borland-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Clang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Cray-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CrayClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Diab-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GHS-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GNU-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\HP-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IAR-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Intel-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\LCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\NVHPC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\OrangeC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\PGI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\PathScale-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Renesas-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SCO-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TIClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Tasking-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Watcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XL-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\zOS-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files\CMake\share\cmake-4.3\Modules\FindGit.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPkgConfig.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeDetermineLinkerId.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeInspectCLinker.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeInspectCXXLinker.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckFlagCommonConfig.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckLinkerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\FeatureTesting.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Determine-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\WriteBasicConfigVersionFile.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeCCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeCXXCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeRCCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeSystem.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\OpenALConfig.cmake.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindJACK.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindOpenSL.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindPortAudio.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindPulseAudio.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config_backends.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config_simd.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\openal.pc.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\version.h.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/downloads/openal-soft-1.25.2 -BE:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64 --check-stamp-file E:/ProjectTemp-Server/OpenRei-cs/scripts/build-openal/build/win-x64/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCCompilerABI.c;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeCompilerIdDetection.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineCompilerSupport.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeFindBinUtils.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseImplicitIncludeInfo.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeParseLibraryArchitecture.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCCompiler.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CMakeTestRCCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckCXXSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckFunctionExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckIncludeFiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckLinkerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckStructHasMember.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ADSP-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ARMCC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\ARMClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\AppleClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Borland-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Clang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Cray-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\CrayClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Diab-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\FujitsuClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GHS-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GNU-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\HP-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IAR-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IBMClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Intel-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\IntelLLVM-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\LCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\LCC-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\NVHPC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\OrangeC-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\PGI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\PathScale-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Renesas-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SCO-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TI-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TIClang-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Tasking-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\Watcom-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XL-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\zOS-C-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files\CMake\share\cmake-4.3\Modules\FindGit.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindPkgConfig.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeDetermineLinkerId.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeInspectCLinker.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CMakeInspectCXXLinker.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckCompilerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckFlagCommonConfig.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckLinkerFlag.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Internal\FeatureTesting.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Determine-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-4.3\Modules\WriteBasicConfigVersionFile.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeCCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeCXXCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeRCCompiler.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\4.3.3\CMakeSystem.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\OpenALConfig.cmake.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindJACK.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindOpenSL.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindPortAudio.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\cmake\FindPulseAudio.cmake;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config_backends.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\config_simd.h.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\openal.pc.in;E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\version.h.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\auxeffectslot.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\buffer.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\debug.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effect.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\autowah.cpp">
+      <ObjectFileName>$(IntDir)al/effects/autowah.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\chorus.cpp">
+      <ObjectFileName>$(IntDir)al/effects/chorus.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\compressor.cpp">
+      <ObjectFileName>$(IntDir)al/effects/compressor.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\convolution.cpp">
+      <ObjectFileName>$(IntDir)al/effects/convolution.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\dedicated.cpp">
+      <ObjectFileName>$(IntDir)al/effects/dedicated.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\distortion.cpp">
+      <ObjectFileName>$(IntDir)al/effects/distortion.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\echo.cpp">
+      <ObjectFileName>$(IntDir)al/effects/echo.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\effects.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\equalizer.cpp">
+      <ObjectFileName>$(IntDir)al/effects/equalizer.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\fshifter.cpp">
+      <ObjectFileName>$(IntDir)al/effects/fshifter.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\modulator.cpp">
+      <ObjectFileName>$(IntDir)al/effects/modulator.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\null.cpp">
+      <ObjectFileName>$(IntDir)al/effects/null.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\pshifter.cpp">
+      <ObjectFileName>$(IntDir)al/effects/pshifter.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\reverb.cpp">
+      <ObjectFileName>$(IntDir)al/effects/reverb.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\vmorpher.cpp">
+      <ObjectFileName>$(IntDir)al/effects/vmorpher.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\error.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\event.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\extension.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\filter.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\listener.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\source.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\state.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\api.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\call.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\exception.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\fx_slot_index.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\fx_slots.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\utils.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\alc.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\alu.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\alconfig.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\context.cpp">
+      <ObjectFileName>$(IntDir)alc/context.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\device.cpp">
+      <ObjectFileName>$(IntDir)alc/device.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\autowah.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/autowah.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\chorus.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/chorus.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\compressor.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/compressor.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\convolution.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/convolution.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\dedicated.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/dedicated.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\distortion.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/distortion.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\echo.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/echo.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\equalizer.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/equalizer.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\fshifter.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/fshifter.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\modulator.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/modulator.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\null.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/null.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\pshifter.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/pshifter.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\reverb.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/reverb.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\vmorpher.cpp">
+      <ObjectFileName>$(IntDir)alc/effects/vmorpher.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\events.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\panning.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\base.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\loopback.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\null.cpp">
+      <ObjectFileName>$(IntDir)alc/backends/null.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\wasapi.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\dsound.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\winmm.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\wave.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\ambdec.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\ambidefs.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\bformatdec.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\bs2b.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\bsinc_tables.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\context.cpp">
+      <ObjectFileName>$(IntDir)core/context.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\converter.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\cpu_caps.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\cubic_tables.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\devformat.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\device.cpp">
+      <ObjectFileName>$(IntDir)core/device.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\effectslot.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\except.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\filters\biquad.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\filters\nfc.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\filters\splitter.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\fpu_ctrl.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\helpers.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\hrtf.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\hrtf_loader.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\hrtf_resource.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\logging.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mastering.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\storage_formats.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\tsmefilter.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\uhjfilter.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\uiddefs.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\voice.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer\mixer_c.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer\mixer_sse.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer\mixer_sse2.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer\mixer_sse3.cpp" />
+    <ClCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer\mixer_sse41.cpp" />
+    <ResourceCompile Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\resources\openal32.rc">
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</ScanSourceForModuleDependencies>
+      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</ScanSourceForModuleDependencies>
+    </ResourceCompile>
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\auxeffectslot.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\buffer.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\debug.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\direct_defs.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effect.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\effects\effects.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\event.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\filter.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\listener.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\source.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\api.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\call.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\effect.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\exception.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\fx_slot_index.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\fx_slots.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\globals.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\utils.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\al\eax\x_ram.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\alu.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\alconfig.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\context.hpp" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\device.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\effects\base.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\events.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\export_list.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\inprogext.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\base.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\loopback.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\null.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\wasapi.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\dsound.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\winmm.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\alc\backends\wave.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\allpass_conv.hpp" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\allpass_iir.hpp" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\ambdec.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\ambidefs.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\async_event.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\bformatdec.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\bs2b.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\bsinc_defs.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\bsinc_tables.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\bufferline.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\buffer_storage.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\context.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\converter.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\cpu_caps.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\cubic_defs.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\cubic_tables.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\decoderbase.hpp" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\devformat.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\device.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\effects\base.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\effectslot.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\encoderbase.hpp" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\except.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\filters\biquad.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\filters\nfc.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\filters\splitter.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\fmt_traits.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\fpu_ctrl.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\front_stablizer.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\helpers.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\hrtf.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\hrtf_loader.hpp" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\hrtf_resource.hpp" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mastering.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\resampler_limits.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\storage_formats.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\tsmefilter.hpp" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\uhjfilter.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\voice.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\voice_change.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\logging.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer\defs.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer\hrtfbase.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\core\mixer\hrtfdefs.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include\AL\al.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include\AL\alc.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include\AL\alext.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include\AL\efx.h" />
+    <ClInclude Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\downloads\openal-soft-1.25.2\include\AL\efx-presets.h" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\ZERO_CHECK.vcxproj">
+      <Project>{22D35AE4-4BF7-3C41-9EDD-A86A5E18E76B}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\alsoft.common.vcxproj">
+      <Project>{94DE70B6-AE97-3979-948E-08056E8A26FB}</Project>
+      <Name>alsoft.common</Name>
+    </ProjectReference>
+    <ProjectReference Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\alsoft.default_hrtf_data.vcxproj">
+      <Project>{9661EB2C-911D-37AF-8A7F-8720CD741230}</Project>
+      <Name>alsoft.default_hrtf_data</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\fmt-11.2.0\alsoft.fmt.vcxproj">
+      <Project>{0BB4B59E-BB26-3A12-A45D-649A034F4018}</Project>
+      <Name>alsoft.fmt</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

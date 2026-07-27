@@ -21,6 +21,10 @@
     <Content Include="GoogleSans-Regular.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="ThirdParty\soft_oal.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>soft_oal.dll</Link>
+    </Content>
   </ItemGroup>
 
 </Project>

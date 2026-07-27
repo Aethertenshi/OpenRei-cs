@@ -1,0 +1,21 @@
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/lib/OpenAL32.lib
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/bin/OpenAL32.dll
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/include/AL/al.h
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/include/AL/alc.h
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/include/AL/alext.h
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/include/AL/efx.h
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/include/AL/efx-presets.h
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/lib/cmake/OpenAL/OpenALTargets.cmake
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/lib/cmake/OpenAL/OpenALTargets-release.cmake
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/lib/pkgconfig/openal.pc
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/lib/cmake/OpenAL/OpenALConfig.cmake
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/alsoftrc.sample
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/hrtf/Default HRTF.mhr
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/presets/3D7.1.ambdec
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/presets/hex-quad.ambdec
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/presets/hexagon.ambdec
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/presets/itu5.1-nocenter.ambdec
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/presets/itu5.1.ambdec
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/presets/presets.txt
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/presets/rectangle.ambdec
+E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/share/openal/presets/square.ambdec

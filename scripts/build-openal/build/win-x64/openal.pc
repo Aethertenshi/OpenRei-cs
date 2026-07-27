@@ -1,0 +1,12 @@
+prefix=E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64
+exec_prefix=${prefix}
+libdir=E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/lib
+includedir=E:/ProjectTemp-Server/OpenRei-cs/OpenRei/ThirdParty/win-x64/include
+
+Name: OpenAL
+Description: OpenAL is a cross-platform 3D audio API
+Requires: 
+Version: 1.25.2
+Libs: -L${libdir} -lOpenAL32 
+Libs.private:
+Cflags: -I${includedir} -I${includedir}/AL 

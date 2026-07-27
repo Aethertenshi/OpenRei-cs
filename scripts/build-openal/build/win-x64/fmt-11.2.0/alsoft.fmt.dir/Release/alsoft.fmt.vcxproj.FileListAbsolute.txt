@@ -1,0 +1,1 @@
+E:\ProjectTemp-Server\OpenRei-cs\scripts\build-openal\build\win-x64\fmt-11.2.0\alsoft.fmt.dir\Release\alsoft.fmt.lib
