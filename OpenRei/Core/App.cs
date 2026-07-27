@@ -122,6 +122,9 @@ public class App
             return;
         }
 
+        // Initialize OpenAL Soft Audio Engine
+        OpenRei.Audio.AudioEngine.Initialize();
+
         SDL_WindowFlags sdlWindowFlags = SDL_WindowFlags.SDL_WINDOW_HIGH_PIXEL_DENSITY;
         if (Flags.HasFlag(WindowFlags.Resizable)) sdlWindowFlags |= SDL_WindowFlags.SDL_WINDOW_RESIZABLE;
         if (Flags.HasFlag(WindowFlags.Fullscreen)) sdlWindowFlags |= SDL_WindowFlags.SDL_WINDOW_FULLSCREEN;
