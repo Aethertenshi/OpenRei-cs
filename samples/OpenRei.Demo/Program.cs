@@ -4,7 +4,9 @@ using OpenRei.Filters;
 using OpenRei.Graphics;
 using OpenRei.InputSystem;
 using OpenRei.Layout;
+using OpenRei.Rhythm;
 using OpenRei.Splines;
+using OpenRei.Tween;
 using OpenRei.Types;
 
 Console.WriteLine("=== OpenRei Engine SDL3 Window Demo ===");
@@ -15,7 +17,7 @@ Input.Ended += (key) => Console.WriteLine($"[Input Event] Key Released: {key}");
 
 // 2. Initialize application entry point:
 // App.Window(new Vector2D(1280, 720), "title", WindowFlags)
-var app = App.Window(new Vector2D(1280, 720), "OpenRei 2D Engine", WindowFlags.Resizable | WindowFlags.VSync);
+var app = App.Window(new Vector2D(1280, 720), "OpenRei 2D Engine", WindowFlags.Borderless | WindowFlags.VSync);
 
 // <-- game / app code lives here -->
 
@@ -64,7 +66,22 @@ var helloButton = new Button
     ZIndex = 10
 };
 
-helloButton.OnClick += () => Console.WriteLine("[Event] Hello Button Clicked!");
+helloButton.OnClick += () =>
+{
+    Console.WriteLine("[Event] Hello Button Clicked! Starting elastic scale tween...");
+    var scaleTween = new Tween(1.0f, 1.2f, 0.4f, (val) =>
+    {
+        helloButton.Size = UDim2.FromOffset(240 * val, 48 * val);
+    }, Easing.Elastic, EasingDirection.Out, onComplete: () =>
+    {
+        var returnTween = new Tween(1.2f, 1.0f, 0.3f, (val) =>
+        {
+            helloButton.Size = UDim2.FromOffset(240 * val, 48 * val);
+        }, Easing.Cubic, EasingDirection.Out);
+        returnTween.Start();
+    });
+    scaleTween.Start();
+};
 mainCard.AddChild(helloButton);
 
 var demoSprite = new Sprite

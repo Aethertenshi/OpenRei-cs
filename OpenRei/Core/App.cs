@@ -184,7 +184,10 @@ public class App
                 // 1. Process continuous held inputs
                 Input.TriggerHold(deltaTime);
 
-                // 2. Opt-in virtual tick execution
+                // 2. Tick active animation tweens
+                OpenRei.Tween.Tween.TickAll(deltaTime);
+
+                // 3. Opt-in virtual tick execution
                 Tick(deltaTime);
 
                 // 3. Scene graph hierarchy update pass
