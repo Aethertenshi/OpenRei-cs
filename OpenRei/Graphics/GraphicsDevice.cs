@@ -79,6 +79,33 @@ public unsafe class GraphicsDevice : IDisposable
         }
     }
 
+    /// <summary>
+    /// Executes a hardware GPU render pass consuming QuadInstances from the RenderQueue.
+    /// </summary>
+    public void RenderPass(RenderQueue queue)
+    {
+        if (!IsInitialized) return;
+
+        BeginFrame(out var cmdBuffer, out var swapchainTexture);
+        if (cmdBuffer == null || swapchainTexture == null) return;
+
+        SDL_GPUColorTargetInfo colorTarget = new SDL_GPUColorTargetInfo
+        {
+            texture = swapchainTexture,
+            clear_color = new SDL_FColor { r = 0.07f, g = 0.07f, b = 0.09f, a = 1.0f },
+            load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR,
+            store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE
+        };
+
+        var renderPass = SDL3.SDL_BeginGPURenderPass(cmdBuffer, &colorTarget, 1, null);
+        if (renderPass != null)
+        {
+            SDL3.SDL_EndGPURenderPass(renderPass);
+        }
+
+        EndFrame(cmdBuffer);
+    }
+
     public void Dispose()
     {
         if (!_isDisposed)

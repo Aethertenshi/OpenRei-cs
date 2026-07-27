@@ -87,6 +87,8 @@ public class App
                 return;
             }
 
+            using var graphicsDevice = new GraphicsDevice(window);
+
             Console.WriteLine("[OpenRei App] Native SDL3 Window created successfully! Entering main loop...");
 
             ulong lastTicks = SDL3.SDL_GetTicks();
@@ -144,6 +146,9 @@ public class App
                 var renderContext = new RenderContext(renderQueue);
                 RootElement.Render(renderContext);
                 renderQueue.SwapBuffers();
+
+                // 5. Hardware GPU Render Pass Execution
+                graphicsDevice.RenderPass(renderQueue);
 
                 // Cap frame rate slightly for smooth CPU loop if GPU vsync is inactive
                 SDL3.SDL_Delay(1);
