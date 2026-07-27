@@ -18,14 +18,31 @@ public readonly struct TextCommand
     }
 }
 
+public readonly struct ImageCommand
+{
+    public readonly Texture Texture;
+    public readonly Rect DestBounds;
+    public readonly Rect? SourceRect;
+    public readonly Color Color;
+
+    public ImageCommand(Texture texture, Rect destBounds, Rect? sourceRect, Color color)
+    {
+        Texture = texture;
+        DestBounds = destBounds;
+        SourceRect = sourceRect;
+        Color = color;
+    }
+}
+
 /// <summary>
-/// Execution context passed down scene graph elements to submit 2D quad instances to the RenderQueue.
+/// Execution context passed down scene graph elements to submit 2D quad instances, text, and images to the RenderQueue.
 /// </summary>
 public class RenderContext
 {
     private readonly RenderQueue _queue;
 
     public List<TextCommand> TextCommands { get; } = new();
+    public List<ImageCommand> ImageCommands { get; } = new();
 
     public RenderContext(RenderQueue queue)
     {
@@ -42,6 +59,14 @@ public class RenderContext
         if (!string.IsNullOrEmpty(text))
         {
             TextCommands.Add(new TextCommand(font, text, bounds, color));
+        }
+    }
+
+    public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null)
+    {
+        if (texture != null && texture.IsValid)
+        {
+            ImageCommands.Add(new ImageCommand(texture, destBounds, sourceRect, color ?? Color.White));
         }
     }
 

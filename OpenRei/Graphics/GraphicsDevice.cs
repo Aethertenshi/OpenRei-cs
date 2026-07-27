@@ -76,9 +76,44 @@ public unsafe class GraphicsDevice : IDisposable
             }
         }
     }
+    public void RenderImage(Texture texture, Rect destBounds, Rect? sourceRect, Color color)
+    {
+        if (!IsInitialized || _renderer == null || texture == null || !texture.IsValid) return;
+
+        SDL_FRect dest = new SDL_FRect
+        {
+            x = destBounds.X,
+            y = destBounds.Y,
+            w = destBounds.Width,
+            h = destBounds.Height
+        };
+
+        SDL3.SDL_SetTextureColorModFloat(texture.Handle, color.R, color.G, color.B);
+        SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, color.A);
+
+        if (sourceRect.HasValue)
+        {
+            SDL_FRect src = new SDL_FRect
+            {
+                x = sourceRect.Value.X,
+                y = sourceRect.Value.Y,
+                w = sourceRect.Value.Width,
+                h = sourceRect.Value.Height
+            };
+            SDL3.SDL_RenderTexture(_renderer, texture.Handle, &src, &dest);
+        }
+        else
+        {
+            SDL3.SDL_RenderTexture(_renderer, texture.Handle, null, &dest);
+        }
+    }
+
     public void RenderPass(RenderQueue queue, RenderContext context)
     {
         if (!IsInitialized || _renderer == null) return;
+
+        // Process background texture uploads within 2.0ms main-thread frame budget
+        TextureEngine.ProcessPendingUploads(this, 2.0f);
 
         // 1. Clear background to dark theme color
         SDL3.SDL_SetRenderDrawColor(_renderer, 18, 18, 24, 255);
@@ -104,13 +139,19 @@ public unsafe class GraphicsDevice : IDisposable
             SDL3.SDL_RenderFillRect(_renderer, &rect);
         }
 
-        // 3. Render all TextCommands
+        // 3. Render all ImageCommands
+        foreach (var imgCmd in context.ImageCommands)
+        {
+            RenderImage(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color);
+        }
+
+        // 4. Render all TextCommands
         foreach (var textCmd in context.TextCommands)
         {
             RenderText(textCmd.Font, textCmd.Text, textCmd.Bounds, textCmd.Color);
         }
 
-        // 4. Swap buffers (Present frame to window display)
+        // 5. Swap buffers (Present frame to window display)
         SDL3.SDL_RenderPresent(_renderer);
     }
 

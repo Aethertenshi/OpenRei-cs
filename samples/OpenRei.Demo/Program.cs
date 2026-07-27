@@ -1,6 +1,7 @@
 using OpenRei.Core;
 using OpenRei.Elements;
 using OpenRei.Filters;
+using OpenRei.Graphics;
 using OpenRei.InputSystem;
 using OpenRei.Layout;
 using OpenRei.Splines;
@@ -65,6 +66,15 @@ var helloButton = new Button
 
 helloButton.OnClick += () => Console.WriteLine("[Event] Hello Button Clicked!");
 mainCard.AddChild(helloButton);
+
+var demoSprite = new Sprite
+{
+    Name = "DemoSprite",
+    Size = UDim2.FromOffset(128, 128),
+    ScaleType = ScaleType.Fit,
+    TexturePath = "test.png"
+};
+mainCard.AddChild(demoSprite);
 
 Console.WriteLine("Launching native SDL3 desktop window... Press ESC or close window to exit.");
 
