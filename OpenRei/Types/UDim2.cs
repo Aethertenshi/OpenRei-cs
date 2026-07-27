@@ -9,7 +9,7 @@ public readonly record struct UDim2(UDim X, UDim Y)
     public UDim X { get; init; } = X;
     public UDim Y { get; init; } = Y;
 
-    public UDim2(float xScale, float xOffset, float yScale, float yOffset) 
+    public UDim2(float xScale, float yScale, float xOffset, float yOffset) 
         : this(new UDim(xScale, xOffset), new UDim(yScale, yOffset)) { }
 
     public static UDim2 Zero => new(UDim.Zero, UDim.Zero);
