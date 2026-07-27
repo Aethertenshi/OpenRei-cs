@@ -8,9 +8,22 @@
     <Content Include="GoogleSans-Regular.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\OpenRei\ThirdParty\soft_oal.dll">
+    <!-- Native OpenAL Soft library (platform-conditional) -->
+    <Content Include="..\..\OpenRei\ThirdParty\win-x64\soft_oal.dll" Condition="'$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win'))">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>soft_oal.dll</Link>
+    </Content>
+    <Content Include="..\..\OpenRei\ThirdParty\linux-x64\libopenal.so.1" Condition="$(RuntimeIdentifier.StartsWith('linux'))">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>libopenal.so.1</Link>
+    </Content>
+    <Content Include="..\..\OpenRei\ThirdParty\osx-arm64\libopenal.1.dylib" Condition="$(RuntimeIdentifier.StartsWith('osx'))">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>libopenal.1.dylib</Link>
+    </Content>
+    <Content Include="..\..\OpenRei\ThirdParty\android-arm64\libopenal.so" Condition="$(RuntimeIdentifier.StartsWith('android'))">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>libopenal.so</Link>
     </Content>
   </ItemGroup>
 
