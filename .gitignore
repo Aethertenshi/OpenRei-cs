@@ -16,3 +16,6 @@ obj/
 *.so
 *.dylib
 *.exe
+
+# Custom scripts build directory
+scripts/
