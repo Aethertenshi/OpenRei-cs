@@ -1,4 +1,5 @@
 using OpenRei.Filters;
+using OpenRei.Graphics;
 using OpenRei.Layout;
 using OpenRei.Types;
 
@@ -106,17 +107,21 @@ public class Element
         }
     }
 
-    public virtual void Render()
+    public virtual void Render(RenderContext context)
     {
         if (!Visible) return;
 
-        // Render self...
+        // Draw element quad if non-transparent
+        if (Color.A > 0f && AbsoluteSize.X > 0f && AbsoluteSize.Y > 0f)
+        {
+            context.DrawQuad(AbsoluteBounds, Color, CornerRadius, ZIndex);
+        }
 
         // Render children according to local ZIndex stacking order
         var sortedChildren = GetSortedChildren();
         foreach (var child in sortedChildren)
         {
-            child.Render();
+            child.Render(context);
         }
     }
 }

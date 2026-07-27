@@ -1,4 +1,5 @@
 using OpenRei.Elements;
+using OpenRei.Graphics;
 using OpenRei.InputSystem;
 using OpenRei.Types;
 using SDL;
@@ -138,8 +139,11 @@ public class App
                 RootElement.Size = UDim2.FromOffset(Size.X, Size.Y);
                 RootElement.Update(deltaTime);
 
-                // 4. Render pass
-                RootElement.Render();
+                // 4. Zero-allocation Render pass
+                using var renderQueue = new RenderQueue();
+                var renderContext = new RenderContext(renderQueue);
+                RootElement.Render(renderContext);
+                renderQueue.SwapBuffers();
 
                 // Cap frame rate slightly for smooth CPU loop if GPU vsync is inactive
                 SDL3.SDL_Delay(1);

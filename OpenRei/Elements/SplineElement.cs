@@ -1,3 +1,4 @@
+using OpenRei.Graphics;
 using OpenRei.Splines;
 using OpenRei.Types;
 
@@ -33,5 +34,13 @@ public class SplineElement : Element
 
         // Default linear polyline points
         return new List<Vector2D>(ControlPoints);
+    }
+
+    public override void Render(RenderContext context)
+    {
+        if (!Visible) return;
+        var points = GenerateEvaluatedPoints();
+        context.DrawSpline(points, StrokeWidth, StrokeColor, ZIndex);
+        base.Render(context);
     }
 }
