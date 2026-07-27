@@ -11,6 +11,7 @@ public class AudioStream
     private uint _bufferId;
     private int _sampleRate = 44100;
     private bool _isPlaying;
+    private DecodedAudioData? _pendingData;
 
     public float Pitch { get; set; } = 1.0f;
     public float Volume { get; set; } = 1.0f;
@@ -22,6 +23,7 @@ public class AudioStream
     {
         get
         {
+            EnsureHandlesAndUpload();
             if (!AudioEngine.IsInitialized || _sourceId == 0) return false;
             AudioEngine.AL.GetSourceProperty(_sourceId, GetSourceInteger.SourceState, out int state);
             return state == (int)SourceState.Playing;
@@ -35,7 +37,8 @@ public class AudioStream
     {
         get
         {
-            if (!_isPlaying || !AudioEngine.IsInitialized) return 0.0;
+            EnsureHandlesAndUpload();
+            if (!_isPlaying || !AudioEngine.IsInitialized || _sourceId == 0) return 0.0;
 
             AudioEngine.AL.GetSourceProperty(_sourceId, GetSourceInteger.SampleOffset, out int sampleOffset);
             return (double)sampleOffset / _sampleRate * 1000.0;
@@ -44,38 +47,29 @@ public class AudioStream
 
     public AudioStream()
     {
-        InitHandles();
     }
 
-    public AudioStream(string filePath) : this()
+    public AudioStream(string filePath)
     {
         var data = AudioDecoder.DecodeFile(filePath);
         LoadPcmData(data);
     }
 
-    public AudioStream(DecodedAudioData data) : this()
+    public AudioStream(DecodedAudioData data)
     {
         LoadPcmData(data);
     }
 
-    public AudioStream(byte[] pcmData, int sampleRate, int channels = 2, int bitsPerSample = 16) : this()
+    public AudioStream(byte[] pcmData, int sampleRate, int channels = 2, int bitsPerSample = 16)
     {
         LoadPcmData(pcmData, sampleRate, channels, bitsPerSample);
-    }
-
-    private void InitHandles()
-    {
-        if (AudioEngine.IsInitialized && _sourceId == 0)
-        {
-            _sourceId = AudioEngine.AL.GenSource();
-            _bufferId = AudioEngine.AL.GenBuffer();
-        }
     }
 
     public void LoadPcmData(DecodedAudioData data)
     {
         if (data != null)
         {
+            _pendingData = data;
             LoadPcmData(data.PcmData, data.SampleRate, data.Channels, data.BitsPerSample);
         }
     }
@@ -83,32 +77,51 @@ public class AudioStream
     public void LoadPcmData(byte[] pcmData, int sampleRate, int channels = 2, int bitsPerSample = 16)
     {
         _sampleRate = sampleRate;
-        InitHandles();
-        if (!AudioEngine.IsInitialized || pcmData.Length == 0) return;
+        _pendingData = new DecodedAudioData(pcmData, sampleRate, channels, bitsPerSample, 0f);
+        EnsureHandlesAndUpload();
+    }
 
-        BufferFormat format = (channels, bitsPerSample) switch
-        {
-            (1, 8) => BufferFormat.Mono8,
-            (1, 16) => BufferFormat.Mono16,
-            (2, 8) => BufferFormat.Stereo8,
-            (2, 16) => BufferFormat.Stereo16,
-            _ => BufferFormat.Stereo16
-        };
+    private void EnsureHandlesAndUpload()
+    {
+        if (!AudioEngine.IsInitialized) return;
 
-        unsafe
+        if (_sourceId == 0)
         {
-            fixed (byte* ptr = pcmData)
-            {
-                AudioEngine.AL.BufferData(_bufferId, format, ptr, pcmData.Length, sampleRate);
-            }
+            _sourceId = AudioEngine.AL.GenSource();
+            _bufferId = AudioEngine.AL.GenBuffer();
         }
 
-        AudioEngine.AL.SetSourceProperty(_sourceId, SourceInteger.Buffer, (int)_bufferId);
+        if (_pendingData != null && _pendingData.PcmData.Length > 0)
+        {
+            var pcmData = _pendingData.PcmData;
+            _sampleRate = _pendingData.SampleRate;
+
+            BufferFormat format = (_pendingData.Channels, _pendingData.BitsPerSample) switch
+            {
+                (1, 8) => BufferFormat.Mono8,
+                (1, 16) => BufferFormat.Mono16,
+                (2, 8) => BufferFormat.Stereo8,
+                (2, 16) => BufferFormat.Stereo16,
+                _ => BufferFormat.Stereo16
+            };
+
+            unsafe
+            {
+                fixed (byte* ptr = pcmData)
+                {
+                    AudioEngine.AL.BufferData(_bufferId, format, ptr, pcmData.Length, _sampleRate);
+                }
+            }
+
+            AudioEngine.AL.SetSourceProperty(_sourceId, SourceInteger.Buffer, (int)_bufferId);
+            _pendingData = null; // Upload complete
+        }
     }
 
     public void Play()
     {
-        if (!AudioEngine.IsInitialized) return;
+        EnsureHandlesAndUpload();
+        if (!AudioEngine.IsInitialized || _sourceId == 0) return;
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Pitch, Pitch);
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Gain, Volume);
         AudioEngine.AL.SourcePlay(_sourceId);
@@ -117,14 +130,14 @@ public class AudioStream
 
     public void Pause()
     {
-        if (!AudioEngine.IsInitialized) return;
+        if (!AudioEngine.IsInitialized || _sourceId == 0) return;
         AudioEngine.AL.SourcePause(_sourceId);
         _isPlaying = false;
     }
 
     public void Stop()
     {
-        if (!AudioEngine.IsInitialized) return;
+        if (!AudioEngine.IsInitialized || _sourceId == 0) return;
         AudioEngine.AL.SourceStop(_sourceId);
         _isPlaying = false;
     }

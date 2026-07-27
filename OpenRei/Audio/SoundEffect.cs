@@ -10,6 +10,9 @@ public class SoundEffect
     private uint _bufferId;
     private readonly List<uint> _sourcePool = new();
     private int _poolIndex;
+    private DecodedAudioData? _pendingData;
+    private int _pendingPoolSize = 8;
+
     /// <summary>
     /// Indicates whether any voice in this sound effect pool is currently playing.
     /// </summary>
@@ -17,6 +20,7 @@ public class SoundEffect
     {
         get
         {
+            EnsureHandlesAndUpload();
             if (!AudioEngine.IsInitialized || _sourcePool.Count == 0) return false;
             foreach (var source in _sourcePool)
             {
@@ -49,45 +53,62 @@ public class SoundEffect
     {
         if (data != null)
         {
-            LoadPcmData(data.PcmData, data.SampleRate, data.Channels, data.BitsPerSample, poolSize);
+            _pendingData = data;
+            _pendingPoolSize = poolSize;
+            EnsureHandlesAndUpload();
         }
     }
 
     public void LoadPcmData(byte[] pcmData, int sampleRate, int channels = 2, int bitsPerSample = 16, int poolSize = 8)
     {
-        if (!AudioEngine.IsInitialized || pcmData.Length == 0) return;
+        _pendingData = new DecodedAudioData(pcmData, sampleRate, channels, bitsPerSample, 0f);
+        _pendingPoolSize = poolSize;
+        EnsureHandlesAndUpload();
+    }
+
+    private void EnsureHandlesAndUpload()
+    {
+        if (!AudioEngine.IsInitialized) return;
 
         if (_bufferId == 0)
         {
             _bufferId = AudioEngine.AL.GenBuffer();
         }
 
-        BufferFormat format = (channels, bitsPerSample) switch
+        if (_pendingData != null && _pendingData.PcmData.Length > 0)
         {
-            (1, 8) => BufferFormat.Mono8,
-            (1, 16) => BufferFormat.Mono16,
-            (2, 8) => BufferFormat.Stereo8,
-            (2, 16) => BufferFormat.Stereo16,
-            _ => BufferFormat.Stereo16
-        };
+            var pcmData = _pendingData.PcmData;
+            int sampleRate = _pendingData.SampleRate;
 
-        unsafe
-        {
-            fixed (byte* ptr = pcmData)
+            BufferFormat format = (_pendingData.Channels, _pendingData.BitsPerSample) switch
             {
-                AudioEngine.AL.BufferData(_bufferId, format, ptr, pcmData.Length, sampleRate);
-            }
-        }
+                (1, 8) => BufferFormat.Mono8,
+                (1, 16) => BufferFormat.Mono16,
+                (2, 8) => BufferFormat.Stereo8,
+                (2, 16) => BufferFormat.Stereo16,
+                _ => BufferFormat.Stereo16
+            };
 
-        // Initialize voice pool for simultaneous hitsounds
-        if (_sourcePool.Count == 0)
-        {
-            for (int i = 0; i < poolSize; i++)
+            unsafe
             {
-                uint source = AudioEngine.AL.GenSource();
-                AudioEngine.AL.SetSourceProperty(source, SourceInteger.Buffer, (int)_bufferId);
-                _sourcePool.Add(source);
+                fixed (byte* ptr = pcmData)
+                {
+                    AudioEngine.AL.BufferData(_bufferId, format, ptr, pcmData.Length, sampleRate);
+                }
             }
+
+            // Initialize voice pool for simultaneous hitsounds
+            if (_sourcePool.Count == 0)
+            {
+                for (int i = 0; i < _pendingPoolSize; i++)
+                {
+                    uint source = AudioEngine.AL.GenSource();
+                    AudioEngine.AL.SetSourceProperty(source, SourceInteger.Buffer, (int)_bufferId);
+                    _sourcePool.Add(source);
+                }
+            }
+
+            _pendingData = null; // Upload complete
         }
     }
 
@@ -96,6 +117,7 @@ public class SoundEffect
     /// </summary>
     public void Play(float volume = 1.0f, float pitch = 1.0f)
     {
+        EnsureHandlesAndUpload();
         if (!AudioEngine.IsInitialized || _sourcePool.Count == 0) return;
 
         uint source = _sourcePool[_poolIndex];
