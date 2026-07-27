@@ -39,8 +39,16 @@ public unsafe class BlurPipeline : IDisposable
         _pingTexture = SDL3.SDL_CreateTexture(_renderer, SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888, SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET, width, height);
         _pongTexture = SDL3.SDL_CreateTexture(_renderer, SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888, SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET, width, height);
 
-        if (_pingTexture != null) SDL3.SDL_SetTextureScaleMode(_pingTexture, SDL_ScaleMode.SDL_SCALEMODE_LINEAR);
-        if (_pongTexture != null) SDL3.SDL_SetTextureScaleMode(_pongTexture, SDL_ScaleMode.SDL_SCALEMODE_LINEAR);
+        if (_pingTexture != null)
+        {
+            SDL3.SDL_SetTextureScaleMode(_pingTexture, SDL_ScaleMode.SDL_SCALEMODE_LINEAR);
+            SDL3.SDL_SetTextureBlendMode(_pingTexture, SDL_BlendMode.SDL_BLENDMODE_NONE);
+        }
+        if (_pongTexture != null)
+        {
+            SDL3.SDL_SetTextureScaleMode(_pongTexture, SDL_ScaleMode.SDL_SCALEMODE_LINEAR);
+            SDL3.SDL_SetTextureBlendMode(_pongTexture, SDL_BlendMode.SDL_BLENDMODE_NONE);
+        }
     }
 
     /// <summary>
@@ -50,7 +58,7 @@ public unsafe class BlurPipeline : IDisposable
     {
         if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
 
-        // Smoothly adjust downscaling factor for low radii (< 4px) to eliminate downsample snapping
+        // Smoothly scale downscaling factor for low radii (< 4px) to eliminate downsample snapping
         int downscale = (filter.Radius < 4.0f) ? 1 : Math.Clamp(filter.Downscale, 1, 4);
         int passes = Math.Clamp(filter.Passes, 1, 4);
 
@@ -94,6 +102,7 @@ public unsafe class BlurPipeline : IDisposable
             SDL_Texture* screenTex = SDL3.SDL_CreateTextureFromSurface(_renderer, screenSurface);
             if (screenTex != null)
             {
+                SDL3.SDL_SetTextureBlendMode(screenTex, SDL_BlendMode.SDL_BLENDMODE_NONE);
                 SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
                 SDL3.SDL_RenderTexture(_renderer, screenTex, null, &fboDest);
                 SDL3.SDL_DestroyTexture(screenTex);
@@ -109,8 +118,6 @@ public unsafe class BlurPipeline : IDisposable
         {
             // Horizontal Pass
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
-            SDL3.SDL_SetRenderDrawColor(_renderer, 0, 0, 0, 0);
-            SDL3.SDL_RenderClear(_renderer);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
 
             // Swap Targets
@@ -120,8 +127,6 @@ public unsafe class BlurPipeline : IDisposable
 
             // Vertical Pass
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
-            SDL3.SDL_SetRenderDrawColor(_renderer, 0, 0, 0, 0);
-            SDL3.SDL_RenderClear(_renderer);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
 
             // Swap Targets
@@ -133,9 +138,18 @@ public unsafe class BlurPipeline : IDisposable
         // Step 3: Reset main swapchain render target
         SDL3.SDL_SetRenderTarget(_renderer, null);
 
-        // Step 4: Smoothly fade blur alpha at small radii (0px - 4px) to prevent 1-frame snapping
-        float blurOpacity = Math.Clamp(filter.Radius / 4.0f, 0.0f, 1.0f);
-        SDL3.SDL_SetTextureAlphaModFloat(readTarget, blurOpacity);
+        // Step 4: Configure final composite blend mode and opacity for zero black-screen fading
+        if (filter.Radius < 4.0f)
+        {
+            float blurOpacity = Math.Clamp(filter.Radius / 4.0f, 0.0f, 1.0f);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, blurOpacity);
+        }
+        else
+        {
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+        }
 
         // Step 5: Upsample and composite final blurred FBO back onto screen viewport
         SDL3.SDL_RenderTexture(_renderer, readTarget, null, &srcArea);
