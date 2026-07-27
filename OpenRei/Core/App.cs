@@ -150,6 +150,9 @@ public class App
                 float deltaTime = MathF.Max((currentTicks - lastTicks) / 1000.0f, 0.0001f);
                 lastTicks = currentTicks;
 
+                bool mousePressed = false;
+                bool mouseReleased = false;
+
                 // Process Native SDL3 OS Event Queue
                 SDL_Event sdlEvent;
                 while (SDL3.SDL_PollEvent(&sdlEvent))
@@ -161,7 +164,8 @@ public class App
                     }
                     else if (eventType == SDL_EventType.SDL_EVENT_KEY_DOWN)
                     {
-                        Input.TriggerBegin(KeyType.Space);
+                        KeyType mappedKey = MapKeycode(sdlEvent.key.key);
+                        Input.TriggerBegin(mappedKey);
                         if (sdlEvent.key.key == SDL_Keycode.SDLK_ESCAPE)
                         {
                             IsRunning = false;
@@ -169,17 +173,37 @@ public class App
                     }
                     else if (eventType == SDL_EventType.SDL_EVENT_KEY_UP)
                     {
-                        Input.TriggerEnded(KeyType.Space);
+                        KeyType mappedKey = MapKeycode(sdlEvent.key.key);
+                        Input.TriggerEnded(mappedKey);
                     }
                     else if (eventType == SDL_EventType.SDL_EVENT_MOUSE_MOTION)
                     {
                         Input.MousePosition = new Vector2D(sdlEvent.motion.x, sdlEvent.motion.y);
+                    }
+                    else if (eventType == SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN)
+                    {
+                        if (sdlEvent.button.button == 1)
+                        {
+                            mousePressed = true;
+                            Input.TriggerBegin(KeyType.MouseLeft);
+                        }
+                    }
+                    else if (eventType == SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP)
+                    {
+                        if (sdlEvent.button.button == 1)
+                        {
+                            mouseReleased = true;
+                            Input.TriggerEnded(KeyType.MouseLeft);
+                        }
                     }
                     else if (eventType == SDL_EventType.SDL_EVENT_WINDOW_RESIZED)
                     {
                         Size = new Vector2D(sdlEvent.window.data1, sdlEvent.window.data2);
                     }
                 }
+
+                // Dispatch UI input tree (Hover / Click / Press)
+                RootElement.HandleInput(Input.MousePosition, mousePressed, mouseReleased);
 
                 // 1. Process continuous held inputs
                 Input.TriggerHold(deltaTime);
@@ -212,4 +236,60 @@ public class App
             Console.WriteLine("[OpenRei App] Native window destroyed. Application shut down cleanly.");
         }
     }
+
+    private static KeyType MapKeycode(SDL_Keycode code) => code switch
+    {
+        SDL_Keycode.SDLK_SPACE => KeyType.Space,
+        SDL_Keycode.SDLK_RETURN => KeyType.Enter,
+        SDL_Keycode.SDLK_ESCAPE => KeyType.Escape,
+        SDL_Keycode.SDLK_TAB => KeyType.Tab,
+        SDL_Keycode.SDLK_BACKSPACE => KeyType.Backspace,
+        SDL_Keycode.SDLK_UP => KeyType.Up,
+        SDL_Keycode.SDLK_DOWN => KeyType.Down,
+        SDL_Keycode.SDLK_LEFT => KeyType.Left,
+        SDL_Keycode.SDLK_RIGHT => KeyType.Right,
+        SDL_Keycode.SDLK_A => KeyType.A,
+        SDL_Keycode.SDLK_B => KeyType.B,
+        SDL_Keycode.SDLK_C => KeyType.C,
+        SDL_Keycode.SDLK_D => KeyType.D,
+        SDL_Keycode.SDLK_E => KeyType.E,
+        SDL_Keycode.SDLK_F => KeyType.F,
+        SDL_Keycode.SDLK_G => KeyType.G,
+        SDL_Keycode.SDLK_H => KeyType.H,
+        SDL_Keycode.SDLK_I => KeyType.I,
+        SDL_Keycode.SDLK_J => KeyType.J,
+        SDL_Keycode.SDLK_K => KeyType.K,
+        SDL_Keycode.SDLK_L => KeyType.L,
+        SDL_Keycode.SDLK_M => KeyType.M,
+        SDL_Keycode.SDLK_N => KeyType.N,
+        SDL_Keycode.SDLK_O => KeyType.O,
+        SDL_Keycode.SDLK_P => KeyType.P,
+        SDL_Keycode.SDLK_Q => KeyType.Q,
+        SDL_Keycode.SDLK_R => KeyType.R,
+        SDL_Keycode.SDLK_S => KeyType.S,
+        SDL_Keycode.SDLK_T => KeyType.T,
+        SDL_Keycode.SDLK_U => KeyType.U,
+        SDL_Keycode.SDLK_V => KeyType.V,
+        SDL_Keycode.SDLK_W => KeyType.W,
+        SDL_Keycode.SDLK_X => KeyType.X,
+        SDL_Keycode.SDLK_Y => KeyType.Y,
+        SDL_Keycode.SDLK_Z => KeyType.Z,
+        SDL_Keycode.SDLK_0 => KeyType.Num0,
+        SDL_Keycode.SDLK_1 => KeyType.Num1,
+        SDL_Keycode.SDLK_2 => KeyType.Num2,
+        SDL_Keycode.SDLK_3 => KeyType.Num3,
+        SDL_Keycode.SDLK_4 => KeyType.Num4,
+        SDL_Keycode.SDLK_5 => KeyType.Num5,
+        SDL_Keycode.SDLK_6 => KeyType.Num6,
+        SDL_Keycode.SDLK_7 => KeyType.Num7,
+        SDL_Keycode.SDLK_8 => KeyType.Num8,
+        SDL_Keycode.SDLK_9 => KeyType.Num9,
+        SDL_Keycode.SDLK_LSHIFT => KeyType.LeftShift,
+        SDL_Keycode.SDLK_RSHIFT => KeyType.RightShift,
+        SDL_Keycode.SDLK_LCTRL => KeyType.LeftControl,
+        SDL_Keycode.SDLK_RCTRL => KeyType.RightControl,
+        SDL_Keycode.SDLK_LALT => KeyType.LeftAlt,
+        SDL_Keycode.SDLK_RALT => KeyType.RightAlt,
+        _ => KeyType.Space
+    };
 }

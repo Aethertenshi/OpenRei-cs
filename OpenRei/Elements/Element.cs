@@ -107,6 +107,21 @@ public class Element
         }
     }
 
+    public virtual void HandleInput(Vector2D mousePos, bool mousePressed, bool mouseReleased)
+    {
+        if (!Visible) return;
+
+        // Traverse children in reverse ZIndex order (topmost elements receive input first)
+        var sortedChildren = _children.OrderByDescending(c => c.ZIndex).ToList();
+        foreach (var child in sortedChildren)
+        {
+            if (child.Visible)
+            {
+                child.HandleInput(mousePos, mousePressed, mouseReleased);
+            }
+        }
+    }
+
     public virtual void Render(RenderContext context)
     {
         if (!Visible) return;

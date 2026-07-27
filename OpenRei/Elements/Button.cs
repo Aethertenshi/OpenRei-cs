@@ -27,7 +27,7 @@ public class Button : Element
         Name = nameof(Button);
     }
 
-    public void HandleInput(Vector2D mousePos, bool mousePressed, bool mouseReleased)
+    public override void HandleInput(Vector2D mousePos, bool mousePressed, bool mouseReleased)
     {
         bool contains = AbsoluteBounds.Contains(mousePos);
 
@@ -55,6 +55,8 @@ public class Button : Element
                 OnClick?.Invoke();
             }
         }
+
+        base.HandleInput(mousePos, mousePressed, mouseReleased);
     }
 
     public override void Render(RenderContext context)
