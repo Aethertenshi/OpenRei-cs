@@ -10,7 +10,6 @@ public class AudioStream
     private uint _sourceId;
     private uint _bufferId;
     private int _sampleRate = 44100;
-    private bool _isPlaying;
     private DecodedAudioData? _pendingData;
 
     public float Pitch { get; set; } = 1.0f;
@@ -31,17 +30,23 @@ public class AudioStream
     }
 
     /// <summary>
-    /// Returns the sub-millisecond audio hardware playback position for rhythm timing.
+    /// Returns or seeks the sub-millisecond audio hardware playback position in milliseconds.
     /// </summary>
     public double PositionMs
     {
         get
         {
             EnsureHandlesAndUpload();
-            if (!_isPlaying || !AudioEngine.IsInitialized || _sourceId == 0) return 0.0;
+            if (!AudioEngine.IsInitialized || _sourceId == 0) return 0.0;
 
-            AudioEngine.AL.GetSourceProperty(_sourceId, GetSourceInteger.SampleOffset, out int sampleOffset);
-            return (double)sampleOffset / _sampleRate * 1000.0;
+            AudioEngine.AL.GetSourceProperty(_sourceId, SourceFloat.SecOffset, out float secOffset);
+            return (double)secOffset * 1000.0;
+        }
+        set
+        {
+            EnsureHandlesAndUpload();
+            if (!AudioEngine.IsInitialized || _sourceId == 0) return;
+            AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.SecOffset, (float)(value / 1000.0));
         }
     }
 
@@ -125,20 +130,17 @@ public class AudioStream
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Pitch, Pitch);
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Gain, Volume);
         AudioEngine.AL.SourcePlay(_sourceId);
-        _isPlaying = true;
     }
 
     public void Pause()
     {
         if (!AudioEngine.IsInitialized || _sourceId == 0) return;
         AudioEngine.AL.SourcePause(_sourceId);
-        _isPlaying = false;
     }
 
     public void Stop()
     {
         if (!AudioEngine.IsInitialized || _sourceId == 0) return;
         AudioEngine.AL.SourceStop(_sourceId);
-        _isPlaying = false;
     }
 }

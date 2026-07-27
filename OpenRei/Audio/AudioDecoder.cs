@@ -64,21 +64,25 @@ public static class AudioDecoder
         int channels = mpeg.Channels;
         int bitsPerSample = 16;
 
-        // Allocate float sample buffer
-        long totalSampleCount = mpeg.Length;
-        float[] samples = new float[totalSampleCount];
-        int samplesRead = mpeg.ReadSamples(samples, 0, (int)totalSampleCount);
+        List<byte> pcmList = new List<byte>(sampleRate * channels * 2 * 10);
+        float[] sampleBuffer = new float[8192];
+        int read;
 
-        byte[] pcmData = new byte[samplesRead * 2];
-        for (int i = 0; i < samplesRead; i++)
+        while ((read = mpeg.ReadSamples(sampleBuffer, 0, sampleBuffer.Length)) > 0)
         {
-            short sampleShort = (short)Math.Clamp(samples[i] * 32767f, -32768f, 32767f);
-            pcmData[i * 2] = (byte)(sampleShort & 0xFF);
-            pcmData[i * 2 + 1] = (byte)((sampleShort >> 8) & 0xFF);
+            for (int i = 0; i < read; i++)
+            {
+                short sampleShort = (short)Math.Clamp(sampleBuffer[i] * 32767f, -32768f, 32767f);
+                pcmList.Add((byte)(sampleShort & 0xFF));
+                pcmList.Add((byte)((sampleShort >> 8) & 0xFF));
+            }
         }
 
-        float duration = mpeg.Duration.TotalSeconds > 0 ? (float)mpeg.Duration.TotalSeconds : (float)samplesRead / (sampleRate * channels);
-        Console.WriteLine($"[AudioDecoder] Decoded MP3 '{Path.GetFileName(filePath)}' ({sampleRate}Hz, {channels}ch, {duration:F2}s)");
+        byte[] pcmData = pcmList.ToArray();
+        int bytesPerSample = (bitsPerSample / 8) * channels;
+        float duration = bytesPerSample > 0 ? (float)pcmData.Length / (sampleRate * bytesPerSample) : 0f;
+
+        Console.WriteLine($"[AudioDecoder] Decoded MP3 '{Path.GetFileName(filePath)}' ({sampleRate}Hz, {channels}ch, {duration:F2}s, {pcmData.Length} bytes)");
         return new DecodedAudioData(pcmData, sampleRate, channels, bitsPerSample, duration);
     }
 
@@ -102,7 +106,7 @@ public static class AudioDecoder
         }
 
         float duration = (float)vorbis.TotalTime.TotalSeconds;
-        Console.WriteLine($"[AudioDecoder] Decoded OGG '{Path.GetFileName(filePath)}' ({sampleRate}Hz, {channels}ch, {duration:F2}s)");
+        Console.WriteLine($"[AudioDecoder] Decoded OGG '{Path.GetFileName(filePath)}' ({sampleRate}Hz, {channels}ch, {duration:F2}s, {pcmData.Length} bytes)");
         return new DecodedAudioData(pcmData, sampleRate, channels, bitsPerSample, duration);
     }
 
@@ -165,7 +169,7 @@ public static class AudioDecoder
         int bytesPerSample = (bitsPerSample / 8) * channels;
         float duration = bytesPerSample > 0 ? (float)pcmData.Length / (sampleRate * bytesPerSample) : 0f;
 
-        Console.WriteLine($"[AudioDecoder] Decoded WAV '{Path.GetFileName(filePath)}' ({sampleRate}Hz, {channels}ch, {duration:F2}s)");
+        Console.WriteLine($"[AudioDecoder] Decoded WAV '{Path.GetFileName(filePath)}' ({sampleRate}Hz, {channels}ch, {duration:F2}s, {pcmData.Length} bytes)");
         return new DecodedAudioData(pcmData, sampleRate, channels, bitsPerSample, duration);
     }
 }
