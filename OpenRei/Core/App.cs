@@ -19,6 +19,56 @@ public class App
     public WindowFlags Flags { get; private set; }
     public bool IsRunning { get; private set; }
 
+    /// <summary>
+    /// Current application window width in pixels.
+    /// </summary>
+    public float WindowWidth => Size.X;
+
+    /// <summary>
+    /// Current application window height in pixels.
+    /// </summary>
+    public float WindowHeight => Size.Y;
+
+    /// <summary>
+    /// Primary physical display monitor width in pixels.
+    /// </summary>
+    public static int ScreenWidth
+    {
+        get
+        {
+            unsafe
+            {
+                SDL_DisplayID displayId = SDL3.SDL_GetPrimaryDisplay();
+                SDL_Rect bounds;
+                if (SDL3.SDL_GetDisplayBounds(displayId, &bounds))
+                {
+                    return bounds.w;
+                }
+            }
+            return 1920;
+        }
+    }
+
+    /// <summary>
+    /// Primary physical display monitor height in pixels.
+    /// </summary>
+    public static int ScreenHeight
+    {
+        get
+        {
+            unsafe
+            {
+                SDL_DisplayID displayId = SDL3.SDL_GetPrimaryDisplay();
+                SDL_Rect bounds;
+                if (SDL3.SDL_GetDisplayBounds(displayId, &bounds))
+                {
+                    return bounds.h;
+                }
+            }
+            return 1080;
+        }
+    }
+
     public Element RootElement { get; set; }
 
     private App(Vector2D size, string title, WindowFlags flags)

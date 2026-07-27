@@ -71,7 +71,7 @@ var demoSprite = new Sprite
 {
     Name = "DemoSprite",
     Size = UDim2.FromOffset(128, 128),
-    ScaleType = ScaleType.Fit,
+    ScaleType = ScaleType.Cover,
     TexturePath = "test.png"
 };
 mainCard.AddChild(demoSprite);
