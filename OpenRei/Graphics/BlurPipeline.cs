@@ -1,3 +1,4 @@
+using OpenRei.Core;
 using OpenRei.Filters;
 using OpenRei.Types;
 using SDL;
@@ -47,27 +48,44 @@ public unsafe class BlurPipeline : IDisposable
     /// </summary>
     public void ApplyBlur(Rect bounds, BlurFilter filter)
     {
-        if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0f) return;
+        if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
 
-        int downscale = Math.Clamp(filter.Downscale, 1, 4);
+        // Smoothly adjust downscaling factor for low radii (< 4px) to eliminate downsample snapping
+        int downscale = (filter.Radius < 4.0f) ? 1 : Math.Clamp(filter.Downscale, 1, 4);
         int passes = Math.Clamp(filter.Passes, 1, 4);
 
-        int targetW = (int)Math.Max(bounds.Width / downscale, 1);
-        int targetH = (int)Math.Max(bounds.Height / downscale, 1);
+        // Clamp capture bounds to physical window viewport
+        int winW = 0, winH = 0;
+        SDL3.SDL_GetRenderOutputSize(_renderer, &winW, &winH);
+        float screenW = winW > 0 ? winW : 1280;
+        float screenH = winH > 0 ? winH : 720;
+
+        float clampX = MathF.Max(bounds.X, 0f);
+        float clampY = MathF.Max(bounds.Y, 0f);
+        float clampRight = MathF.Min(bounds.X + bounds.Width, screenW);
+        float clampBottom = MathF.Min(bounds.Y + bounds.Height, screenH);
+
+        float clampW = clampRight - clampX;
+        float clampH = clampBottom - clampY;
+
+        if (clampW <= 0f || clampH <= 0f) return;
+
+        int targetW = (int)Math.Max(clampW / downscale, 1);
+        int targetH = (int)Math.Max(clampH / downscale, 1);
 
         EnsureRenderTargets(targetW, targetH);
         if (_pingTexture == null || _pongTexture == null) return;
 
-        SDL_FRect srcArea = new SDL_FRect { x = bounds.X, y = bounds.Y, w = bounds.Width, h = bounds.Height };
+        SDL_FRect srcArea = new SDL_FRect { x = clampX, y = clampY, w = clampW, h = clampH };
         SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
 
-        // Step 1: Capture main screen region pixels into Ping FBO with downsampling
+        // Step 1: Capture valid viewport screen region into Ping FBO
         SDL_Rect readRect = new SDL_Rect
         {
-            x = (int)bounds.X,
-            y = (int)bounds.Y,
-            w = (int)bounds.Width,
-            h = (int)bounds.Height
+            x = (int)clampX,
+            y = (int)clampY,
+            w = (int)clampW,
+            h = (int)clampH
         };
 
         SDL_Surface* screenSurface = SDL3.SDL_RenderReadPixels(_renderer, &readRect);
@@ -115,7 +133,11 @@ public unsafe class BlurPipeline : IDisposable
         // Step 3: Reset main swapchain render target
         SDL3.SDL_SetRenderTarget(_renderer, null);
 
-        // Step 4: Upsample and composite final blurred FBO back onto the screen
+        // Step 4: Smoothly fade blur alpha at small radii (0px - 4px) to prevent 1-frame snapping
+        float blurOpacity = Math.Clamp(filter.Radius / 4.0f, 0.0f, 1.0f);
+        SDL3.SDL_SetTextureAlphaModFloat(readTarget, blurOpacity);
+
+        // Step 5: Upsample and composite final blurred FBO back onto screen viewport
         SDL3.SDL_RenderTexture(_renderer, readTarget, null, &srcArea);
     }
 

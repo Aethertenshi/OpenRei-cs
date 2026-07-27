@@ -143,11 +143,10 @@ public class Sprite : Element
 
                         case ScaleType.Stretch: // Fill (Default)
                         default:
-                            context.DrawImage(Texture, destBounds, activeSourceRect, ImageColor);
                             break;
                     }
 
-                    if (ScaleType != ScaleType.Tile && ScaleType != ScaleType.Stretch)
+                    if (ScaleType != ScaleType.Tile)
                     {
                         context.DrawImage(Texture, destBounds, activeSourceRect, ImageColor);
                     }
