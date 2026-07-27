@@ -61,10 +61,27 @@ public unsafe class BlurPipeline : IDisposable
         SDL_FRect srcArea = new SDL_FRect { x = bounds.X, y = bounds.Y, w = bounds.Width, h = bounds.Height };
         SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
 
-        // Step 1: Copy main screen region into Ping FBO with 2x/4x downsampling
-        SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
-        SDL3.SDL_SetRenderDrawColor(_renderer, 0, 0, 0, 0);
-        SDL3.SDL_RenderClear(_renderer);
+        // Step 1: Capture main screen region pixels into Ping FBO with downsampling
+        SDL_Rect readRect = new SDL_Rect
+        {
+            x = (int)bounds.X,
+            y = (int)bounds.Y,
+            w = (int)bounds.Width,
+            h = (int)bounds.Height
+        };
+
+        SDL_Surface* screenSurface = SDL3.SDL_RenderReadPixels(_renderer, &readRect);
+        if (screenSurface != null)
+        {
+            SDL_Texture* screenTex = SDL3.SDL_CreateTextureFromSurface(_renderer, screenSurface);
+            if (screenTex != null)
+            {
+                SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
+                SDL3.SDL_RenderTexture(_renderer, screenTex, null, &fboDest);
+                SDL3.SDL_DestroyTexture(screenTex);
+            }
+            SDL3.SDL_DestroySurface(screenSurface);
+        }
 
         // Step 2: Multi-pass separable Gaussian blur between Ping and Pong FBO targets
         SDL_Texture* readTarget = _pingTexture;
