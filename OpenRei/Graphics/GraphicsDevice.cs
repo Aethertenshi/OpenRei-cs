@@ -31,6 +31,9 @@ public unsafe class GraphicsDevice : IDisposable
         // Enable VSync / Mailbox presentation mode
         SDL3.SDL_SetRenderVSync(_renderer, 1);
 
+        // Initialize FontEngine and default font
+        FontEngine.Initialize();
+
         Console.WriteLine("[GraphicsDevice] Hardware-Accelerated 2D GPU Renderer initialized successfully.");
     }
 

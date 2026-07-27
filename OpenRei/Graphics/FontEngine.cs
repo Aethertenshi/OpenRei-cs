@@ -22,13 +22,27 @@ public static class FontEngine
             _isInitialized = true;
             Console.WriteLine("[OpenRei FontEngine] SDL3_ttf initialized successfully.");
 
-            string fontPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "OpenRei", "GoogleSans-Regular.ttf");
-            if (!File.Exists(fontPath)) fontPath = "OpenRei/GoogleSans-Regular.ttf";
-
-            if (File.Exists(fontPath))
+            string[] candidatePaths = new string[]
             {
-                DefaultFont = new Font(fontPath, 22.0f);
-                Console.WriteLine($"[OpenRei FontEngine] Default font '{fontPath}' loaded successfully.");
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GoogleSans-Regular.ttf"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "OpenRei", "GoogleSans-Regular.ttf"),
+                "GoogleSans-Regular.ttf",
+                "OpenRei/GoogleSans-Regular.ttf",
+                "../OpenRei/GoogleSans-Regular.ttf",
+                "../../OpenRei/GoogleSans-Regular.ttf",
+                @"E:\ProjectTemp-Server\OpenRei-cs\OpenRei\GoogleSans-Regular.ttf"
+            };
+
+            string? foundFontPath = candidatePaths.FirstOrDefault(File.Exists);
+
+            if (foundFontPath != null)
+            {
+                DefaultFont = new Font(foundFontPath, 24.0f);
+                Console.WriteLine($"[OpenRei FontEngine] Default font '{foundFontPath}' loaded successfully!");
+            }
+            else
+            {
+                Console.WriteLine("[OpenRei FontEngine Warning] Could not locate 'GoogleSans-Regular.ttf' in any search path.");
             }
         }
         else
