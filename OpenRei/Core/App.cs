@@ -138,7 +138,7 @@ public class App
             }
 
             using var graphicsDevice = new GraphicsDevice(window);
-            OpenRei.IO.OszDropHandler.Initialize();
+            OpenRei.IO.FileDropHandler.Initialize();
 
             Console.WriteLine("[OpenRei App] Native SDL3 Window created successfully! Entering main loop...");
 
@@ -204,7 +204,7 @@ public class App
                             string? droppedPath = System.Runtime.InteropServices.Marshal.PtrToStringUTF8((IntPtr)sdlEvent.drop.data);
                             if (!string.IsNullOrEmpty(droppedPath))
                             {
-                                OpenRei.IO.OszDropHandler.Enqueue(droppedPath);
+                                OpenRei.IO.FileDropHandler.Enqueue(droppedPath);
                             }
                         }
                     }
@@ -243,7 +243,7 @@ public class App
                 SDL3.SDL_Delay(1);
             }
 
-            OpenRei.IO.OszDropHandler.Shutdown();
+            OpenRei.IO.FileDropHandler.Shutdown();
             SDL3.SDL_DestroyWindow(window);
             SDL3.SDL_Quit();
             Console.WriteLine("[OpenRei App] Native window destroyed. Application shut down cleanly.");

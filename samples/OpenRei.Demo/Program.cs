@@ -16,7 +16,7 @@ Console.WriteLine("=== OpenRei Engine SDL3 Window Demo ===");
 Input.Begin += (key) => Console.WriteLine($"[Input Event] Key Pressed: {key}");
 Input.Ended += (key) => Console.WriteLine($"[Input Event] Key Released: {key}");
 
-OszDropHandler.OnFileDropped += (file) =>
+FileDropHandler.OnFileDropped += (file) =>
 {
     Console.WriteLine($"[Drag-and-Drop Event] File Dropped onto Window: {file}");
     if (OszImporter.IsOszFile(file))

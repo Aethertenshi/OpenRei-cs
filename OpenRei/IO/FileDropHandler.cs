@@ -6,15 +6,15 @@ using SDL;
 namespace OpenRei.IO;
 
 /// <summary>
-/// Hooks into native SDL3 drag-and-drop file events and queues dropped .osz paths for main-thread beatmap ingestion.
+/// Hooks into native SDL3 drag-and-drop file events and queues dropped file paths for main-thread ingestion.
 /// </summary>
-public static class OszDropHandler
+public static class FileDropHandler
 {
     private static readonly ConcurrentQueue<string> _pending = new();
     private static bool _initialized;
 
     /// <summary>
-    /// Event triggered when a valid file is dropped onto the window.
+    /// Event triggered when any file is dropped onto the window.
     /// </summary>
     public static event Action<string>? OnFileDropped;
 
@@ -29,7 +29,7 @@ public static class OszDropHandler
         SDL3.SDL_AddEventWatch(&DropEventFilter, IntPtr.Zero);
 
         _initialized = true;
-        Console.WriteLine("[OszDropHandler] SDL3 Drag-and-Drop file listener initialized successfully.");
+        Console.WriteLine("[FileDropHandler] SDL3 Drag-and-Drop file listener initialized successfully.");
     }
 
     /// <summary>
@@ -79,9 +79,10 @@ public static class OszDropHandler
         if (data == null) return true;
 
         string? path = Marshal.PtrToStringUTF8((IntPtr)data);
-        if (!string.IsNullOrEmpty(path) && path.EndsWith(".osz", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(path))
         {
             _pending.Enqueue(path);
+            OnFileDropped?.Invoke(path);
         }
 
         return true;
