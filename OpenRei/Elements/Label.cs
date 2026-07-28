@@ -35,6 +35,6 @@ public class Label : Element
         base.Render(context);
 
         // Submit text render command
-        context.DrawText(Font, Text, AbsoluteBounds, TextColor);
+        context.DrawText(Font, Text, AbsoluteBounds, TextColor, ZIndex);
     }
 }

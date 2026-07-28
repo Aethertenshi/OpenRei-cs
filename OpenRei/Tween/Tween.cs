@@ -48,6 +48,9 @@ public sealed class Tween
     /// <summary>The most recent interpolated value produced by this tween.</summary>
     public float CurrentValue { get; private set; }
 
+    /// <summary>True while the tween is actively animating (running and not paused).</summary>
+    public bool IsPlaying => _running && !_paused;
+
     /// <param name="startValue">Initial value when t = 0.</param>
     /// <param name="endValue">Final value when t = 1.</param>
     /// <param name="duration">Tween duration in seconds. Clamped to a minimum of 0.001.</param>
@@ -156,6 +159,7 @@ public sealed class Tween
 
     private void Tick(float dt)
     {
+        dt = MathF.Min(dt, 0.05f); // prevent huge first-frame dt from skipping the tween
         _elapsed += dt;
 
         float t = Math.Clamp(_elapsed / _duration, 0f, 1f);

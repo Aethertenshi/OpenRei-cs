@@ -10,13 +10,15 @@ public readonly struct TextCommand
     public readonly string Text;
     public readonly Rect Bounds;
     public readonly Color Color;
+    public readonly float ZIndex;
 
-    public TextCommand(Font? font, string text, Rect bounds, Color color)
+    public TextCommand(Font? font, string text, Rect bounds, Color color, float zIndex = 1f)
     {
         Font = font;
         Text = text;
         Bounds = bounds;
         Color = color;
+        ZIndex = zIndex;
     }
 }
 
@@ -26,13 +28,15 @@ public readonly struct ImageCommand
     public readonly Rect DestBounds;
     public readonly Rect? SourceRect;
     public readonly Color Color;
+    public readonly float ZIndex;
 
-    public ImageCommand(Texture texture, Rect destBounds, Rect? sourceRect, Color color)
+    public ImageCommand(Texture texture, Rect destBounds, Rect? sourceRect, Color color, float zIndex = 1f)
     {
         Texture = texture;
         DestBounds = destBounds;
         SourceRect = sourceRect;
         Color = color;
+        ZIndex = zIndex;
     }
 }
 
@@ -88,19 +92,19 @@ public class RenderContext
         _queue.Enqueue(new QuadInstance(bounds, color, cornerRadius, zIndex));
     }
 
-    public void DrawText(Font? font, string text, Rect bounds, Color color)
+    public void DrawText(Font? font, string text, Rect bounds, Color color, float zIndex = 1f)
     {
         if (!string.IsNullOrEmpty(text))
         {
-            TextCommands.Add(new TextCommand(font, text, bounds, color));
+            TextCommands.Add(new TextCommand(font, text, bounds, color, zIndex));
         }
     }
 
-    public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null)
+    public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null, float zIndex = 1f)
     {
         if (texture != null && texture.IsValid)
         {
-            ImageCommands.Add(new ImageCommand(texture, destBounds, sourceRect, color ?? Color.White));
+            ImageCommands.Add(new ImageCommand(texture, destBounds, sourceRect, color ?? Color.White, zIndex));
         }
     }
 

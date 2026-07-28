@@ -80,7 +80,8 @@ public class App
         {
             Name = "RootViewport",
             Size = UDim2.FromOffset(size.X, size.Y),
-            Position = UDim2.Zero
+            Position = UDim2.Zero,
+            Color = Color.Transparent
         };
     }
 
@@ -102,6 +103,9 @@ public class App
         RootElement = root;
         return this;
     }
+
+    /// <summary>Fired every frame. Useful for game logic without subclassing App.</summary>
+    public Action<float>? OnTick { get; set; }
 
     protected virtual void Tick(float deltaTime)
     {
@@ -230,8 +234,9 @@ public class App
                 // 2. Tick active animation tweens
                 OpenRei.Tween.Tween.TickAll(deltaTime);
 
-                // 3. Opt-in virtual tick execution
+                // 3. Opt-in virtual tick execution + OnTick event
                 Tick(deltaTime);
+                OnTick?.Invoke(deltaTime);
 
                 // 3. Scene graph hierarchy update pass
                 RootElement.Size = UDim2.FromOffset(Size.X, Size.Y);

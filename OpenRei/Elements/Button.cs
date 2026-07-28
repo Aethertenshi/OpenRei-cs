@@ -69,7 +69,7 @@ public class Button : Element
         // Submit button text command
         if (!string.IsNullOrEmpty(Text))
         {
-            context.DrawText(Font, Text, AbsoluteBounds, TextColor);
+            context.DrawText(Font, Text, AbsoluteBounds, TextColor, ZIndex);
         }
     }
 }

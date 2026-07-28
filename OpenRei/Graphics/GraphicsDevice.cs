@@ -33,6 +33,9 @@ public unsafe class GraphicsDevice : IDisposable
         // Enable VSync / Mailbox presentation mode
         SDL3.SDL_SetRenderVSync(_renderer, 1);
 
+        // Ensure alpha blending is enabled for RenderFillRect (Quad alpha, splash fades)
+        SDL3.SDL_SetRenderDrawBlendMode(_renderer, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+
         // Initialize FontEngine and default font
         FontEngine.Initialize();
 
@@ -93,6 +96,7 @@ public unsafe class GraphicsDevice : IDisposable
             h = destBounds.Height
         };
 
+        SDL3.SDL_SetTextureBlendMode(texture.Handle, SDL_BlendMode.SDL_BLENDMODE_BLEND);
         SDL3.SDL_SetTextureColorModFloat(texture.Handle, color.R, color.G, color.B);
         SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, color.A);
 
@@ -127,45 +131,72 @@ public unsafe class GraphicsDevice : IDisposable
         SDL3.SDL_SetRenderDrawColor(_renderer, 18, 18, 24, 255);
         SDL3.SDL_RenderClear(_renderer);
 
-        // 2. Render all QuadInstances from persistent NativeMemory buffer
-        int instanceCount = queue.ActiveReadCount;
+        // 2. Collect all render commands with ZIndex into a single sorted list
+        int quadCount = queue.ActiveReadCount;
         QuadInstance* instances = queue.ActiveReadBuffer;
 
-        for (int i = 0; i < instanceCount; i++)
+        int totalCount = quadCount + context.ImageCommands.Count + context.TextCommands.Count;
+        if (totalCount == 0)
         {
-            var quad = instances[i];
+            SDL3.SDL_RenderPresent(_renderer);
+            return;
+        }
 
-            SDL_FRect rect = new SDL_FRect
+        var sortKeys = new (float ZIndex, int BatchOrder, int Type, int Index)[totalCount];
+        int sortIdx = 0;
+
+        for (int i = 0; i < quadCount; i++)
+            sortKeys[sortIdx++] = (instances[i].ZIndex, sortIdx, 0, i);
+
+        for (int i = 0; i < context.ImageCommands.Count; i++)
+            sortKeys[sortIdx++] = (context.ImageCommands[i].ZIndex, sortIdx, 1, i);
+
+        for (int i = 0; i < context.TextCommands.Count; i++)
+            sortKeys[sortIdx++] = (context.TextCommands[i].ZIndex, sortIdx, 2, i);
+
+        Array.Sort(sortKeys, (a, b) =>
+        {
+            int cmp = a.ZIndex.CompareTo(b.ZIndex);
+            return cmp != 0 ? cmp : a.BatchOrder.CompareTo(b.BatchOrder);
+        });
+
+        // 3. Render all commands in ZIndex order
+        foreach (var key in sortKeys)
+        {
+            switch (key.Type)
             {
-                x = quad.Bounds.X,
-                y = quad.Bounds.Y,
-                w = quad.Bounds.Width,
-                h = quad.Bounds.Height
-            };
-
-            SDL3.SDL_SetRenderDrawColorFloat(_renderer, quad.Color.R, quad.Color.G, quad.Color.B, quad.Color.A);
-            SDL3.SDL_RenderFillRect(_renderer, &rect);
+                case 0: // Quad
+                    {
+                        var quad = instances[key.Index];
+                        SDL_FRect rect = new SDL_FRect
+                        {
+                            x = quad.Bounds.X, y = quad.Bounds.Y,
+                            w = quad.Bounds.Width, h = quad.Bounds.Height
+                        };
+                        SDL3.SDL_SetRenderDrawColorFloat(_renderer, quad.Color.R, quad.Color.G, quad.Color.B, quad.Color.A);
+                        SDL3.SDL_RenderFillRect(_renderer, &rect);
+                        break;
+                    }
+                case 1: // Image
+                    {
+                        var imgCmd = context.ImageCommands[key.Index];
+                        RenderImage(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color);
+                        break;
+                    }
+                case 2: // Text
+                    {
+                        var textCmd = context.TextCommands[key.Index];
+                        RenderText(textCmd.Font, textCmd.Text, textCmd.Bounds, textCmd.Color);
+                        break;
+                    }
+            }
         }
 
-        // 3. Render all ImageCommands
-        foreach (var imgCmd in context.ImageCommands)
-        {
-            RenderImage(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color);
-        }
-
-        // 4. Execute Multi-pass Gaussian Blur Pipeline (osu!-framework style)
+        // 4. Execute Multi-pass Gaussian Blur Pipeline
         foreach (var blurCmd in context.BlurCommands)
-        {
             _blurPipeline?.ApplyBlur(blurCmd.Bounds, blurCmd.Filter);
-        }
 
-        // 5. Render all TextCommands
-        foreach (var textCmd in context.TextCommands)
-        {
-            RenderText(textCmd.Font, textCmd.Text, textCmd.Bounds, textCmd.Color);
-        }
-
-        // 6. Swap buffers (Present frame to window display)
+        // 5. Swap buffers (Present frame to window display)
         SDL3.SDL_RenderPresent(_renderer);
     }
 

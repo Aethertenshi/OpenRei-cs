@@ -1,3 +1,4 @@
+using System.Text;
 using NLayer;
 using NVorbis;
 
@@ -115,8 +116,8 @@ public static class AudioDecoder
         using var stream = File.OpenRead(filePath);
         using var reader = new BinaryReader(stream);
 
-        // Read RIFF header
-        string chunkId = new string(reader.ReadChars(4));
+        // Read RIFF header (use ASCII encoding, NOT ReadChars — binary data)
+        string chunkId = Encoding.ASCII.GetString(reader.ReadBytes(4));
         if (chunkId != "RIFF")
         {
             Console.WriteLine($"[AudioDecoder Error] Invalid WAV file header in {filePath}");
@@ -124,7 +125,7 @@ public static class AudioDecoder
         }
 
         reader.ReadInt32(); // ChunkSize
-        string format = new string(reader.ReadChars(4));
+        string format = Encoding.ASCII.GetString(reader.ReadBytes(4));
         if (format != "WAVE")
         {
             Console.WriteLine($"[AudioDecoder Error] Format is not WAVE in {filePath}");
@@ -138,12 +139,19 @@ public static class AudioDecoder
 
         while (stream.Position < stream.Length - 8)
         {
-            string subChunkId = new string(reader.ReadChars(4));
+            string subChunkId = Encoding.ASCII.GetString(reader.ReadBytes(4));
             int subChunkSize = reader.ReadInt32();
 
             if (subChunkId == "fmt ")
             {
                 short audioFormat = reader.ReadInt16();
+
+                if (audioFormat != 1 && audioFormat != 3)
+                {
+                    Console.WriteLine($"[AudioDecoder Error] Unsupported WAV audio format ({audioFormat}) in {filePath}. Only PCM (1) and IEEE float (3) are supported.");
+                    return new DecodedAudioData(Array.Empty<byte>(), 44100, 2, 16, 0f);
+                }
+
                 channels = reader.ReadInt16();
                 sampleRate = reader.ReadInt32();
                 reader.ReadInt32(); // ByteRate
@@ -153,6 +161,12 @@ public static class AudioDecoder
                 int extraBytes = subChunkSize - 16;
                 if (extraBytes > 0)
                     reader.BaseStream.Seek(extraBytes, SeekOrigin.Current);
+
+                if (audioFormat == 3)
+                {
+                    // IEEE float → we'll convert to 16-bit PCM after reading
+                    bitsPerSample = 32; // track as 32-bit float for now
+                }
             }
             else if (subChunkId == "data")
             {
@@ -166,10 +180,27 @@ public static class AudioDecoder
             }
         }
 
+        // Convert IEEE float samples to 16-bit PCM
+        if (bitsPerSample == 32)
+        {
+            int sampleCount = pcmData.Length / 4;
+            byte[] converted = new byte[sampleCount * 2];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float sample = BitConverter.ToSingle(pcmData, i * 4);
+                sample = Math.Clamp(sample, -1f, 1f);
+                short pcm16 = (short)(sample * 32767f);
+                converted[i * 2] = (byte)(pcm16 & 0xFF);
+                converted[i * 2 + 1] = (byte)((pcm16 >> 8) & 0xFF);
+            }
+            pcmData = converted;
+            bitsPerSample = 16;
+        }
+
         int bytesPerSample = (bitsPerSample / 8) * channels;
         float duration = bytesPerSample > 0 ? (float)pcmData.Length / (sampleRate * bytesPerSample) : 0f;
 
-        Console.WriteLine($"[AudioDecoder] Decoded WAV '{Path.GetFileName(filePath)}' ({sampleRate}Hz, {channels}ch, {duration:F2}s, {pcmData.Length} bytes)");
+        Console.WriteLine($"[AudioDecoder] Decoded WAV '{Path.GetFileName(filePath)}' ({sampleRate}Hz, {channels}ch, bits={bitsPerSample}, dur={duration:F2}s, {pcmData.Length} bytes)");
         return new DecodedAudioData(pcmData, sampleRate, channels, bitsPerSample, duration);
     }
 }

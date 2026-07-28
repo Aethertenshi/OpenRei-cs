@@ -135,7 +135,7 @@ public class Sprite : Element
                                         Rect tileDest = new Rect(x, y, tileW, tileH);
                                         Rect tileSrc = new Rect(0, 0, tileW, tileH);
 
-                                        context.DrawImage(Texture, tileDest, tileSrc, ImageColor);
+                                        context.DrawImage(Texture, tileDest, tileSrc, ImageColor, ZIndex);
                                     }
                                 }
                                 break;
@@ -148,7 +148,7 @@ public class Sprite : Element
 
                     if (ScaleType != ScaleType.Tile)
                     {
-                        context.DrawImage(Texture, destBounds, activeSourceRect, ImageColor);
+                        context.DrawImage(Texture, destBounds, activeSourceRect, ImageColor, ZIndex);
                     }
                 }
             }
