@@ -40,12 +40,38 @@ public class Element
 
     public IReadOnlyList<Element> Children => _children;
 
+    public float AspectRatio { get; set; } = 0.0f;
+    public DominantAxis AspectAxis { get; set; } = DominantAxis.Height;
+
     public Vector2D AbsoluteSize
     {
         get
         {
             Vector2D parentSize = _parent?.AbsoluteSize ?? Vector2D.Zero;
-            return Size.GetAbsolute(parentSize);
+            Vector2D baseSize = Size.GetAbsolute(parentSize);
+
+            float ratio = AspectRatio;
+            DominantAxis axis = AspectAxis;
+
+            if (Layout is UIAspectRatioConstraint aspectConstraint)
+            {
+                ratio = aspectConstraint.AspectRatio;
+                axis = aspectConstraint.AspectAxis;
+            }
+
+            if (ratio > 0f)
+            {
+                if (axis == DominantAxis.Height)
+                {
+                    return new Vector2D(baseSize.Y * ratio, baseSize.Y);
+                }
+                else
+                {
+                    return new Vector2D(baseSize.X, baseSize.X / ratio);
+                }
+            }
+
+            return baseSize;
         }
     }
 
