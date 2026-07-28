@@ -52,18 +52,6 @@ public readonly struct BlurCommand
     }
 }
 
-public readonly struct FrostedGlassCommand
-{
-    public readonly Rect Bounds;
-    public readonly FrostedGlassFilter Filter;
-
-    public FrostedGlassCommand(Rect bounds, FrostedGlassFilter filter)
-    {
-        Bounds = bounds;
-        Filter = filter;
-    }
-}
-
 /// <summary>
 /// Execution context passed down scene graph elements to submit 2D quad instances, text, images, and post-processing filters.
 /// </summary>
@@ -76,7 +64,6 @@ public class RenderContext
     public List<TextCommand> TextCommands { get; } = new();
     public List<ImageCommand> ImageCommands { get; } = new();
     public List<BlurCommand> BlurCommands { get; } = new();
-    public List<FrostedGlassCommand> FrostedGlassCommands { get; } = new();
 
     public RenderContext(RenderQueue queue)
     {
@@ -126,14 +113,6 @@ public class RenderContext
         if (filter != null && filter.Enabled && filter.Radius > 0f)
         {
             BlurCommands.Add(new BlurCommand(bounds, filter));
-        }
-    }
-
-    public void ApplyFrostedGlass(Rect bounds, FrostedGlassFilter filter)
-    {
-        if (filter != null && filter.Enabled && filter.Radius > 0f)
-        {
-            FrostedGlassCommands.Add(new FrostedGlassCommand(bounds, filter));
         }
     }
 

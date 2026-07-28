@@ -192,12 +192,9 @@ public unsafe class GraphicsDevice : IDisposable
             }
         }
 
-        // 4. Execute Multi-pass Gaussian Blur & Frosted Glass Pipelines
+        // 4. Execute Multi-pass Gaussian Blur Pipeline
         foreach (var blurCmd in context.BlurCommands)
             _blurPipeline?.ApplyBlur(blurCmd.Bounds, blurCmd.Filter);
-
-        foreach (var fgCmd in context.FrostedGlassCommands)
-            _blurPipeline?.ApplyFrostedGlass(fgCmd.Bounds, fgCmd.Filter);
 
         // 5. Swap buffers (Present frame to window display)
         SDL3.SDL_RenderPresent(_renderer);

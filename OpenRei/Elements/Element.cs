@@ -132,16 +132,12 @@ public class Element
             context.DrawQuad(AbsoluteBounds, Color, CornerRadius, ZIndex);
         }
 
-        // Submit element filters (BlurFilter queued, FrostedGlassFilter applied inline)
+        // Submit element filters
         foreach (var filter in Filters)
         {
             if (filter is BlurFilter blurFilter && blurFilter.Enabled)
             {
                 context.ApplyBlur(AbsoluteBounds, blurFilter);
-            }
-            else if (filter is FrostedGlassFilter fgFilter && fgFilter.Enabled)
-            {
-                context.ApplyFrostedGlass(AbsoluteBounds, fgFilter);
             }
         }
 
