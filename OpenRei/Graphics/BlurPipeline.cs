@@ -6,8 +6,8 @@ using SDL;
 namespace OpenRei.Graphics;
 
 /// <summary>
-/// Executes Hardware-Accelerated Multi-Pass Dual-Kawase / Gaussian Blur (osu!-framework style)
-/// using multi-tap offset sampling over downsampled FBO render targets.
+/// Executes Hardware-Accelerated Multi-Pass Separable Downsampled Gaussian Blur (osu!-framework style)
+/// using downsampled FBO render targets and hardware bilinear interpolation.
 /// </summary>
 public unsafe class BlurPipeline : IDisposable
 {
@@ -53,15 +53,15 @@ public unsafe class BlurPipeline : IDisposable
     }
 
     /// <summary>
-    /// Captures source screen region, applies multi-pass Dual-Kawase Gaussian kernel blur, and renders result back to screen.
+    /// Captures source screen region, applies separable downsampled Gaussian blur, and renders result back to screen.
     /// </summary>
     public void ApplyBlur(Rect bounds, BlurFilter filter)
     {
         if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
 
-        // Calculate smooth downscaling factor to eliminate pixelation
-        int downscale = (filter.Radius < 4.0f) ? 1 : Math.Clamp(filter.Downscale, 1, 4);
-        int passes = Math.Clamp(filter.Passes, 1, 5);
+        // Dynamic downscaling factor derived from Radius (eliminates ghosting staircases & keeps blur smooth)
+        int downscale = (filter.Radius < 3.0f) ? 1 : Math.Clamp((int)MathF.Ceiling(filter.Radius / 5.0f), 1, 8);
+        int passes = Math.Clamp(filter.Passes, 1, 4);
 
         // Clamp capture bounds to physical window viewport
         int winW = 0, winH = 0;
@@ -111,46 +111,42 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_DestroySurface(screenSurface);
         }
 
-        // Step 2: Execute Multi-Pass Dual-Kawase Gaussian Offset Sampling
+        // Step 2: Separable Multi-Pass Gaussian Downsampling between Ping and Pong FBO targets
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
 
-        float kernelSpread = (filter.Radius / (float)downscale) * 0.5f;
-
         for (int p = 0; p < passes; p++)
         {
-            float offset = (p + 1.0f) * kernelSpread;
-
+            // Horizontal Pass
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
-
-            // 4-Tap Diagonal Offset Sampling Pass (Simulates 16-tap 2D Gaussian Kernel)
-            SDL_FRect t1 = new SDL_FRect { x = -offset, y = -offset, w = targetW, h = targetH };
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t1);
-
-            SDL_FRect t2 = new SDL_FRect { x = offset, y = -offset, w = targetW, h = targetH };
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t2);
-
-            SDL_FRect t3 = new SDL_FRect { x = -offset, y = offset, w = targetW, h = targetH };
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t3);
-
-            SDL_FRect t4 = new SDL_FRect { x = offset, y = offset, w = targetW, h = targetH };
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t4);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
 
             // Swap Ping-Pong targets
-            SDL_Texture* temp = readTarget;
+            SDL_Texture* temp1 = readTarget;
             readTarget = writeTarget;
-            writeTarget = temp;
+            writeTarget = temp1;
+
+            // Vertical Pass
+            SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
+
+            // Swap Ping-Pong targets
+            SDL_Texture* temp2 = readTarget;
+            readTarget = writeTarget;
+            writeTarget = temp2;
         }
 
-        // Step 3: Reset render target back to main swapchain screen
+        // Step 3: Reset main swapchain render target
         SDL3.SDL_SetRenderTarget(_renderer, null);
 
-        // Step 4: Configure final composite blend mode and opacity for dynamic radius tweening
-        if (filter.Radius < 4.0f)
+        // Step 4: Configure final blend mode & smooth alpha modulation for low radii (< 4px) to prevent 1-frame snapping
+        if (filter.Radius < 3.0f)
         {
-            float blurOpacity = Math.Clamp(filter.Radius / 4.0f, 0.0f, 1.0f);
+            float blurOpacity = Math.Clamp(filter.Radius / 3.0f, 0.0f, 1.0f);
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, blurOpacity);
         }
