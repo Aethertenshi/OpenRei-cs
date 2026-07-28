@@ -1,10 +1,11 @@
+using OpenRei.Filters;
 using OpenRei.Graphics;
 using OpenRei.Types;
 
 namespace OpenRei.Elements;
 
 /// <summary>
-/// A high-performance image rendering UI element supporting asynchronous background loading, UV atlas cropping, and CSS object-fit StretchMode scaling.
+/// A high-performance image rendering UI element supporting asynchronous background loading, UV atlas cropping, color tinting, and CSS object-fit StretchMode scaling.
 /// </summary>
 public class Sprite : Element
 {
@@ -23,6 +24,10 @@ public class Sprite : Element
     }
 
     public Rect? SourceRect { get; set; }
+
+    /// <summary>
+    /// Explicit image tint color overlay.
+    /// </summary>
     public Color ImageColor { get; set; } = Color.White;
 
     public string? TexturePath
@@ -50,14 +55,17 @@ public class Sprite : Element
     public Sprite()
     {
         Name = nameof(Sprite);
-        Color = Color.Transparent;
+        Color = Color.White;
     }
 
     public override void Render(RenderContext context)
     {
         if (!Visible) return;
 
-        // 1. Render this Sprite's own texture FIRST
+        // Determine active texture color tint (supports both sprite.Color and sprite.ImageColor)
+        Color activeTint = ImageColor != Color.White ? ImageColor : Color;
+
+        // 1. Render this Sprite's texture FIRST with color tint modulation
         if (Texture != null && Texture.IsValid)
         {
             Rect bounds = AbsoluteBounds;
@@ -100,14 +108,12 @@ public class Sprite : Element
 
                                 if (boundsAspect > texAspect)
                                 {
-                                    // Bounds is wider than texture -> Crop top & bottom of source
                                     float cropH = texW / boundsAspect;
                                     float cropY = (texH - cropH) * 0.5f;
                                     activeSourceRect = new Rect(0, cropY, texW, cropH);
                                 }
                                 else
                                 {
-                                    // Bounds is taller than texture -> Crop left & right of source
                                     float cropW = texH * boundsAspect;
                                     float cropX = (texW - cropW) * 0.5f;
                                     activeSourceRect = new Rect(cropX, 0, cropW, texH);
@@ -135,7 +141,7 @@ public class Sprite : Element
                                         Rect tileDest = new Rect(x, y, tileW, tileH);
                                         Rect tileSrc = new Rect(0, 0, tileW, tileH);
 
-                                        context.DrawImage(Texture, tileDest, tileSrc, ImageColor, ZIndex);
+                                        context.DrawImage(Texture, tileDest, tileSrc, activeTint, ZIndex);
                                     }
                                 }
                                 break;
@@ -148,13 +154,26 @@ public class Sprite : Element
 
                     if (ScaleType != ScaleType.Tile)
                     {
-                        context.DrawImage(Texture, destBounds, activeSourceRect, ImageColor, ZIndex);
+                        context.DrawImage(Texture, destBounds, activeSourceRect, activeTint, ZIndex);
                     }
                 }
             }
         }
 
-        // 2. Render background quad & child elements SECOND (so children draw on top of this sprite's image!)
-        base.Render(context);
+        // 2. Submit element filters
+        foreach (var filter in Filters)
+        {
+            if (filter is BlurFilter blurFilter && blurFilter.Enabled)
+            {
+                context.ApplyBlur(AbsoluteBounds, blurFilter);
+            }
+        }
+
+        // 3. Render child elements on top of this sprite's image
+        var sortedChildren = GetSortedChildren();
+        foreach (var child in sortedChildren)
+        {
+            child.Render(context);
+        }
     }
 }
