@@ -2,22 +2,18 @@ using Silk.NET.OpenAL;
 
 namespace OpenRei.Audio;
 
-/// <summary>
-/// Handles rhythm music stream playback with millisecond sample-accurate position querying.
-/// </summary>
 public class AudioStream
 {
     private uint _sourceId;
     private uint _bufferId;
     private int _sampleRate = 44100;
     private DecodedAudioData? _pendingData;
+    private Task<DecodedAudioData?>? _loadTask;
+    private bool _playRequested;
 
     public float Pitch { get; set; } = 1.0f;
     public float Volume { get; set; } = 1.0f;
 
-    /// <summary>
-    /// Indicates whether the audio stream is currently playing.
-    /// </summary>
     public bool IsPlaying
     {
         get
@@ -29,9 +25,6 @@ public class AudioStream
         }
     }
 
-    /// <summary>
-    /// Returns or seeks the sub-millisecond audio hardware playback position in milliseconds.
-    /// </summary>
     public double PositionMs
     {
         get
@@ -70,6 +63,45 @@ public class AudioStream
         LoadPcmData(pcmData, sampleRate, channels, bitsPerSample);
     }
 
+    /// <summary>
+    /// Creates an AudioStream that decodes asynchronously on a background thread.
+    /// Call Play() as usual — it auto-fires once the data is ready.
+    /// </summary>
+    public static AudioStream CreateAsync(string filePath)
+    {
+        var stream = new AudioStream();
+        stream._loadTask = AudioCache.GetOrDecodeAsync(filePath);
+        AudioCache.Track(stream);
+        return stream;
+    }
+
+    /// <summary>
+    /// Checks whether an async load has completed. Called automatically by Play() and
+    /// EnsureHandlesAndUpload(). Also called from the main loop via AudioCache.CheckPending().
+    /// </summary>
+    internal void CheckPendingLoad()
+    {
+        if (_loadTask == null || _pendingData != null) return;
+
+        if (_loadTask.IsCompleted)
+        {
+            _pendingData = _loadTask.Result;
+            _loadTask = null;
+
+            if (_playRequested)
+            {
+                EnsureHandlesAndUpload();
+                if (_sourceId != 0)
+                {
+                    AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Pitch, Pitch);
+                    AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Gain, Volume);
+                    AudioEngine.AL.SourcePlay(_sourceId);
+                }
+                _playRequested = false;
+            }
+        }
+    }
+
     public void LoadPcmData(DecodedAudioData data)
     {
         if (data != null)
@@ -89,6 +121,12 @@ public class AudioStream
     private void EnsureHandlesAndUpload()
     {
         if (!AudioEngine.IsInitialized) return;
+
+        if (_loadTask != null)
+        {
+            CheckPendingLoad();
+            if (_pendingData == null) return;
+        }
 
         if (_sourceId == 0)
         {
@@ -119,14 +157,30 @@ public class AudioStream
             }
 
             AudioEngine.AL.SetSourceProperty(_sourceId, SourceInteger.Buffer, (int)_bufferId);
-            _pendingData = null; // Upload complete
+            _pendingData = null;
         }
     }
 
     public void Play()
     {
+        if (!AudioEngine.IsInitialized) return;
+
+        // Async load still in progress → queue play request for when it finishes
+        if (_loadTask != null && !_loadTask.IsCompleted)
+        {
+            _playRequested = true;
+            return;
+        }
+
+        // Async load just completed → CheckPendingLoad handles upload + play
+        if (_loadTask != null)
+        {
+            CheckPendingLoad();
+            return;
+        }
+
         EnsureHandlesAndUpload();
-        if (!AudioEngine.IsInitialized || _sourceId == 0) return;
+        if (_sourceId == 0) return;
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Pitch, Pitch);
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Gain, Volume);
         AudioEngine.AL.SourcePlay(_sourceId);

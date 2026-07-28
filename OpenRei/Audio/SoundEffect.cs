@@ -12,6 +12,10 @@ public class SoundEffect
     private int _poolIndex;
     private DecodedAudioData? _pendingData;
     private int _pendingPoolSize = 8;
+    private Task<DecodedAudioData?>? _loadTask;
+    private bool _playRequested;
+    private float _queuedVolume;
+    private float _queuedPitch;
 
     /// <summary>
     /// Indicates whether any voice in this sound effect pool is currently playing.
@@ -37,6 +41,45 @@ public class SoundEffect
     {
         var data = AudioDecoder.DecodeFile(filePath);
         LoadPcmData(data, poolSize);
+    }
+
+    /// <summary>
+    /// Creates a SoundEffect that decodes asynchronously on a background thread.
+    /// Play() auto-fires once data is ready.
+    /// </summary>
+    public static SoundEffect CreateAsync(string filePath, int poolSize = 8)
+    {
+        var sfx = new SoundEffect();
+        sfx._pendingPoolSize = poolSize;
+        sfx._loadTask = AudioCache.GetOrDecodeAsync(filePath);
+        AudioCache.Track(sfx);
+        return sfx;
+    }
+
+    internal void CheckPendingLoad()
+    {
+        if (_loadTask == null || _pendingData != null) return;
+
+        if (_loadTask.IsCompleted)
+        {
+            _pendingData = _loadTask.Result;
+            _loadTask = null;
+
+            if (_playRequested)
+            {
+                EnsureHandlesAndUpload();
+                if (_sourcePool.Count > 0)
+                {
+                    uint source = _sourcePool[_poolIndex];
+                    _poolIndex = (_poolIndex + 1) % _sourcePool.Count;
+                    AudioEngine.AL.SourceStop(source);
+                    AudioEngine.AL.SetSourceProperty(source, SourceFloat.Gain, _queuedVolume);
+                    AudioEngine.AL.SetSourceProperty(source, SourceFloat.Pitch, _queuedPitch);
+                    AudioEngine.AL.SourcePlay(source);
+                }
+                _playRequested = false;
+            }
+        }
     }
 
     public SoundEffect(DecodedAudioData data, int poolSize = 8)
@@ -69,6 +112,12 @@ public class SoundEffect
     private void EnsureHandlesAndUpload()
     {
         if (!AudioEngine.IsInitialized) return;
+
+        if (_loadTask != null)
+        {
+            CheckPendingLoad();
+            if (_pendingData == null) return;
+        }
 
         if (_bufferId == 0)
         {
@@ -113,10 +162,28 @@ public class SoundEffect
     }
 
     /// <summary>
-    /// Triggers immediate hitsound playback.
+    /// Triggers immediate hitsound playback. If async load is still in progress,
+    /// queues the play to fire automatically when the data arrives.
     /// </summary>
     public void Play(float volume = 1.0f, float pitch = 1.0f)
     {
+        if (!AudioEngine.IsInitialized) return;
+
+        // Async load still in progress → queue
+        if (_loadTask != null && !_loadTask.IsCompleted)
+        {
+            _playRequested = true;
+            _queuedVolume = volume;
+            _queuedPitch = pitch;
+            return;
+        }
+
+        // Async load just completed
+        if (_loadTask != null)
+        {
+            CheckPendingLoad();
+        }
+
         EnsureHandlesAndUpload();
         if (!AudioEngine.IsInitialized || _sourcePool.Count == 0) return;
 

@@ -231,10 +231,13 @@ public class App
                 // 1. Process continuous held inputs
                 Input.TriggerHold(deltaTime);
 
-                // 2. Tick active animation tweens
+                // 2. Resolve pending async audio loads
+                OpenRei.Audio.AudioCache.CheckPending();
+
+                // 3. Tick active animation tweens
                 OpenRei.Tween.Tween.TickAll(deltaTime);
 
-                // 3. Opt-in virtual tick execution + OnTick event
+                // 4. Opt-in virtual tick execution + OnTick event
                 Tick(deltaTime);
                 OnTick?.Invoke(deltaTime);
 
