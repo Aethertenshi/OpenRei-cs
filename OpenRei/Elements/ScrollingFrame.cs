@@ -14,23 +14,25 @@ public enum ScrollbarPlacement
 
 public class ScrollingFrame : Element
 {
-    private readonly UIListLayout _layout = new();
+    private readonly UIListLayout _internalLayout = new();
     private Vector2D _scrollPosition;
     private Vector2D _targetScrollPosition;
     private Vector2D _contentSize;
 
+    public UIListLayout ActiveLayout => (Layout as UIListLayout) ?? _internalLayout;
+
     public FillDirection FillDirection
     {
-        get => _layout.FillDirection;
-        set => _layout.FillDirection = value;
+        get => ActiveLayout.FillDirection;
+        set => ActiveLayout.FillDirection = value;
     }
 
-    public UDim PaddingTop { get => _layout.PaddingTop; set => _layout.PaddingTop = value; }
-    public UDim PaddingBottom { get => _layout.PaddingBottom; set => _layout.PaddingBottom = value; }
-    public UDim PaddingLeft { get => _layout.PaddingLeft; set => _layout.PaddingLeft = value; }
-    public UDim PaddingRight { get => _layout.PaddingRight; set => _layout.PaddingRight = value; }
-    public UDim PaddingBetween { get => _layout.PaddingBetween; set => _layout.PaddingBetween = value; }
-    public UDim Padding { set => _layout.Padding = value; }
+    public UDim PaddingTop { get => ActiveLayout.PaddingTop; set => ActiveLayout.PaddingTop = value; }
+    public UDim PaddingBottom { get => ActiveLayout.PaddingBottom; set => ActiveLayout.PaddingBottom = value; }
+    public UDim PaddingLeft { get => ActiveLayout.PaddingLeft; set => ActiveLayout.PaddingLeft = value; }
+    public UDim PaddingRight { get => ActiveLayout.PaddingRight; set => ActiveLayout.PaddingRight = value; }
+    public UDim PaddingBetween { get => ActiveLayout.PaddingBetween; set => ActiveLayout.PaddingBetween = value; }
+    public UDim Padding { set => ActiveLayout.Padding = value; }
 
     public float ScrollSmoothness { get; set; } = 14f;
     public float ScrollSpeed { get; set; } = 40f;
@@ -53,14 +55,14 @@ public class ScrollingFrame : Element
         Name = nameof(ScrollingFrame);
         Color = Color.Transparent;
         ClipsToBounds = true;
-        Layout = _layout;
+        Layout = _internalLayout;
     }
 
     public override void Update(float deltaTime)
     {
         Vector2D viewSize = AbsoluteSize;
-        _layout.UpdateLayout(this);
-        _contentSize = _layout.GetContentSize(this);
+        ActiveLayout.UpdateLayout(this);
+        _contentSize = ActiveLayout.GetContentSize(this);
 
         float maxScrollX = MathF.Max(0f, _contentSize.X - viewSize.X);
         float maxScrollY = MathF.Max(0f, _contentSize.Y - viewSize.Y);
