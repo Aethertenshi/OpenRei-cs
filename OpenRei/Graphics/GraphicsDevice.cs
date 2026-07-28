@@ -124,7 +124,7 @@ public unsafe class GraphicsDevice : IDisposable
         // Process background texture uploads within 2.0ms main-thread frame budget
         TextureEngine.ProcessPendingUploads(this, 2.0f);
 
-        // Attach renderer handle to context for inline clip rect operations
+        // Attach renderer handle for inline clip rect operations
         context.RendererHandle = _renderer;
 
         // 1. Clear background to dark theme color
@@ -192,9 +192,12 @@ public unsafe class GraphicsDevice : IDisposable
             }
         }
 
-        // 4. Execute Multi-pass Gaussian Blur Pipeline
+        // 4. Execute Multi-pass Gaussian Blur & Frosted Glass Pipelines
         foreach (var blurCmd in context.BlurCommands)
             _blurPipeline?.ApplyBlur(blurCmd.Bounds, blurCmd.Filter);
+
+        foreach (var fgCmd in context.FrostedGlassCommands)
+            _blurPipeline?.ApplyFrostedGlass(fgCmd.Bounds, fgCmd.Filter);
 
         // 5. Swap buffers (Present frame to window display)
         SDL3.SDL_RenderPresent(_renderer);

@@ -155,6 +155,109 @@ public unsafe class BlurPipeline : IDisposable
         SDL3.SDL_RenderTexture(_renderer, readTarget, null, &srcArea);
     }
 
+    /// <summary>
+    /// Applies a premium frosted-glass effect: capture → blur → brightness boost → composite → tint overlay.
+    /// </summary>
+    public void ApplyFrostedGlass(Rect bounds, FrostedGlassFilter filter)
+    {
+        if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
+
+        int downscale = (filter.Radius < 4.0f) ? 1 : Math.Clamp(filter.Downscale, 1, 4);
+        int passes = Math.Clamp(filter.Passes, 1, 4);
+
+        int winW = 0, winH = 0;
+        SDL3.SDL_GetRenderOutputSize(_renderer, &winW, &winH);
+        float screenW = winW > 0 ? winW : 1280;
+        float screenH = winH > 0 ? winH : 720;
+
+        float clampX = MathF.Max(bounds.X, 0f);
+        float clampY = MathF.Max(bounds.Y, 0f);
+        float clampRight = MathF.Min(bounds.X + bounds.Width, screenW);
+        float clampBottom = MathF.Min(bounds.Y + bounds.Height, screenH);
+
+        float clampW = clampRight - clampX;
+        float clampH = clampBottom - clampY;
+
+        if (clampW <= 0f || clampH <= 0f) return;
+
+        int targetW = (int)Math.Max(clampW / downscale, 1);
+        int targetH = (int)Math.Max(clampH / downscale, 1);
+
+        EnsureRenderTargets(targetW, targetH);
+        if (_pingTexture == null || _pongTexture == null) return;
+
+        SDL_FRect srcArea = new SDL_FRect { x = clampX, y = clampY, w = clampW, h = clampH };
+        SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
+
+        // Step 1: Capture viewport screen region into Ping FBO
+        SDL_Rect readRect = new SDL_Rect
+        {
+            x = (int)clampX, y = (int)clampY,
+            w = (int)clampW, h = (int)clampH
+        };
+
+        SDL_Surface* screenSurface = SDL3.SDL_RenderReadPixels(_renderer, &readRect);
+        if (screenSurface != null)
+        {
+            SDL_Texture* screenTex = SDL3.SDL_CreateTextureFromSurface(_renderer, screenSurface);
+            if (screenTex != null)
+            {
+                SDL3.SDL_SetTextureBlendMode(screenTex, SDL_BlendMode.SDL_BLENDMODE_NONE);
+                SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
+                SDL3.SDL_RenderTexture(_renderer, screenTex, null, &fboDest);
+                SDL3.SDL_DestroyTexture(screenTex);
+            }
+            SDL3.SDL_DestroySurface(screenSurface);
+        }
+
+        // Step 2: Multi-pass separable Gaussian blur
+        SDL_Texture* readTarget = _pingTexture;
+        SDL_Texture* writeTarget = _pongTexture;
+
+        for (int p = 0; p < passes; p++)
+        {
+            SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
+
+            SDL_Texture* temp1 = readTarget;
+            readTarget = writeTarget;
+            writeTarget = temp1;
+
+            SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
+
+            SDL_Texture* temp2 = readTarget;
+            readTarget = writeTarget;
+            writeTarget = temp2;
+        }
+
+        // Step 3: Reset render target to main screen
+        SDL3.SDL_SetRenderTarget(_renderer, null);
+
+        // Step 4: Render blurred base texture onto screen
+        SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
+        SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+        SDL3.SDL_RenderTexture(_renderer, readTarget, null, &srcArea);
+
+        // Step 5: Optional Brightness highlight pass (if Brightness > 1.0f)
+        if (filter.Brightness > 1.0f)
+        {
+            float extraGain = Math.Clamp(filter.Brightness - 1.0f, 0.0f, 1.0f);
+            SDL3.SDL_SetRenderDrawBlendMode(_renderer, SDL_BlendMode.SDL_BLENDMODE_ADD);
+            SDL3.SDL_SetRenderDrawColorFloat(_renderer, extraGain * 0.3f, extraGain * 0.3f, extraGain * 0.3f, extraGain * 0.5f);
+            SDL3.SDL_RenderFillRect(_renderer, &srcArea);
+        }
+
+        // Step 6: Render Frosted Glass Tint Overlay
+        if (filter.TintColor.A > 0f)
+        {
+            SDL3.SDL_SetRenderDrawBlendMode(_renderer, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetRenderDrawColorFloat(_renderer,
+                filter.TintColor.R, filter.TintColor.G, filter.TintColor.B, filter.TintColor.A);
+            SDL3.SDL_RenderFillRect(_renderer, &srcArea);
+        }
+    }
+
     public void Dispose()
     {
         if (!_isDisposed)
