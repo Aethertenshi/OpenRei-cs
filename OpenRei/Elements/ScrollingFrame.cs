@@ -19,7 +19,7 @@ public class ScrollingFrame : Element
     private Vector2D _targetScrollPosition;
     private Vector2D _contentSize;
 
-    public UIListLayout ActiveLayout => (Layout as UIListLayout) ?? _internalLayout;
+    public UIListLayout ActiveLayout => Modifiers.OfType<UIListLayout>().LastOrDefault(l => l != _internalLayout) ?? Modifiers.OfType<UIListLayout>().FirstOrDefault() ?? _internalLayout;
 
     public FillDirection FillDirection
     {
