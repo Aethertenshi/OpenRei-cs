@@ -19,7 +19,7 @@ public class Element
     public Anchor Anchor { get; set; } = Anchor.TopLeft;
     public int ZIndex { get; set; } = 1;
     public Color Color { get; set; } = Color.White;
-    public float CornerRadius { get; set; } = 0.0f;
+    public CornerRadius CornerRadius { get; set; } = CornerRadius.Zero;
     public bool Visible { get; set; } = true;
     public bool ClipsToBounds { get; set; } = false;
 

@@ -139,15 +139,16 @@ public unsafe class GraphicsDevice : IDisposable
             {
                 case 0: // Quad
                     {
-                        if (cmd.CornerRadius > 1.0f)
+                        var r = cmd.CornerRadius;
+                        if (r.TopLeft > 1.0f || r.TopRight > 1.0f || r.BottomLeft > 1.0f || r.BottomRight > 1.0f)
                         {
                             RenderRoundedRect(cmd.Bounds, cmd.Color, cmd.CornerRadius);
                         }
                         else
                         {
-                            SDL_FRect r = new SDL_FRect { x = cmd.Bounds.X, y = cmd.Bounds.Y, w = cmd.Bounds.Width, h = cmd.Bounds.Height };
+                            SDL_FRect rect = new SDL_FRect { x = cmd.Bounds.X, y = cmd.Bounds.Y, w = cmd.Bounds.Width, h = cmd.Bounds.Height };
                             SDL3.SDL_SetRenderDrawColorFloat(_renderer, cmd.Color.R, cmd.Color.G, cmd.Color.B, cmd.Color.A);
-                            SDL3.SDL_RenderFillRect(_renderer, &r);
+                            SDL3.SDL_RenderFillRect(_renderer, &rect);
                         }
                         break;
                     }
@@ -184,13 +185,19 @@ public unsafe class GraphicsDevice : IDisposable
     }
 
     /// <summary>
-    /// Draws a filled rounded rectangle seamlessly using 3 fill rectangles + 4 corner fan geometries.
+    /// Draws a filled rounded rectangle with independent per-corner rounding (TopLeft, TopRight, BottomLeft, BottomRight).
     /// </summary>
-    private void RenderRoundedRect(Rect bounds, Color color, float radius)
+    private void RenderRoundedRect(Rect bounds, Color color, CornerRadius radius)
     {
         float x = bounds.X, y = bounds.Y, w = bounds.Width, h = bounds.Height;
-        float r = MathF.Min(radius, MathF.Min(w, h) * 0.5f);
-        if (r <= 1f)
+        float maxR = MathF.Min(w, h) * 0.5f;
+
+        float rTL = MathF.Min(radius.TopLeft, maxR);
+        float rTR = MathF.Min(radius.TopRight, maxR);
+        float rBL = MathF.Min(radius.BottomLeft, maxR);
+        float rBR = MathF.Min(radius.BottomRight, maxR);
+
+        if (rTL <= 1f && rTR <= 1f && rBL <= 1f && rBR <= 1f)
         {
             SDL_FRect fallback = new SDL_FRect { x = x, y = y, w = w, h = h };
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
@@ -200,19 +207,22 @@ public unsafe class GraphicsDevice : IDisposable
 
         SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
 
-        // 1. Middle rect (Full height between inset top & bottom)
-        SDL_FRect midRect = new SDL_FRect { x = x, y = y + r, w = w, h = MathF.Max(0f, h - 2f * r) };
+        float maxTopR = MathF.Max(rTL, rTR);
+        float maxBotR = MathF.Max(rBL, rBR);
+
+        // 1. Center-middle rect (Full width, inset top by maxTopR & bottom by maxBotR)
+        SDL_FRect midRect = new SDL_FRect { x = x, y = y + maxTopR, w = w, h = MathF.Max(0f, h - maxTopR - maxBotR) };
         if (midRect.h > 0f) SDL3.SDL_RenderFillRect(_renderer, &midRect);
 
-        // 2. Top-center rect (Inset left & right by r)
-        SDL_FRect topRect = new SDL_FRect { x = x + r, y = y, w = MathF.Max(0f, w - 2f * r), h = r };
-        if (topRect.w > 0f) SDL3.SDL_RenderFillRect(_renderer, &topRect);
+        // 2. Top-center rect (Inset left by rTL & right by rTR)
+        SDL_FRect topRect = new SDL_FRect { x = x + rTL, y = y, w = MathF.Max(0f, w - rTL - rTR), h = maxTopR };
+        if (topRect.w > 0f && topRect.h > 0f) SDL3.SDL_RenderFillRect(_renderer, &topRect);
 
-        // 3. Bottom-center rect (Inset left & right by r)
-        SDL_FRect botRect = new SDL_FRect { x = x + r, y = y + h - r, w = MathF.Max(0f, w - 2f * r), h = r };
-        if (botRect.w > 0f) SDL3.SDL_RenderFillRect(_renderer, &botRect);
+        // 3. Bottom-center rect (Inset left by rBL & right by rBR)
+        SDL_FRect botRect = new SDL_FRect { x = x + rBL, y = y + h - maxBotR, w = MathF.Max(0f, w - rBL - rBR), h = maxBotR };
+        if (botRect.w > 0f && botRect.h > 0f) SDL3.SDL_RenderFillRect(_renderer, &botRect);
 
-        // 4. Render 4 quarter-circle corner fans
+        // 4. Render 4 corner fans (or degenerate fallback if r == 0)
         int segments = 8;
         int totalVerts = 4 * (segments + 2);
         var verts = new SDL_Vertex[totalVerts];
@@ -220,16 +230,29 @@ public unsafe class GraphicsDevice : IDisposable
 
         float cr = color.R, cg = color.G, cb = color.B, ca = color.A;
 
-        // Screen space (+Y down) quarter circle angles:
         var corners = new[] {
-            (x + r,         y + r,         180f, 270f), // Top-Left
-            (x + w - r,     y + r,         270f, 360f), // Top-Right
-            (x + w - r,     y + h - r,     0f,   90f),  // Bottom-Right
-            (x + r,         y + h - r,     90f,  180f), // Bottom-Left
+            (x + rTL,         y + rTL,         rTL, 180f, 270f), // Top-Left
+            (x + w - rTR,     y + rTR,         rTR, 270f, 360f), // Top-Right
+            (x + w - rBR,     y + h - rBR,     rBR, 0f,   90f),  // Bottom-Right
+            (x + rBL,         y + h - rBL,     rBL, 90f,  180f), // Bottom-Left
         };
 
-        foreach (var (cx, cy, startAngle, endAngle) in corners)
+        foreach (var (cx, cy, r, startAngle, endAngle) in corners)
         {
+            if (r <= 1f)
+            {
+                // Square corner fallback
+                for (int i = 0; i <= segments + 1; i++)
+                {
+                    verts[idx++] = new SDL_Vertex
+                    {
+                        position = new SDL_FPoint { x = cx, y = cy },
+                        color = new SDL_FColor { r = cr, g = cg, b = cb, a = ca }
+                    };
+                }
+                continue;
+            }
+
             // Fan center
             verts[idx++] = new SDL_Vertex
             {
