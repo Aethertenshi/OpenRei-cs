@@ -1,7 +1,7 @@
 namespace OpenRei.Types;
 
 /// <summary>
-/// Represents an RGBA color with both byte (0..255) and float (0..1) accessors.
+/// Represents an RGBA color supporting float (0..1), byte (0..255), and int (0..255) constructors.
 /// </summary>
 public readonly record struct Color(float R, float G, float B, float A = 1.0f)
 {
@@ -15,7 +15,13 @@ public readonly record struct Color(float R, float G, float B, float A = 1.0f)
     public static Color Cyan => new(0f, 1f, 1f, 1f);
     public static Color Magenta => new(1f, 0f, 1f, 1f);
 
-    public static Color FromRgba(byte r, byte g, byte b, byte a = 255) => 
+    public Color(byte r, byte g, byte b, byte a = 255)
+        : this(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f) { }
+
+    public Color(int r, int g, int b, int a = 255)
+        : this(Math.Clamp(r, 0, 255) / 255.0f, Math.Clamp(g, 0, 255) / 255.0f, Math.Clamp(b, 0, 255) / 255.0f, Math.Clamp(a, 0, 255) / 255.0f) { }
+
+    public static Color FromRgba(byte r, byte g, byte b, byte a = 255) =>
         new(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
 
     public static Color FromHex(uint hex)

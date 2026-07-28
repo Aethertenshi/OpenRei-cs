@@ -97,8 +97,8 @@ public unsafe class GraphicsDevice : IDisposable
         };
 
         SDL3.SDL_SetTextureBlendMode(texture.Handle, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-        SDL3.SDL_SetTextureColorModFloat(texture.Handle, color.R, color.G, color.B);
-        SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, color.A);
+        SDL3.SDL_SetTextureColorModFloat(texture.Handle, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
+        SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, Math.Clamp(color.A, 0f, 1f));
 
         if (sourceRect.HasValue)
         {
