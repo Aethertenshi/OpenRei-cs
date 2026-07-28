@@ -102,7 +102,7 @@ var scroll = new ScrollingFrame
     Color = Color.Black
 };
 for (int i = 0; i < 20; i++)
-    scroll.AddChild(new Label { Size = UDim2.FromOffset(380, 40), Text = $"Item {i}", Color = Color.Red });
+    scroll.AddChild(new Label { Size = new UDim2(1f, 0, 0, 40), Text = $"Item {i}", Color = Color.Red });
 app.RootElement.AddChild(scroll);
 
 Console.WriteLine("Launching native SDL3 desktop window... Press ESC or close window to exit.");
