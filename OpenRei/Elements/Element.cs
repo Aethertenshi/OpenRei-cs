@@ -24,7 +24,26 @@ public class Element
     public bool ClipsToBounds { get; set; } = false;
 
     public List<Filter> Filters { get; init; } = new();
-    public LayoutModifier? Layout { get; set; }
+
+    /// <summary>
+    /// Collection of active layout modifiers (e.g. UIAspectRatioConstraint, UICorner, UIListLayout, UIPadding).
+    /// </summary>
+    public List<LayoutModifier> Modifiers { get; init; } = new();
+
+    /// <summary>
+    /// Alias getter/setter for the primary layout modifier.
+    /// </summary>
+    public LayoutModifier? Layout
+    {
+        get => Modifiers.FirstOrDefault();
+        set
+        {
+            if (value != null && !Modifiers.Contains(value))
+            {
+                Modifiers.Add(value);
+            }
+        }
+    }
 
     public Element? Parent
     {
@@ -53,7 +72,10 @@ public class Element
             float ratio = AspectRatio;
             DominantAxis axis = AspectAxis;
 
-            if (Layout is UIAspectRatioConstraint aspectConstraint)
+            var aspectConstraint = Modifiers.OfType<UIAspectRatioConstraint>().FirstOrDefault()
+                ?? (Layout as UIAspectRatioConstraint);
+
+            if (aspectConstraint != null)
             {
                 ratio = aspectConstraint.AspectRatio;
                 axis = aspectConstraint.AspectAxis;
@@ -104,6 +126,14 @@ public class Element
         }
     }
 
+    public void AddModifier(LayoutModifier modifier)
+    {
+        if (modifier != null && !Modifiers.Contains(modifier))
+        {
+            Modifiers.Add(modifier);
+        }
+    }
+
     /// <summary>
     /// Returns children sorted by local ZIndex (Local Stacking Context).
     /// </summary>
@@ -122,7 +152,14 @@ public class Element
     public virtual void Update(float deltaTime)
     {
         Tick(deltaTime);
-        Layout?.UpdateLayout(this);
+
+        foreach (var modifier in Modifiers)
+        {
+            if (modifier != null && modifier.Enabled)
+            {
+                modifier.UpdateLayout(this);
+            }
+        }
 
         foreach (var child in _children)
         {
@@ -137,7 +174,6 @@ public class Element
     {
         if (!Visible) return;
 
-        // Traverse children in reverse ZIndex order (topmost elements receive input first)
         var sortedChildren = _children.OrderByDescending(c => c.ZIndex).ToList();
         foreach (var child in sortedChildren)
         {
@@ -162,7 +198,10 @@ public class Element
         var sortedChildren = GetSortedChildren();
         foreach (var child in sortedChildren)
         {
-            child.Render(context);
+            if (child.Visible)
+            {
+                child.Render(context);
+            }
         }
     }
 }
