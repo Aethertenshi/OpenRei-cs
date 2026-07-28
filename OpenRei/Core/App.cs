@@ -248,14 +248,12 @@ public class App
                 // Reset per-frame input state after update phase
                 Input.ResetMouseWheelDelta();
 
-                // 4. Zero-allocation Render pass
-                using var renderQueue = new RenderQueue();
-                var renderContext = new RenderContext(renderQueue);
+                // 4. Render pass (traversal collects FIFO commands)
+                var renderContext = new RenderContext();
                 RootElement.Render(renderContext);
-                renderQueue.SwapBuffers();
 
                 // 5. Hardware GPU Render Pass Execution
-                graphicsDevice.RenderPass(renderQueue, renderContext);
+                graphicsDevice.RenderPass(null!, renderContext);
 
                 // Cap frame rate slightly for smooth CPU loop if GPU vsync is inactive
                 SDL3.SDL_Delay(1);

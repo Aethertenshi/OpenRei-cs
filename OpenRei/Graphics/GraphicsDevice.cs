@@ -132,76 +132,143 @@ public unsafe class GraphicsDevice : IDisposable
         SDL3.SDL_SetRenderDrawColor(_renderer, 18, 18, 24, 255);
         SDL3.SDL_RenderClear(_renderer);
 
-        // 2. Collect all render commands with ZIndex into a single sorted list
-        int quadCount = queue.ActiveReadCount;
-        QuadInstance* instances = queue.ActiveReadBuffer;
-
-        int totalCount = quadCount + context.ImageCommands.Count + context.TextCommands.Count;
-        if (totalCount == 0)
+        // 2. Process unified sorted commands (Quads, Images, Text, ClipPush, ClipPop)
+        foreach (var cmd in context.Commands)
         {
-            SDL3.SDL_RenderPresent(_renderer);
-            return;
-        }
-
-        var sortKeys = new (float ZIndex, int BatchOrder, int Type, int Index)[totalCount];
-        int sortIdx = 0;
-
-        for (int i = 0; i < quadCount; i++)
-            sortKeys[sortIdx++] = (instances[i].ZIndex, sortIdx, 0, i);
-
-        for (int i = 0; i < context.ImageCommands.Count; i++)
-            sortKeys[sortIdx++] = (context.ImageCommands[i].ZIndex, sortIdx, 1, i);
-
-        for (int i = 0; i < context.TextCommands.Count; i++)
-            sortKeys[sortIdx++] = (context.TextCommands[i].ZIndex, sortIdx, 2, i);
-
-        Array.Sort(sortKeys, (a, b) =>
-        {
-            int cmp = a.ZIndex.CompareTo(b.ZIndex);
-            return cmp != 0 ? cmp : a.BatchOrder.CompareTo(b.BatchOrder);
-        });
-
-        // 3. Render all commands in ZIndex depth order
-        foreach (var key in sortKeys)
-        {
-            switch (key.Type)
+            switch (cmd.Type)
             {
                 case 0: // Quad
                     {
-                        var quad = instances[key.Index];
-                        SDL_FRect rect = new SDL_FRect
+                        if (cmd.CornerRadius > 1.0f)
                         {
-                            x = quad.Bounds.X, y = quad.Bounds.Y,
-                            w = quad.Bounds.Width, h = quad.Bounds.Height
-                        };
-                        SDL3.SDL_SetRenderDrawColorFloat(_renderer, quad.Color.R, quad.Color.G, quad.Color.B, quad.Color.A);
-                        SDL3.SDL_RenderFillRect(_renderer, &rect);
+                            RenderRoundedRect(cmd.Bounds, cmd.Color, cmd.CornerRadius);
+                        }
+                        else
+                        {
+                            SDL_FRect r = new SDL_FRect { x = cmd.Bounds.X, y = cmd.Bounds.Y, w = cmd.Bounds.Width, h = cmd.Bounds.Height };
+                            SDL3.SDL_SetRenderDrawColorFloat(_renderer, cmd.Color.R, cmd.Color.G, cmd.Color.B, cmd.Color.A);
+                            SDL3.SDL_RenderFillRect(_renderer, &r);
+                        }
                         break;
                     }
                 case 1: // Image
                     {
-                        var imgCmd = context.ImageCommands[key.Index];
-                        if (imgCmd.BlurFilter != null && imgCmd.BlurFilter.Enabled && imgCmd.BlurFilter.Radius > 0.05f)
-                        {
-                            _blurPipeline?.RenderBlurredTexture(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color, imgCmd.BlurFilter);
-                        }
+                        if (cmd.BlurFilter != null && cmd.BlurFilter.Enabled && cmd.BlurFilter.Radius > 0.05f)
+                            _blurPipeline?.RenderBlurredTexture(cmd.Texture!, cmd.Bounds, cmd.SourceRect, cmd.Color, cmd.BlurFilter);
                         else
-                        {
-                            RenderImage(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color);
-                        }
+                            RenderImage(cmd.Texture!, cmd.Bounds, cmd.SourceRect, cmd.Color);
                         break;
                     }
                 case 2: // Text
                     {
-                        var textCmd = context.TextCommands[key.Index];
-                        RenderText(textCmd.Font, textCmd.Text, textCmd.Bounds, textCmd.Color);
+                        if (cmd.TextString != null)
+                            RenderText(cmd.Font, cmd.TextString, cmd.Bounds, cmd.Color);
+                        break;
+                    }
+                case 3: // ClipPush
+                    {
+                        SDL_Rect r = new SDL_Rect { x = (int)cmd.Bounds.X, y = (int)cmd.Bounds.Y, w = (int)cmd.Bounds.Width, h = (int)cmd.Bounds.Height };
+                        SDL3.SDL_SetRenderClipRect(_renderer, &r);
+                        break;
+                    }
+                case 4: // ClipPop
+                    {
+                        SDL3.SDL_SetRenderClipRect(_renderer, null);
                         break;
                     }
             }
         }
 
-        // 4. Swap buffers (Present frame to window display)
+        // 3. Swap buffers (Present frame to window display)
         SDL3.SDL_RenderPresent(_renderer);
+    }
+
+    /// <summary>
+    /// Draws a filled rounded rectangle seamlessly using 3 fill rectangles + 4 corner fan geometries.
+    /// </summary>
+    private void RenderRoundedRect(Rect bounds, Color color, float radius)
+    {
+        float x = bounds.X, y = bounds.Y, w = bounds.Width, h = bounds.Height;
+        float r = MathF.Min(radius, MathF.Min(w, h) * 0.5f);
+        if (r <= 1f)
+        {
+            SDL_FRect fallback = new SDL_FRect { x = x, y = y, w = w, h = h };
+            SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
+            SDL3.SDL_RenderFillRect(_renderer, &fallback);
+            return;
+        }
+
+        SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
+
+        // 1. Middle rect (Full height between inset top & bottom)
+        SDL_FRect midRect = new SDL_FRect { x = x, y = y + r, w = w, h = MathF.Max(0f, h - 2f * r) };
+        if (midRect.h > 0f) SDL3.SDL_RenderFillRect(_renderer, &midRect);
+
+        // 2. Top-center rect (Inset left & right by r)
+        SDL_FRect topRect = new SDL_FRect { x = x + r, y = y, w = MathF.Max(0f, w - 2f * r), h = r };
+        if (topRect.w > 0f) SDL3.SDL_RenderFillRect(_renderer, &topRect);
+
+        // 3. Bottom-center rect (Inset left & right by r)
+        SDL_FRect botRect = new SDL_FRect { x = x + r, y = y + h - r, w = MathF.Max(0f, w - 2f * r), h = r };
+        if (botRect.w > 0f) SDL3.SDL_RenderFillRect(_renderer, &botRect);
+
+        // 4. Render 4 quarter-circle corner fans
+        int segments = 8;
+        int totalVerts = 4 * (segments + 2);
+        var verts = new SDL_Vertex[totalVerts];
+        int idx = 0;
+
+        float cr = color.R, cg = color.G, cb = color.B, ca = color.A;
+
+        // Screen space (+Y down) quarter circle angles:
+        var corners = new[] {
+            (x + r,         y + r,         180f, 270f), // Top-Left
+            (x + w - r,     y + r,         270f, 360f), // Top-Right
+            (x + w - r,     y + h - r,     0f,   90f),  // Bottom-Right
+            (x + r,         y + h - r,     90f,  180f), // Bottom-Left
+        };
+
+        foreach (var (cx, cy, startAngle, endAngle) in corners)
+        {
+            // Fan center
+            verts[idx++] = new SDL_Vertex
+            {
+                position = new SDL_FPoint { x = cx, y = cy },
+                color = new SDL_FColor { r = cr, g = cg, b = cb, a = ca }
+            };
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = (startAngle + (endAngle - startAngle) * i / segments) * MathF.PI / 180f;
+                verts[idx++] = new SDL_Vertex
+                {
+                    position = new SDL_FPoint { x = cx + r * MathF.Cos(angle), y = cy + r * MathF.Sin(angle) },
+                    color = new SDL_FColor { r = cr, g = cg, b = cb, a = ca }
+                };
+            }
+        }
+
+        fixed (SDL_Vertex* vPtr = verts)
+        {
+            int[] indices = new int[4 * (3 * segments)];
+            int iIdx = 0;
+            int cornerPos = 0;
+            for (int c = 0; c < 4; c++)
+            {
+                int fanCenter = cornerPos;
+                for (int s = 0; s < segments; s++)
+                {
+                    indices[iIdx++] = fanCenter;
+                    indices[iIdx++] = fanCenter + 1 + s;
+                    indices[iIdx++] = fanCenter + 2 + s;
+                }
+                cornerPos += (segments + 2);
+            }
+
+            fixed (int* iPtr = indices)
+            {
+                SDL3.SDL_RenderGeometry(_renderer, null, vPtr, totalVerts, iPtr, iIdx);
+            }
+        }
     }
 
     public void Dispose()
