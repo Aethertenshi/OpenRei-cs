@@ -24,7 +24,7 @@ public enum VerticalAlignment
 }
 
 /// <summary>
-/// Automatically positions child elements in a horizontal or vertical list with padding.
+/// Automatically positions and anchors child elements in a horizontal or vertical list with padding and alignment controls.
 /// </summary>
 public class UIListLayout : LayoutModifier
 {
@@ -92,10 +92,7 @@ public class UIListLayout : LayoutModifier
         float padLeft = PaddingLeft.GetAbsolute(parent.AbsoluteSize.X);
         float padRight = PaddingRight.GetAbsolute(parent.AbsoluteSize.X);
 
-        if (FillDirection == FillDirection.Vertical)
-            return new Vector2D(totalX + padLeft + padRight, totalY + padTop + padBot);
-        else
-            return new Vector2D(totalX + padLeft + padRight, totalY + padTop + padBot);
+        return new Vector2D(totalX + padLeft + padRight, totalY + padTop + padBot);
     }
 
     public override void UpdateLayout(Element parent)
@@ -124,19 +121,59 @@ public class UIListLayout : LayoutModifier
             if (FillDirection == FillDirection.Vertical)
             {
                 float userX = child.Position.X.Offset;
-                child.Position = new UDim2(
-                    new UDim(0f, padLeft + userX),
-                    UDim.FromOffset(currentOffset)
-                );
+
+                // Position X & Anchor derived from HorizontalAlignment
+                UDim posX;
+                float anchorX;
+
+                switch (HorizontalAlignment)
+                {
+                    case HorizontalAlignment.Right:
+                        anchorX = 1.0f;
+                        posX = new UDim(1.0f, -padRight + userX);
+                        break;
+                    case HorizontalAlignment.Center:
+                        anchorX = 0.5f;
+                        posX = new UDim(0.5f, userX);
+                        break;
+                    case HorizontalAlignment.Left:
+                    default:
+                        anchorX = 0.0f;
+                        posX = new UDim(0.0f, padLeft + userX);
+                        break;
+                }
+
+                child.Anchor = new Anchor(anchorX, child.Anchor.Y);
+                child.Position = new UDim2(posX, UDim.FromOffset(currentOffset));
                 currentOffset += childSize.Y + betweenPx;
             }
-            else
+            else // FillDirection == Horizontal
             {
                 float userY = child.Position.Y.Offset;
-                child.Position = new UDim2(
-                    UDim.FromOffset(currentOffset),
-                    new UDim(0f, padTop + userY)
-                );
+
+                // Position Y & Anchor derived from VerticalAlignment
+                UDim posY;
+                float anchorY;
+
+                switch (VerticalAlignment)
+                {
+                    case VerticalAlignment.Bottom:
+                        anchorY = 1.0f;
+                        posY = new UDim(1.0f, -padBot + userY);
+                        break;
+                    case VerticalAlignment.Center:
+                        anchorY = 0.5f;
+                        posY = new UDim(0.5f, userY);
+                        break;
+                    case VerticalAlignment.Top:
+                    default:
+                        anchorY = 0.0f;
+                        posY = new UDim(0.0f, padTop + userY);
+                        break;
+                }
+
+                child.Anchor = new Anchor(child.Anchor.X, anchorY);
+                child.Position = new UDim2(UDim.FromOffset(currentOffset), posY);
                 currentOffset += childSize.X + betweenPx;
             }
         }
