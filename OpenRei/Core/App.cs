@@ -144,7 +144,7 @@ public class App
                 return;
             }
 
-            using var graphicsDevice = new GraphicsDevice(window);
+            var graphicsDevice = new GraphicsDevice(window);
             OpenRei.IO.FileDropHandler.Initialize();
 
             Console.WriteLine("[OpenRei App] Native SDL3 Window created successfully! Entering main loop...");
@@ -254,14 +254,18 @@ public class App
                 RootElement.Render(renderContext);
                 renderQueue.SwapBuffers();
 
-                // 5. Hardware GPU Render Pass Execution
+                // 5. Hardware GPU Render Pass Execution (SDL_Renderer path)
                 graphicsDevice.RenderPass(renderQueue, renderContext);
+
+                // 6. SDL_GPU path (if available, renders on top of SDL_Renderer)
+                graphicsDevice.GpuRendererInstance?.Render(renderContext);
 
                 // Cap frame rate slightly for smooth CPU loop if GPU vsync is inactive
                 SDL3.SDL_Delay(1);
             }
 
             OpenRei.IO.FileDropHandler.Shutdown();
+            graphicsDevice.Dispose();
             OpenRei.Audio.AudioEngine.Shutdown();
             SDL3.SDL_DestroyWindow(window);
             SDL3.SDL_Quit();
