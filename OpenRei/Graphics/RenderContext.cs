@@ -28,32 +28,22 @@ public readonly struct ImageCommand
     public readonly Rect DestBounds;
     public readonly Rect? SourceRect;
     public readonly Color Color;
+    public readonly BlurFilter? BlurFilter;
     public readonly float ZIndex;
 
-    public ImageCommand(Texture texture, Rect destBounds, Rect? sourceRect, Color color, float zIndex = 1f)
+    public ImageCommand(Texture texture, Rect destBounds, Rect? sourceRect, Color color, BlurFilter? blurFilter = null, float zIndex = 1f)
     {
         Texture = texture;
         DestBounds = destBounds;
         SourceRect = sourceRect;
         Color = color;
+        BlurFilter = blurFilter;
         ZIndex = zIndex;
     }
 }
 
-public readonly struct BlurCommand
-{
-    public readonly Rect Bounds;
-    public readonly BlurFilter Filter;
-
-    public BlurCommand(Rect bounds, BlurFilter filter)
-    {
-        Bounds = bounds;
-        Filter = filter;
-    }
-}
-
 /// <summary>
-/// Execution context passed down scene graph elements to submit 2D quad instances, text, images, and post-processing filters.
+/// Execution context passed down scene graph elements to submit 2D quad instances, text, images, and texture blur filters.
 /// </summary>
 public class RenderContext
 {
@@ -63,7 +53,6 @@ public class RenderContext
 
     public List<TextCommand> TextCommands { get; } = new();
     public List<ImageCommand> ImageCommands { get; } = new();
-    public List<BlurCommand> BlurCommands { get; } = new();
 
     public RenderContext(RenderQueue queue)
     {
@@ -100,19 +89,11 @@ public class RenderContext
         }
     }
 
-    public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null, float zIndex = 1f)
+    public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null, BlurFilter? blurFilter = null, float zIndex = 1f)
     {
         if (texture != null && texture.IsValid)
         {
-            ImageCommands.Add(new ImageCommand(texture, destBounds, sourceRect, color ?? Color.White, zIndex));
-        }
-    }
-
-    public void ApplyBlur(Rect bounds, BlurFilter filter)
-    {
-        if (filter != null && filter.Enabled && filter.Radius > 0f)
-        {
-            BlurCommands.Add(new BlurCommand(bounds, filter));
+            ImageCommands.Add(new ImageCommand(texture, destBounds, sourceRect, color ?? Color.White, blurFilter, zIndex));
         }
     }
 

@@ -5,7 +5,7 @@ using OpenRei.Types;
 namespace OpenRei.Elements;
 
 /// <summary>
-/// A high-performance image rendering UI element supporting asynchronous background loading, UV atlas cropping, color tinting, and CSS object-fit StretchMode scaling.
+/// A high-performance image rendering UI element supporting asynchronous background loading, UV atlas cropping, color tinting, isolated Gaussian blur, and CSS object-fit StretchMode scaling.
 /// </summary>
 public class Sprite : Element
 {
@@ -67,7 +67,10 @@ public class Sprite : Element
             ? ImageColor
             : (Color != Color.Transparent ? Color : Color.White);
 
-        // 1. Render this Sprite's texture FIRST with color tint modulation
+        // Find active BlurFilter attached to this Sprite
+        BlurFilter? activeBlur = Filters.OfType<BlurFilter>().FirstOrDefault(b => b.Enabled && b.Radius > 0f);
+
+        // 1. Render this Sprite's texture FIRST with color tint modulation and isolated blur
         if (Texture != null && Texture.IsValid)
         {
             Rect bounds = AbsoluteBounds;
@@ -143,7 +146,7 @@ public class Sprite : Element
                                         Rect tileDest = new Rect(x, y, tileW, tileH);
                                         Rect tileSrc = new Rect(0, 0, tileW, tileH);
 
-                                        context.DrawImage(Texture, tileDest, tileSrc, activeTint, ZIndex);
+                                        context.DrawImage(Texture, tileDest, tileSrc, activeTint, activeBlur, ZIndex);
                                     }
                                 }
                                 break;
@@ -156,22 +159,13 @@ public class Sprite : Element
 
                     if (ScaleType != ScaleType.Tile)
                     {
-                        context.DrawImage(Texture, destBounds, activeSourceRect, activeTint, ZIndex);
+                        context.DrawImage(Texture, destBounds, activeSourceRect, activeTint, activeBlur, ZIndex);
                     }
                 }
             }
         }
 
-        // 2. Submit element filters
-        foreach (var filter in Filters)
-        {
-            if (filter is BlurFilter blurFilter && blurFilter.Enabled)
-            {
-                context.ApplyBlur(AbsoluteBounds, blurFilter);
-            }
-        }
-
-        // 3. Render child elements on top of this sprite's image
+        // 2. Render child elements on top of this sprite's image
         var sortedChildren = GetSortedChildren();
         foreach (var child in sortedChildren)
         {

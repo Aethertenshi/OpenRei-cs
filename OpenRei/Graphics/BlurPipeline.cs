@@ -7,7 +7,7 @@ namespace OpenRei.Graphics;
 
 /// <summary>
 /// Executes Hardware-Accelerated Dual-Kawase / Gaussian Blur (osu!-framework style)
-/// using normalized 4-tap sub-pixel kernel sampling over high-precision FBO render targets.
+/// directly on element textures using normalized 4-tap sub-pixel kernel sampling over high-precision FBO render targets.
 /// </summary>
 public unsafe class BlurPipeline : IDisposable
 {
@@ -53,65 +53,46 @@ public unsafe class BlurPipeline : IDisposable
     }
 
     /// <summary>
-    /// Captures source screen region, applies multi-pass normalized Gaussian blur, and renders result back to screen.
+    /// Renders a texture directly onto the screen with Multi-Pass Gaussian Blur applied ONLY to the texture itself.
     /// </summary>
-    public void ApplyBlur(Rect bounds, BlurFilter filter)
+    public void RenderBlurredTexture(Texture texture, Rect destBounds, Rect? sourceRect, Color color, BlurFilter filter)
     {
-        if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
+        if (_renderer == null || texture == null || !texture.IsValid || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
 
-        // Keep downscale low (1 or 2 max) to eliminate square-ish pixel block edges
         int downscale = (filter.Radius < 6.0f) ? 1 : 2;
         int passes = Math.Clamp(filter.Passes, 1, 4);
 
-        // Clamp capture bounds to physical window viewport
-        int winW = 0, winH = 0;
-        SDL3.SDL_GetRenderOutputSize(_renderer, &winW, &winH);
-        float screenW = winW > 0 ? winW : 1280;
-        float screenH = winH > 0 ? winH : 720;
-
-        float clampX = MathF.Max(bounds.X, 0f);
-        float clampY = MathF.Max(bounds.Y, 0f);
-        float clampRight = MathF.Min(bounds.X + bounds.Width, screenW);
-        float clampBottom = MathF.Min(bounds.Y + bounds.Height, screenH);
-
-        float clampW = clampRight - clampX;
-        float clampH = clampBottom - clampY;
-
-        if (clampW <= 0f || clampH <= 0f) return;
-
-        int targetW = (int)Math.Max(clampW / downscale, 1);
-        int targetH = (int)Math.Max(clampH / downscale, 1);
+        int targetW = (int)Math.Max(destBounds.Width / downscale, 1);
+        int targetH = (int)Math.Max(destBounds.Height / downscale, 1);
 
         EnsureRenderTargets(targetW, targetH);
         if (_pingTexture == null || _pongTexture == null) return;
 
-        SDL_FRect srcArea = new SDL_FRect { x = clampX, y = clampY, w = clampW, h = clampH };
+        SDL_FRect destArea = new SDL_FRect
+        {
+            x = destBounds.X, y = destBounds.Y,
+            w = destBounds.Width, h = destBounds.Height
+        };
         SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
 
-        // Step 1: Capture screen region into Ping FBO
-        SDL_Rect readRect = new SDL_Rect
+        // Step 1: Render source texture directly into Ping FBO (NOT screen capture!)
+        SDL3.SDL_SetTextureBlendMode(texture.Handle, SDL_BlendMode.SDL_BLENDMODE_NONE);
+        SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
+        if (sourceRect.HasValue)
         {
-            x = (int)clampX,
-            y = (int)clampY,
-            w = (int)clampW,
-            h = (int)clampH
-        };
-
-        SDL_Surface* screenSurface = SDL3.SDL_RenderReadPixels(_renderer, &readRect);
-        if (screenSurface != null)
-        {
-            SDL_Texture* screenTex = SDL3.SDL_CreateTextureFromSurface(_renderer, screenSurface);
-            if (screenTex != null)
+            SDL_FRect src = new SDL_FRect
             {
-                SDL3.SDL_SetTextureBlendMode(screenTex, SDL_BlendMode.SDL_BLENDMODE_NONE);
-                SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
-                SDL3.SDL_RenderTexture(_renderer, screenTex, null, &fboDest);
-                SDL3.SDL_DestroyTexture(screenTex);
-            }
-            SDL3.SDL_DestroySurface(screenSurface);
+                x = sourceRect.Value.X, y = sourceRect.Value.Y,
+                w = sourceRect.Value.Width, h = sourceRect.Value.Height
+            };
+            SDL3.SDL_RenderTexture(_renderer, texture.Handle, &src, &fboDest);
+        }
+        else
+        {
+            SDL3.SDL_RenderTexture(_renderer, texture.Handle, null, &fboDest);
         }
 
-        // Step 2: Multi-Pass Normalized 4-Tap Gaussian Kernel Sampling (Zero Darkening, Zero Pixel Blocks)
+        // Step 2: Multi-Pass Normalized 4-Tap Gaussian Kernel Sampling on Texture FBO
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
 
@@ -153,24 +134,26 @@ public unsafe class BlurPipeline : IDisposable
             writeTarget = temp;
         }
 
-        // Step 3: Reset main swapchain render target
+        // Step 3: Reset main swapchain render target back to main screen
         SDL3.SDL_SetRenderTarget(_renderer, null);
 
-        // Step 4: Configure final blend mode & smooth alpha modulation for low radii (< 3px) to prevent 1-frame snapping
+        // Step 4: Configure final blend mode & color modulation for dynamic radius tweening
         if (filter.Radius < 3.0f)
         {
             float blurOpacity = Math.Clamp(filter.Radius / 3.0f, 0.0f, 1.0f);
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, blurOpacity);
+            SDL3.SDL_SetTextureColorModFloat(readTarget, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f) * blurOpacity);
         }
         else
         {
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureColorModFloat(readTarget, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f));
         }
 
-        // Step 5: Upsample and composite final silky Gaussian blur back onto screen viewport
-        SDL3.SDL_RenderTexture(_renderer, readTarget, null, &srcArea);
+        // Step 5: Render final blurred texture onto screen
+        SDL3.SDL_RenderTexture(_renderer, readTarget, null, &destArea);
     }
 
     public void Dispose()

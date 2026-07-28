@@ -84,6 +84,7 @@ public unsafe class GraphicsDevice : IDisposable
             }
         }
     }
+
     public void RenderImage(Texture texture, Rect destBounds, Rect? sourceRect, Color color)
     {
         if (!IsInitialized || _renderer == null || texture == null || !texture.IsValid) return;
@@ -160,7 +161,7 @@ public unsafe class GraphicsDevice : IDisposable
             return cmp != 0 ? cmp : a.BatchOrder.CompareTo(b.BatchOrder);
         });
 
-        // 3. Render all commands in ZIndex order
+        // 3. Render all commands in ZIndex depth order
         foreach (var key in sortKeys)
         {
             switch (key.Type)
@@ -180,7 +181,14 @@ public unsafe class GraphicsDevice : IDisposable
                 case 1: // Image
                     {
                         var imgCmd = context.ImageCommands[key.Index];
-                        RenderImage(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color);
+                        if (imgCmd.BlurFilter != null && imgCmd.BlurFilter.Enabled && imgCmd.BlurFilter.Radius > 0.05f)
+                        {
+                            _blurPipeline?.RenderBlurredTexture(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color, imgCmd.BlurFilter);
+                        }
+                        else
+                        {
+                            RenderImage(imgCmd.Texture, imgCmd.DestBounds, imgCmd.SourceRect, imgCmd.Color);
+                        }
                         break;
                     }
                 case 2: // Text
@@ -192,11 +200,7 @@ public unsafe class GraphicsDevice : IDisposable
             }
         }
 
-        // 4. Execute Multi-pass Gaussian Blur Pipeline
-        foreach (var blurCmd in context.BlurCommands)
-            _blurPipeline?.ApplyBlur(blurCmd.Bounds, blurCmd.Filter);
-
-        // 5. Swap buffers (Present frame to window display)
+        // 4. Swap buffers (Present frame to window display)
         SDL3.SDL_RenderPresent(_renderer);
     }
 
