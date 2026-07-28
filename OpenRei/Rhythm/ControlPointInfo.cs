@@ -42,7 +42,7 @@ public class ControlPointInfo
     private static T? BinarySearchActivePoint<T>(List<T> points, double time) where T : ControlPoint
     {
         if (points.Count == 0) return null;
-        if (time < points[0].Time) return null; // Before first point
+        if (time < points[0].Time) return null;
 
         int low = 0;
         int high = points.Count - 1;
@@ -54,6 +54,10 @@ public class ControlPointInfo
 
             if (midTime == time)
             {
+                // When multiple control points share the same time (e.g. red + green lines),
+                // the LAST one wins (inherited lines override uninherited at the same time).
+                while (mid + 1 < points.Count && points[mid + 1].Time == time)
+                    mid++;
                 return points[mid];
             }
             else if (midTime < time)
