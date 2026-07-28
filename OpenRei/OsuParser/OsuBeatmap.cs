@@ -19,6 +19,7 @@ public class OsuBeatmap
     public ControlPointInfo ControlPoints { get; } = new();
     public int FormatVersion { get; set; }
     public string FilePath { get; set; } = string.Empty;
+    public string FolderPath => string.IsNullOrEmpty(FilePath) ? string.Empty : (System.IO.Path.GetDirectoryName(FilePath) ?? string.Empty);
 
     public IEnumerable<OsuNote> Notes => HitObjects.OfType<OsuNote>();
     public IEnumerable<OsuSlider> Sliders => HitObjects.OfType<OsuSlider>();
@@ -130,6 +131,8 @@ public class OsuBeatmap
         int.TryParse(GetMeta("BeatmapSetID"), out int id) ? id : 0;
 
     public string AudioFilename => GetGeneral("AudioFilename");
+    public string AudioFullPath => string.IsNullOrEmpty(FolderPath) || string.IsNullOrEmpty(AudioFilename)
+        ? string.Empty : System.IO.Path.Combine(FolderPath, AudioFilename);
     public int PreviewTime =>
         int.TryParse(GetGeneral("PreviewTime"), out int t) ? t : 0;
     public int Mode =>
@@ -190,6 +193,9 @@ public class OsuBeatmap
         string? folder = System.IO.Path.GetDirectoryName(FilePath);
         return folder is null ? string.Empty : System.IO.Path.Combine(folder, vid);
     }
+
+    public string VideoFullPath => string.IsNullOrEmpty(FolderPath) || string.IsNullOrEmpty(GetVideo())
+        ? string.Empty : System.IO.Path.Combine(FolderPath, GetVideo());
 
     public double GetVideoOffsetMs()
     {

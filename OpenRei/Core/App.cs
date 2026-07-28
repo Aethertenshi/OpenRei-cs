@@ -14,6 +14,19 @@ public class App
     private static App? _instance;
     public static App Instance => _instance ?? throw new InvalidOperationException("App window has not been initialized. Call App.Window(...) first.");
 
+    // ── Timers ─────────────────────────────────────────────────────────────────
+    private readonly List<(float Remaining, Action Callback)> _timers = new();
+
+    /// <summary>
+    /// Schedules <paramref name="callback"/> to fire after <paramref name="seconds"/> have elapsed.
+    /// Callbacks run on the main thread during the update loop.
+    /// </summary>
+    public void Delay(float seconds, Action callback)
+    {
+        if (callback != null && seconds > 0f)
+            _timers.Add((seconds, callback));
+    }
+
     public Vector2D Size { get; private set; }
     public string Title { get; private set; }
     public WindowFlags Flags { get; private set; }
@@ -237,7 +250,23 @@ public class App
                 // 3. Tick active animation tweens
                 OpenRei.Tween.Tween.TickAll(deltaTime);
 
-                // 4. Opt-in virtual tick execution + OnTick event
+                // 4. Fire completed Delay timers
+                for (int i = _timers.Count - 1; i >= 0; i--)
+                {
+                    var t = _timers[i];
+                    t.Remaining -= deltaTime;
+                    if (t.Remaining <= 0f)
+                    {
+                        t.Callback();
+                        _timers.RemoveAt(i);
+                    }
+                    else
+                    {
+                        _timers[i] = t;
+                    }
+                }
+
+                // 5. Opt-in virtual tick execution + OnTick event
                 Tick(deltaTime);
                 OnTick?.Invoke(deltaTime);
 
