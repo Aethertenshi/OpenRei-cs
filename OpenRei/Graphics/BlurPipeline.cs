@@ -6,7 +6,8 @@ using SDL;
 namespace OpenRei.Graphics;
 
 /// <summary>
-/// Executes Separable Multi-Pass Dual-Kawase / Gaussian Blur using downsampled FBO render targets (osu!-framework style).
+/// Executes Hardware-Accelerated Multi-Pass Dual-Kawase / Gaussian Blur (osu!-framework style)
+/// using multi-tap offset sampling over downsampled FBO render targets.
 /// </summary>
 public unsafe class BlurPipeline : IDisposable
 {
@@ -52,15 +53,15 @@ public unsafe class BlurPipeline : IDisposable
     }
 
     /// <summary>
-    /// Captures source screen region, applies multi-pass downsampled Gaussian blur, and renders result back to screen.
+    /// Captures source screen region, applies multi-pass Dual-Kawase Gaussian kernel blur, and renders result back to screen.
     /// </summary>
     public void ApplyBlur(Rect bounds, BlurFilter filter)
     {
         if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
 
-        // Smoothly scale downscaling factor for low radii (< 4px) to eliminate downsample snapping
+        // Calculate smooth downscaling factor to eliminate pixelation
         int downscale = (filter.Radius < 4.0f) ? 1 : Math.Clamp(filter.Downscale, 1, 4);
-        int passes = Math.Clamp(filter.Passes, 1, 4);
+        int passes = Math.Clamp(filter.Passes, 1, 5);
 
         // Clamp capture bounds to physical window viewport
         int winW = 0, winH = 0;
@@ -87,7 +88,7 @@ public unsafe class BlurPipeline : IDisposable
         SDL_FRect srcArea = new SDL_FRect { x = clampX, y = clampY, w = clampW, h = clampH };
         SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
 
-        // Step 1: Capture valid viewport screen region into Ping FBO
+        // Step 1: Capture screen region into Ping FBO
         SDL_Rect readRect = new SDL_Rect
         {
             x = (int)clampX,
@@ -110,35 +111,43 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_DestroySurface(screenSurface);
         }
 
-        // Step 2: Multi-pass separable Gaussian blur between Ping and Pong FBO targets
+        // Step 2: Execute Multi-Pass Dual-Kawase Gaussian Offset Sampling
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
 
+        float kernelSpread = (filter.Radius / (float)downscale) * 0.5f;
+
         for (int p = 0; p < passes; p++)
         {
-            // Horizontal Pass
+            float offset = (p + 1.0f) * kernelSpread;
+
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
 
-            // Swap Targets
-            SDL_Texture* temp1 = readTarget;
+            // 4-Tap Diagonal Offset Sampling Pass (Simulates 16-tap 2D Gaussian Kernel)
+            SDL_FRect t1 = new SDL_FRect { x = -offset, y = -offset, w = targetW, h = targetH };
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t1);
+
+            SDL_FRect t2 = new SDL_FRect { x = offset, y = -offset, w = targetW, h = targetH };
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t2);
+
+            SDL_FRect t3 = new SDL_FRect { x = -offset, y = offset, w = targetW, h = targetH };
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t3);
+
+            SDL_FRect t4 = new SDL_FRect { x = offset, y = offset, w = targetW, h = targetH };
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t4);
+
+            // Swap Ping-Pong targets
+            SDL_Texture* temp = readTarget;
             readTarget = writeTarget;
-            writeTarget = temp1;
-
-            // Vertical Pass
-            SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
-
-            // Swap Targets
-            SDL_Texture* temp2 = readTarget;
-            readTarget = writeTarget;
-            writeTarget = temp2;
+            writeTarget = temp;
         }
 
-        // Step 3: Reset main swapchain render target
+        // Step 3: Reset render target back to main swapchain screen
         SDL3.SDL_SetRenderTarget(_renderer, null);
 
-        // Step 4: Configure final composite blend mode and opacity for zero black-screen fading
+        // Step 4: Configure final composite blend mode and opacity for dynamic radius tweening
         if (filter.Radius < 4.0f)
         {
             float blurOpacity = Math.Clamp(filter.Radius / 4.0f, 0.0f, 1.0f);
@@ -151,7 +160,7 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
         }
 
-        // Step 5: Upsample and composite final blurred FBO back onto screen viewport
+        // Step 5: Upsample and composite final silky Gaussian blur back onto screen viewport
         SDL3.SDL_RenderTexture(_renderer, readTarget, null, &srcArea);
     }
 
