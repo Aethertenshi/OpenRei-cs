@@ -46,12 +46,12 @@ public unsafe class GraphicsDevice : IDisposable
     }
 
     /// <summary>
-    /// Renders text using SDL3_ttf blended font surface.
+    /// Renders text using SDL3_ttf blended font surface with alpha blending support.
     /// </summary>
     public void RenderText(Font? font, string text, Rect bounds, Color color)
     {
         font ??= FontEngine.DefaultFont;
-        if (!IsInitialized || _renderer == null || font == null || font.Handle == null || string.IsNullOrEmpty(text)) return;
+        if (!IsInitialized || _renderer == null || font == null || font.Handle == null || string.IsNullOrEmpty(text) || color.A <= 0.001f) return;
 
         byte[] textBytes = System.Text.Encoding.UTF8.GetBytes(text + "\0");
         SDL_Color fgColor = new SDL_Color
@@ -74,6 +74,9 @@ public unsafe class GraphicsDevice : IDisposable
 
             if (texture != null)
             {
+                SDL3.SDL_SetTextureBlendMode(texture, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+                SDL3.SDL_SetTextureAlphaModFloat(texture, Math.Clamp(color.A, 0f, 1f));
+
                 // Center text inside bounds
                 float posX = bounds.X + (bounds.Width - textW) * 0.5f;
                 float posY = bounds.Y + (bounds.Height - textH) * 0.5f;

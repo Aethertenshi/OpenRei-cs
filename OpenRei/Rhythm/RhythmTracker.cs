@@ -5,20 +5,16 @@ namespace OpenRei.Rhythm;
 /// </summary>
 public sealed class RhythmTracker
 {
-    /// <summary>
-    /// A strictly increasing integer representing the current beat. Safe to use for trigger checks (Current > Last).
-    /// </summary>
     public int CurrentBeatIndex { get; private set; }
-
-    /// <summary>
-    /// A value between 0.0 and 1.0 representing the progress of the current beat.
-    /// </summary>
     public float BeatProgress { get; private set; }
-
-    /// <summary>
-    /// True if the current beat is the first beat of the measure (the downbeat).
-    /// </summary>
     public bool IsDownbeat { get; private set; }
+
+    /// <summary>Fires when a new beat starts (CurrentBeatIndex increments).</summary>
+    public event Action<int>? OnBeat;
+    /// <summary>Fires on the first beat of each measure.</summary>
+    public event Action? OnDownBeat;
+
+    private int _lastBeatIndex = -1;
 
     public void Update(float musicTimeMs, ControlPointInfo controlPoints)
     {
@@ -27,16 +23,12 @@ public sealed class RhythmTracker
 
         foreach (var tp in controlPoints.TimingPoints)
         {
-            if (tp.Time > musicTimeMs)
-                break;
-
+            if (tp.Time > musicTimeMs) break;
             if (activeTiming != null)
             {
-                // A new timing point snaps the metronome; count whole beats in the previous section.
                 float sectionDurationMs = (float)(tp.Time - activeTiming.Time);
                 priorWholeBeats += (int)Math.Floor(sectionDurationMs / activeTiming.BeatLength);
             }
-
             activeTiming = tp;
         }
 
@@ -50,26 +42,30 @@ public sealed class RhythmTracker
 
         float msSinceTimingPoint = musicTimeMs - (float)activeTiming.Time;
         float beatsSinceTimingPoint = msSinceTimingPoint / (float)activeTiming.BeatLength;
-
-        if (beatsSinceTimingPoint < 0f)
-            beatsSinceTimingPoint = 0f;
+        if (beatsSinceTimingPoint < 0f) beatsSinceTimingPoint = 0f;
 
         int localBeatIndex = (int)Math.Floor(beatsSinceTimingPoint);
-
         CurrentBeatIndex = priorWholeBeats + localBeatIndex;
         BeatProgress = beatsSinceTimingPoint - localBeatIndex;
 
         int meter = activeTiming.Meter > 0 ? activeTiming.Meter : 4;
         IsDownbeat = localBeatIndex % meter == 0;
+
+        // Fire events on beat transition
+        if (CurrentBeatIndex != _lastBeatIndex)
+        {
+            OnBeat?.Invoke(CurrentBeatIndex);
+            if (IsDownbeat)
+                OnDownBeat?.Invoke();
+            _lastBeatIndex = CurrentBeatIndex;
+        }
     }
 
-    /// <summary>
-    /// Resets the tracker to its initial state.
-    /// </summary>
     public void Reset()
     {
         CurrentBeatIndex = 0;
         BeatProgress = 0f;
         IsDownbeat = false;
+        _lastBeatIndex = -1;
     }
 }

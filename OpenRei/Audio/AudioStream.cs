@@ -10,6 +10,7 @@ public class AudioStream
     private DecodedAudioData? _pendingData;
     private Task<DecodedAudioData?>? _loadTask;
     private bool _playRequested;
+    private double? _pendingSeekMs;
 
     public float Pitch { get; set; } = 1.0f;
     public float Volume { get; set; } = 1.0f;
@@ -38,8 +39,18 @@ public class AudioStream
         set
         {
             EnsureHandlesAndUpload();
-            if (!AudioEngine.IsInitialized || _sourceId == 0) return;
-            AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.SecOffset, (float)(value / 1000.0));
+            if (!AudioEngine.IsInitialized || _sourceId == 0) { _pendingSeekMs = value; return; }
+
+            // AL_SEC_OFFSET only applies to playing/paused sources
+            AudioEngine.AL.GetSourceProperty(_sourceId, GetSourceInteger.SourceState, out int state);
+            if (state == (int)SourceState.Playing || state == (int)SourceState.Paused)
+            {
+                AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.SecOffset, (float)(value / 1000.0));
+            }
+            else
+            {
+                _pendingSeekMs = value; // buffer for when Play() is called
+            }
         }
     }
 
@@ -165,25 +176,21 @@ public class AudioStream
     {
         if (!AudioEngine.IsInitialized) return;
 
-        // Async load still in progress → queue play request for when it finishes
-        if (_loadTask != null && !_loadTask.IsCompleted)
-        {
-            _playRequested = true;
-            return;
-        }
-
-        // Async load just completed → CheckPendingLoad handles upload + play
-        if (_loadTask != null)
-        {
-            CheckPendingLoad();
-            return;
-        }
+        if (_loadTask != null && !_loadTask.IsCompleted) { _playRequested = true; return; }
+        if (_loadTask != null) { CheckPendingLoad(); return; }
 
         EnsureHandlesAndUpload();
         if (_sourceId == 0) return;
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Pitch, Pitch);
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Gain, Volume);
         AudioEngine.AL.SourcePlay(_sourceId);
+
+        // Apply any pending seek (AL_SEC_OFFSET only works while playing/paused)
+        if (_pendingSeekMs.HasValue)
+        {
+            AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.SecOffset, (float)(_pendingSeekMs.Value / 1000.0));
+            _pendingSeekMs = null;
+        }
     }
 
     public void Pause()
