@@ -61,6 +61,7 @@ public class Element
 
     public float AspectRatio { get; set; } = 0.0f;
     public DominantAxis AspectAxis { get; set; } = DominantAxis.Height;
+    public bool AccountAspectOffset { get; set; } = true;
 
     public Vector2D AbsoluteSize
     {
@@ -71,6 +72,7 @@ public class Element
 
             float ratio = AspectRatio;
             DominantAxis axis = AspectAxis;
+            bool accountOffset = AccountAspectOffset;
 
             var aspectConstraint = Modifiers.OfType<UIAspectRatioConstraint>().FirstOrDefault()
                 ?? (Layout as UIAspectRatioConstraint);
@@ -79,17 +81,32 @@ public class Element
             {
                 ratio = aspectConstraint.AspectRatio;
                 axis = aspectConstraint.AspectAxis;
+                accountOffset = aspectConstraint.AccountOffset;
             }
 
             if (ratio > 0f)
             {
                 if (axis == DominantAxis.Height)
                 {
-                    return new Vector2D(baseSize.Y * ratio, baseSize.Y);
+                    float heightForAspect = accountOffset
+                        ? baseSize.Y
+                        : (parentSize.Y * Size.Y.Scale);
+
+                    float derivedWidth = heightForAspect * ratio;
+                    if (!accountOffset) derivedWidth += Size.X.Offset;
+
+                    return new Vector2D(derivedWidth, baseSize.Y);
                 }
                 else
                 {
-                    return new Vector2D(baseSize.X, baseSize.X / ratio);
+                    float widthForAspect = accountOffset
+                        ? baseSize.X
+                        : (parentSize.X * Size.X.Scale);
+
+                    float derivedHeight = widthForAspect / ratio;
+                    if (!accountOffset) derivedHeight += Size.Y.Offset;
+
+                    return new Vector2D(baseSize.X, derivedHeight);
                 }
             }
 
