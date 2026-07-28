@@ -55,15 +55,17 @@ public class Sprite : Element
     public Sprite()
     {
         Name = nameof(Sprite);
-        Color = Color.White;
+        Color = Color.Transparent;
     }
 
     public override void Render(RenderContext context)
     {
         if (!Visible) return;
 
-        // Determine active texture color tint (supports both sprite.Color and sprite.ImageColor)
-        Color activeTint = ImageColor != Color.White ? ImageColor : Color;
+        // Determine active texture color tint (supports sprite.Color and sprite.ImageColor)
+        Color activeTint = ImageColor != Color.White
+            ? ImageColor
+            : (Color != Color.Transparent ? Color : Color.White);
 
         // 1. Render this Sprite's texture FIRST with color tint modulation
         if (Texture != null && Texture.IsValid)
