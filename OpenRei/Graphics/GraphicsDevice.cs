@@ -512,7 +512,7 @@ public unsafe class GraphicsDevice : IDisposable
     private int[] _strokeIndices = new int[512];
 
     /// <summary>
-    /// Draws a rounded-outline stroke ring using SDL_RenderGeometry.
+    /// Draws a rounded-outline stroke ring using SDL_RenderGeometry with 1.0px Sub-Pixel Alpha Fringe Ring on inner & outer edges for razor-sharp AA borders.
     /// </summary>
     private void RenderStroke(Rect bounds, StrokeInfo stroke, CornerRadius cornerRadius)
     {
@@ -537,25 +537,27 @@ public unsafe class GraphicsDevice : IDisposable
         float crBL = MathF.Min(cornerRadius.BottomLeft, maxR);
         float crBR = MathF.Min(cornerRadius.BottomRight, maxR);
 
-        // Adaptive segment count
-        static int Segs(float r) => r <= 1f ? 0 : Math.Clamp((int)(r / 3f) + 6, 6, 24);
-
-        // Outer contour: radius = element radius + expand (the stroke's outer edge)
-        // Corner centers shift outward by expand:
-        //   cx = ox + (cr + expand), cy = oy + (cr + expand) for TL
-        // Edge endpoints at expanded bounds: top edge y = oy, right edge x = ox+ow, etc.
         float outerTL = crTL + expand, outerTR = crTR + expand;
         float outerBL = crBL + expand, outerBR = crBR + expand;
+
+        float innerAdj = stroke.Alignment == StrokeAlignment.Inside ? t : 0f;
+        float inTL = MathF.Max(0f, crTL - innerAdj);
+        float inTR = MathF.Max(0f, crTR - innerAdj);
+        float inBL = MathF.Max(0f, crBL - innerAdj);
+        float inBR = MathF.Max(0f, crBR - innerAdj);
+
+        // Adaptive segment count
+        static int Segs(float r) => Math.Clamp((int)(r * 0.75f) + 8, 12, 32);
+
         int sTL = Segs(outerTL), sTR = Segs(outerTR);
         int sBL = Segs(outerBL), sBR = Segs(outerBR);
-        int totalSegs = sTL + sTR + sBL + sBR;
 
-        if (totalSegs == 0) { FastRectStroke(ox, oy, ow, oh, t, c); return; }
+        int contourCount = (sTL + 1) + (sTR + 1) + (sBL + 1) + (sBR + 1);
 
-        int vertsPerCorner(int s) => Math.Max(s, 0) + 2;
-        int outerVerts = vertsPerCorner(sTL) + vertsPerCorner(sTR) + vertsPerCorner(sBL) + vertsPerCorner(sBR);
-        int totalVerts = outerVerts * 2;
-        int totalIndices = totalSegs * 6;
+        // 4 contours: Outer AA (transparent), Outer Solid, Inner Solid, Inner AA (transparent)
+        int totalVerts = contourCount * 4;
+        int totalQuads = (contourCount - 1) * 3; // 3 quad rings between 4 contours
+        int totalIndices = totalQuads * 6;
 
         if (_strokeVerts.Length < totalVerts)
         {
@@ -563,102 +565,92 @@ public unsafe class GraphicsDevice : IDisposable
             _strokeIndices = new int[Math.Max(totalIndices, _strokeIndices.Length * 2)];
         }
 
-        int vi = 0;
-        void EmitV(float px, float py)
-        {
-            _strokeVerts[vi++] = new SDL_Vertex
-            {
-                position = new SDL_FPoint { x = px, y = py },
-                color = new SDL_FColor { r = c.R, g = c.G, b = c.B, a = c.A }
-            };
-        }
+        SDL_FColor solidC = new SDL_FColor { r = c.R, g = c.G, b = c.B, a = c.A };
+        SDL_FColor transC = new SDL_FColor { r = c.R, g = c.G, b = c.B, a = 0f };
 
-        void Arc(float cx, float cy, float r, int segs, float startDeg)
+        int vi = 0;
+
+        void EmitContour(float offset, SDL_FColor color, bool isInner)
         {
-            if (segs <= 0) { EmitV(cx, cy); return; }
-            float sr = startDeg * MathF.PI / 180f;
-            for (int i = 0; i <= segs; i++)
+            float oTL = MathF.Max(0f, isInner ? inTL + offset : outerTL + offset);
+            float oTR = MathF.Max(0f, isInner ? inTR + offset : outerTR + offset);
+            float oBR = MathF.Max(0f, isInner ? inBR + offset : outerBR + offset);
+            float oBL = MathF.Max(0f, isInner ? inBL + offset : outerBL + offset);
+
+            float baseX = isInner ? bx + (stroke.Alignment == StrokeAlignment.Inside ? 0 : expand) : ox;
+            float baseY = isInner ? by + (stroke.Alignment == StrokeAlignment.Inside ? 0 : expand) : oy;
+            float baseW = isInner ? bw - (stroke.Alignment == StrokeAlignment.Inside ? 0 : expand * 2f) : ow;
+            float baseH = isInner ? bh - (stroke.Alignment == StrokeAlignment.Inside ? 0 : expand * 2f) : oh;
+
+            float cxTL = baseX + oTL, cyTL = baseY + oTL;
+            float cxTR = baseX + baseW - oTR, cyTR = baseY + oTR;
+            float cxBR = baseX + baseW - oBR, cyBR = baseY + baseH - oBR;
+            float cxBL = baseX + oBL, cyBL = baseY + baseH - oBL;
+
+            // Top-Left corner
+            for (int i = 0; i <= sTL; i++)
             {
-                float a = sr - (MathF.PI * 0.5f) * i / segs;
-                EmitV(cx + r * MathF.Cos(a), cy - r * MathF.Sin(a));
+                float a = (180f + 90f * i / sTL) * MathF.PI / 180f;
+                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxTL + oTL * MathF.Cos(a), y = cyTL + oTL * MathF.Sin(a) }, color = color };
+            }
+            // Top-Right corner
+            for (int i = 0; i <= sTR; i++)
+            {
+                float a = (270f + 90f * i / sTR) * MathF.PI / 180f;
+                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxTR + oTR * MathF.Cos(a), y = cyTR + oTR * MathF.Sin(a) }, color = color };
+            }
+            // Bottom-Right corner
+            for (int i = 0; i <= sBR; i++)
+            {
+                float a = (0f + 90f * i / sBR) * MathF.PI / 180f;
+                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxBR + oBR * MathF.Cos(a), y = cyBR + oBR * MathF.Sin(a) }, color = color };
+            }
+            // Bottom-Left corner
+            for (int i = 0; i <= sBL; i++)
+            {
+                float a = (90f + 90f * i / sBL) * MathF.PI / 180f;
+                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxBL + oBL * MathF.Cos(a), y = cyBL + oBL * MathF.Sin(a) }, color = color };
             }
         }
 
-        // ── Outer contour (expanded bounds) ──────────────────────────────────
-        // Corner centers at expanded position
-        float otlCx = ox + outerTL, otlCy = oy + outerTL;
-        float otrCx = ox + ow - outerTR, otrCy = oy + outerTR;
-        float obrCx = ox + ow - outerBR, obrCy = oy + oh - outerBR;
-        float oblCx = ox + outerBL, oblCy = oy + oh - outerBL;
+        // Contour 0: Outer AA Transparent Fringe (+0.5px)
+        EmitContour(0.5f, transC, isInner: false);
+        // Contour 1: Outer Solid Boundary (-0.5px)
+        EmitContour(-0.5f, solidC, isInner: false);
+        // Contour 2: Inner Solid Boundary (+0.5px)
+        EmitContour(0.5f, solidC, isInner: true);
+        // Contour 3: Inner AA Transparent Fringe (-0.5px)
+        EmitContour(-0.5f, transC, isInner: true);
 
-        Arc(otlCx, otlCy, outerTL, sTL, 180f);
-        EmitV(ox + ow - outerTR, oy);
-        Arc(otrCx, otrCy, outerTR, sTR, 90f);
-        EmitV(ox + ow, oy + oh - outerBR);
-        Arc(obrCx, obrCy, outerBR, sBR, 0f);
-        EmitV(ox + outerBL, oy + oh);
-        Arc(oblCx, oblCy, outerBL, sBL, 270f);
-        EmitV(ox, oy + outerTL); // back near TL start
+        // Build quad indices connecting the 4 contours
+        int ii = 0;
+        int cLen = contourCount;
 
-        int outerCount = vi;
-
-        // ── Inner contour (element bounds) ───────────────────────────────────
-        // Inner radius = cr for Outside/Center (inner edge = element edge);
-        //               cr - t for Inside (inner edge is insetted)
-        float innerAdj = stroke.Alignment == StrokeAlignment.Inside ? t : 0f;
-        float inTL = MathF.Max(0f, crTL - innerAdj);
-        float inTR = MathF.Max(0f, crTR - innerAdj);
-        float inBL = MathF.Max(0f, crBL - innerAdj);
-        float inBR = MathF.Max(0f, crBR - innerAdj);
-
-        // Corner centers at ELEMENT corner centers (bx,by = element top-left)
-        float itlCx = bx + crTL, itlCy = by + crTL;
-        float itrCx = bx + bw - crTR, itrCy = by + crTR;
-        float ibrCx = bx + bw - crBR, ibrCy = by + bh - crBR;
-        float iblCx = bx + crBL, iblCy = by + bh - crBL;
-
-        // Edge endpoints at element bounds
-        Arc(itlCx, itlCy, inTL, sTL, 180f);
-        EmitV(bx + bw - crTR, by);
-        Arc(itrCx, itrCy, inTR, sTR, 90f);
-        EmitV(bx + bw, by + bh - crBR);
-        Arc(ibrCx, ibrCy, inBR, sBR, 0f);
-        EmitV(bx + crBL, by + bh);
-        Arc(iblCx, iblCy, inBL, sBL, 270f);
-        EmitV(bx, by + crTL);
-
-        int totalVertsActual = vi;
-
-        // Stitch outer → inner
-        int idx = 0;
-        for (int i = 0; i < outerCount - 1; i++)
+        void BuildRing(int ringA, int ringB)
         {
-            _strokeIndices[idx++] = i;
-            _strokeIndices[idx++] = i + 1;
-            _strokeIndices[idx++] = outerCount + i;
+            for (int i = 0; i < cLen; i++)
+            {
+                int next = (i + 1) % cLen;
+                int a1 = ringA + i, a2 = ringA + next;
+                int b1 = ringB + i, b2 = ringB + next;
 
-            _strokeIndices[idx++] = i + 1;
-            _strokeIndices[idx++] = outerCount + i + 1;
-            _strokeIndices[idx++] = outerCount + i;
+                _strokeIndices[ii++] = a1; _strokeIndices[ii++] = b1; _strokeIndices[ii++] = a2;
+                _strokeIndices[ii++] = a2; _strokeIndices[ii++] = b1; _strokeIndices[ii++] = b2;
+            }
         }
+
+        // Ring 1: Outer AA (0 -> 1)
+        BuildRing(0 * cLen, 1 * cLen);
+        // Ring 2: Solid Stroke Body (1 -> 2)
+        BuildRing(1 * cLen, 2 * cLen);
+        // Ring 3: Inner AA (2 -> 3)
+        BuildRing(2 * cLen, 3 * cLen);
 
         fixed (SDL_Vertex* vPtr = _strokeVerts)
         fixed (int* iPtr = _strokeIndices)
-            SDL3.SDL_RenderGeometry(_renderer, null, vPtr, totalVertsActual, iPtr, idx);
-    }
-
-    /// <summary>Fast path for sharp-corner rectangles: 4 filled edge quads.</summary>
-    private void FastRectStroke(float x, float y, float w, float h, float t, Color c)
-    {
-        SDL_FRect top = new SDL_FRect { x = x, y = y, w = w, h = t };
-        SDL_FRect bot = new SDL_FRect { x = x, y = y + h - t, w = w, h = t };
-        SDL_FRect left = new SDL_FRect { x = x, y = y + t, w = t, h = MathF.Max(0f, h - t * 2f) };
-        SDL_FRect right = new SDL_FRect { x = x + w - t, y = y + t, w = t, h = MathF.Max(0f, h - t * 2f) };
-        SDL3.SDL_SetRenderDrawColorFloat(_renderer, c.R, c.G, c.B, c.A);
-        SDL3.SDL_RenderFillRect(_renderer, &top);
-        SDL3.SDL_RenderFillRect(_renderer, &bot);
-        SDL3.SDL_RenderFillRect(_renderer, &left);
-        SDL3.SDL_RenderFillRect(_renderer, &right);
+        {
+            SDL3.SDL_RenderGeometry(_renderer, null, vPtr, totalVerts, iPtr, ii);
+        }
     }
 
     public void Dispose()
