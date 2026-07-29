@@ -12,8 +12,34 @@ public class AudioStream
     private bool _playRequested;
     private double? _pendingSeekMs;
 
-    public float Pitch { get; set; } = 1.0f;
-    public float Volume { get; set; } = 1.0f;
+    private float _volume = 1.0f;
+    private float _pitch = 1.0f;
+
+    public float Pitch
+    {
+        get => _pitch;
+        set
+        {
+            _pitch = value;
+            if (AudioEngine.IsInitialized && _sourceId != 0)
+            {
+                AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Pitch, _pitch);
+            }
+        }
+    }
+
+    public float Volume
+    {
+        get => _volume;
+        set
+        {
+            _volume = value;
+            if (AudioEngine.IsInitialized && _sourceId != 0)
+            {
+                AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Gain, Math.Clamp(_volume, 0f, 1f));
+            }
+        }
+    }
 
     public bool IsPlaying
     {
