@@ -159,6 +159,8 @@ public unsafe class GraphicsDevice : IDisposable
                     {
                         if (cmd.BlurFilter != null && cmd.BlurFilter.Enabled && cmd.BlurFilter.Radius > 0.05f)
                             _blurPipeline?.RenderBlurredTexture(cmd.Texture!, cmd.Bounds, cmd.SourceRect, cmd.Color, cmd.BlurFilter);
+                        else if (cmd.CornerRadius.TopLeft > 1f || cmd.CornerRadius.TopRight > 1f || cmd.CornerRadius.BottomLeft > 1f || cmd.CornerRadius.BottomRight > 1f)
+                            RenderRoundedImage(cmd.Texture!, cmd.Bounds, cmd.SourceRect, cmd.Color, cmd.CornerRadius);
                         else
                             RenderImage(cmd.Texture!, cmd.Bounds, cmd.SourceRect, cmd.Color);
                         break;
@@ -300,6 +302,163 @@ public unsafe class GraphicsDevice : IDisposable
                 SDL3.SDL_RenderGeometry(_renderer, null, vPtr, totalVerts, iPtr, iIdx);
             }
         }
+    }
+
+    /// <summary>
+    /// Renders a texture with per-corner rounding by drawing UV-mapped vertices through SDL_RenderGeometry.
+    /// The texture is rendered into an FBO first, then composited via rounded geometry to avoid UV complexity.
+    /// </summary>
+    private void RenderRoundedImage(Texture texture, Rect destBounds, Rect? sourceRect, Color color, CornerRadius radius)
+    {
+        if (!IsInitialized || _renderer == null || texture == null || !texture.IsValid) return;
+
+        int tw = (int)MathF.Max(destBounds.Width, 1f);
+        int th = (int)MathF.Max(destBounds.Height, 1f);
+
+        // Create a temporary render target to draw the image into
+        SDL_Texture* fbo = SDL3.SDL_CreateTexture(_renderer,
+            SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888,
+            SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET,
+            tw, th);
+        if (fbo == null) { RenderImage(texture, destBounds, sourceRect, color); return; }
+
+        // Step 1: Render image into FBO
+        SDL3.SDL_SetRenderTarget(_renderer, fbo);
+        SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
+        SDL3.SDL_RenderClear(_renderer);
+
+        SDL3.SDL_SetTextureBlendMode(texture.Handle, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+        SDL3.SDL_SetTextureColorModFloat(texture.Handle, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
+        SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, Math.Clamp(color.A, 0f, 1f));
+
+        SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = tw, h = th };
+        if (sourceRect.HasValue)
+        {
+            SDL_FRect src = new SDL_FRect { x = sourceRect.Value.X, y = sourceRect.Value.Y, w = sourceRect.Value.Width, h = sourceRect.Value.Height };
+            SDL3.SDL_RenderTexture(_renderer, texture.Handle, &src, &fboDest);
+        }
+        else
+        {
+            SDL3.SDL_RenderTexture(_renderer, texture.Handle, null, &fboDest);
+        }
+
+        // Step 2: Switch back to screen and composite through rounded geometry
+        SDL3.SDL_SetRenderTarget(_renderer, null);
+        SDL3.SDL_SetTextureBlendMode(fbo, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+
+        float x = destBounds.X, y = destBounds.Y, w = destBounds.Width, h = destBounds.Height;
+        float maxR = MathF.Min(w, h) * 0.5f;
+        float rTL = MathF.Min(radius.TopLeft, maxR);
+        float rTR = MathF.Min(radius.TopRight, maxR);
+        float rBL = MathF.Min(radius.BottomLeft, maxR);
+        float rBR = MathF.Min(radius.BottomRight, maxR);
+
+        int segments = 8;
+
+        // Build UV-mapped vertices for 3 fill rects (6 verts each = 18) + 4 corner fans (segments+2 each)
+        int rectVerts = 18;
+        int fanVerts = 4 * (segments + 2);
+        int totalVerts = rectVerts + fanVerts;
+        var verts = new SDL_Vertex[totalVerts];
+        int vi = 0;
+
+        float maxTopR = MathF.Max(rTL, rTR);
+        float maxBotR = MathF.Max(rBL, rBR);
+
+        SDL_FColor white = new SDL_FColor { r = 1f, g = 1f, b = 1f, a = 1f };
+
+        // Helper: screen pos -> UV
+        float uvX(float px) => (px - x) / w;
+        float uvY(float py) => (py - y) / h;
+
+        void AddQuadVert(float px, float py)
+        {
+            verts[vi++] = new SDL_Vertex
+            {
+                position = new SDL_FPoint { x = px, y = py },
+                color = white,
+                tex_coord = new SDL_FPoint { x = uvX(px), y = uvY(py) }
+            };
+        }
+
+        // Middle rect (2 triangles = 6 verts)
+        float mT = y + maxTopR, mB = y + h - maxBotR;
+        AddQuadVert(x, mT); AddQuadVert(x + w, mT); AddQuadVert(x + w, mB);
+        AddQuadVert(x, mT); AddQuadVert(x + w, mB); AddQuadVert(x, mB);
+
+        // Top-center rect
+        float tL = x + rTL, tR = x + w - rTR;
+        AddQuadVert(tL, y); AddQuadVert(tR, y); AddQuadVert(tR, y + maxTopR);
+        AddQuadVert(tL, y); AddQuadVert(tR, y + maxTopR); AddQuadVert(tL, y + maxTopR);
+
+        // Bottom-center rect
+        float bL = x + rBL, bR = x + w - rBR, bT = y + h - maxBotR;
+        AddQuadVert(bL, bT); AddQuadVert(bR, bT); AddQuadVert(bR, y + h);
+        AddQuadVert(bL, bT); AddQuadVert(bR, y + h); AddQuadVert(bL, y + h);
+
+        // 4 corner fans
+        var corners = new[] {
+            (x + rTL,         y + rTL,         rTL, 180f, 270f),
+            (x + w - rTR,     y + rTR,         rTR, 270f, 360f),
+            (x + w - rBR,     y + h - rBR,     rBR, 0f,   90f),
+            (x + rBL,         y + h - rBL,     rBL, 90f,  180f),
+        };
+
+        int fanStartIdx = vi;
+        foreach (var (cx, cy, r, startAngle, endAngle) in corners)
+        {
+            float cr = r <= 1f ? 0f : r;
+            // Fan center
+            verts[vi++] = new SDL_Vertex
+            {
+                position = new SDL_FPoint { x = cx, y = cy },
+                color = white,
+                tex_coord = new SDL_FPoint { x = uvX(cx), y = uvY(cy) }
+            };
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = (startAngle + (endAngle - startAngle) * i / segments) * MathF.PI / 180f;
+                float px = cx + cr * MathF.Cos(angle);
+                float py = cy + cr * MathF.Sin(angle);
+                verts[vi++] = new SDL_Vertex
+                {
+                    position = new SDL_FPoint { x = px, y = py },
+                    color = white,
+                    tex_coord = new SDL_FPoint { x = uvX(px), y = uvY(py) }
+                };
+            }
+        }
+
+        // Build index buffer: 18 rect verts (drawn as triangles directly) + 4 corner fans
+        int rectIndices = 18;
+        int fanIndices = 4 * 3 * segments;
+        int[] indices = new int[rectIndices + fanIndices];
+        int ii = 0;
+
+        // Rect indices (already in triangle order)
+        for (int i = 0; i < 18; i++) indices[ii++] = i;
+
+        // Fan indices
+        int cornerPos = fanStartIdx;
+        for (int c = 0; c < 4; c++)
+        {
+            int fanCenter = cornerPos;
+            for (int s = 0; s < segments; s++)
+            {
+                indices[ii++] = fanCenter;
+                indices[ii++] = fanCenter + 1 + s;
+                indices[ii++] = fanCenter + 2 + s;
+            }
+            cornerPos += (segments + 2);
+        }
+
+        fixed (SDL_Vertex* vPtr = verts)
+        fixed (int* iPtr = indices)
+        {
+            SDL3.SDL_RenderGeometry(_renderer, fbo, vPtr, totalVerts, iPtr, ii);
+        }
+
+        SDL3.SDL_DestroyTexture(fbo);
     }
 
     public void Dispose()

@@ -30,8 +30,8 @@ public readonly struct FifoCommand
     }
 
     internal static FifoCommand Quad(Rect b, Color c, CornerRadius r, float z) => new(0, b, c, r, z);
-    internal static FifoCommand Image(Texture t, Rect d, Rect? s, Color c, BlurFilter? b, float z) =>
-        new(1, d, c, CornerRadius.Zero, z, texture: t, sourceRect: s, blurFilter: b);
+    internal static FifoCommand Image(Texture t, Rect d, Rect? s, Color c, BlurFilter? b, float z, CornerRadius r = default) =>
+        new(1, d, c, r, z, texture: t, sourceRect: s, blurFilter: b);
     internal static FifoCommand MakeText(Font? f, string t, Rect b, Color c, float z) =>
         new(2, b, c, CornerRadius.Zero, z, font: f, text: t);
     internal static FifoCommand ClipPush(Rect b) => new(3, b, default, CornerRadius.Zero, 0);
@@ -74,11 +74,11 @@ public class RenderContext
         }
     }
 
-    public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null, BlurFilter? blurFilter = null, float zIndex = 1f)
+    public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null, BlurFilter? blurFilter = null, float zIndex = 1f, CornerRadius cornerRadius = default)
     {
         if (texture != null && texture.IsValid)
         {
-            _commands.Add(FifoCommand.Image(texture, destBounds, sourceRect, color ?? Color.White, blurFilter, zIndex));
+            _commands.Add(FifoCommand.Image(texture, destBounds, sourceRect, color ?? Color.White, blurFilter, zIndex, cornerRadius));
         }
     }
 

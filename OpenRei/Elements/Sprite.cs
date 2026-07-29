@@ -159,7 +159,7 @@ public class Sprite : Element
 
                     if (ScaleType != ScaleType.Tile)
                     {
-                        context.DrawImage(Texture, destBounds, activeSourceRect, activeTint, activeBlur, ZIndex);
+                        context.DrawImage(Texture, destBounds, activeSourceRect, activeTint, activeBlur, ZIndex, CornerRadius);
                     }
                 }
             }
