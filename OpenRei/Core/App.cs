@@ -32,6 +32,9 @@ public class App
     public WindowFlags Flags { get; private set; }
     public bool IsRunning { get; private set; }
 
+    /// <summary>Target frame rate when VSync is off. 0 = unlimited. Default 0.</summary>
+    public int TargetFrameRate { get; set; }
+
     /// <summary>
     /// Current application window width in pixels.
     /// </summary>
@@ -157,7 +160,8 @@ public class App
                 return;
             }
 
-            using var graphicsDevice = new GraphicsDevice(window);
+            bool vsync = Flags.HasFlag(WindowFlags.VSync);
+            using var graphicsDevice = new GraphicsDevice(window, vsync);
             OpenRei.IO.FileDropHandler.Initialize();
 
             Console.WriteLine("[OpenRei App] Native SDL3 Window created successfully! Entering main loop...");
@@ -287,8 +291,20 @@ public class App
                 // 5. Hardware GPU Render Pass Execution
                 graphicsDevice.RenderPass(null!, renderContext);
 
-                // Cap frame rate slightly for smooth CPU loop if GPU vsync is inactive
-                SDL3.SDL_Delay(1);
+                // Frame rate cap
+                if (vsync)
+                {
+                    // VSync handles timing; small sleep prevents busy-wait
+                    SDL3.SDL_Delay(1);
+                }
+                else if (TargetFrameRate > 0)
+                {
+                    uint targetMs = (uint)(1000f / TargetFrameRate);
+                    uint elapsedMs = (uint)(SDL3.SDL_GetTicks() - currentTicks);
+                    if (elapsedMs < targetMs)
+                        SDL3.SDL_Delay(targetMs - elapsedMs);
+                }
+                // TargetFrameRate == 0: uncapped, no delay
             }
 
             OpenRei.IO.FileDropHandler.Shutdown();

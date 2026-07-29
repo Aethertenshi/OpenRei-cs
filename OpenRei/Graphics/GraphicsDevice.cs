@@ -17,7 +17,7 @@ public unsafe class GraphicsDevice : IDisposable
     public SDL_Renderer* RendererHandle => _renderer;
     public bool IsInitialized => _renderer != null;
 
-    public GraphicsDevice(SDL_Window* window)
+    public GraphicsDevice(SDL_Window* window, bool vsync = true)
     {
         _window = window;
 
@@ -30,8 +30,8 @@ public unsafe class GraphicsDevice : IDisposable
             return;
         }
 
-        // Enable VSync / Mailbox presentation mode
-        SDL3.SDL_SetRenderVSync(_renderer, 1);
+        // VSync: 1 = enabled (mailbox presentation), 0 = immediate
+        SDL3.SDL_SetRenderVSync(_renderer, vsync ? 1 : 0);
 
         // Ensure alpha blending is enabled for RenderFillRect (Quad alpha, splash fades)
         SDL3.SDL_SetRenderDrawBlendMode(_renderer, SDL_BlendMode.SDL_BLENDMODE_BLEND);
