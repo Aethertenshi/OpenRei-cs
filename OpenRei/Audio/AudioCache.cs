@@ -4,7 +4,11 @@ namespace OpenRei.Audio;
 
 public static class AudioCache
 {
-    private static readonly ConcurrentDictionary<string, DecodedAudioData> _cache = new(StringComparer.OrdinalIgnoreCase);
+    // Cache with proper LRU ordering — most recently used at tail of _lruList
+    private static readonly Dictionary<string, (LinkedListNode<string> Node, DecodedAudioData Data)> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly LinkedList<string> _lruList = new();
+    private static readonly object _cacheLock = new();
+
     private static readonly ConcurrentDictionary<string, Task<DecodedAudioData?>> _pending = new(StringComparer.OrdinalIgnoreCase);
     private static readonly List<WeakReference<AudioStream>> _trackedStreams = new();
     private static readonly List<WeakReference<SoundEffect>> _trackedEffects = new();
@@ -19,18 +23,31 @@ public static class AudioCache
     }
 
     public static long CacheSizeBytes => Interlocked.Read(ref _cacheSizeBytes);
+    public static int CachedCount
+    {
+        get { lock (_cacheLock) return _cache.Count; }
+    }
 
     /// <summary>
     /// Returns cached decoded data, or starts decoding on a background thread.
+    /// LRU ordering is updated on each cache hit.
     /// </summary>
     public static Task<DecodedAudioData?> GetOrDecodeAsync(string path)
     {
         if (string.IsNullOrEmpty(path))
             return Task.FromResult<DecodedAudioData?>(null);
 
-        // 1. Check cache
-        if (_cache.TryGetValue(path, out var cached))
-            return Task.FromResult<DecodedAudioData?>(cached);
+        // 1. Fast path — check cache (under lock)
+        lock (_cacheLock)
+        {
+            if (_cache.TryGetValue(path, out var entry))
+            {
+                // Move to end of LRU list (most recently used)
+                _lruList.Remove(entry.Node);
+                _lruList.AddLast(entry.Node);
+                return Task.FromResult<DecodedAudioData?>(entry.Data);
+            }
+        }
 
         // 2. Prevent duplicate background loads
         return _pending.GetOrAdd(path, assetPath => Task.Run(() =>
@@ -54,27 +71,53 @@ public static class AudioCache
             if (decoded == null || decoded.PcmData.Length == 0)
                 return null;
 
-            // Cache the decoded data (with memory budget check)
             long dataSize = decoded.PcmData.Length;
             EvictIfNeeded(dataSize);
 
-            _cache[assetPath] = decoded;
+            lock (_cacheLock)
+            {
+                var node = _lruList.AddLast(assetPath);
+                _cache[assetPath] = (node, decoded);
+            }
+
             Interlocked.Add(ref _cacheSizeBytes, dataSize);
             Console.WriteLine($"[AudioCache] Cached '{assetPath}' ({dataSize / 1024:N0} KB)");
-
             return decoded;
         }));
     }
 
     /// <summary>
-    /// Releases a previously cached entry (decrements ref or removes).
+    /// Promotes an entry to most-recently-used without returning its data.
+    /// Useful for preloading: call GetOrDecodeAsync for preload, then Touch
+    /// when the user actually navigates to that song.
+    /// </summary>
+    public static void Touch(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+        lock (_cacheLock)
+        {
+            if (_cache.TryGetValue(path, out var entry))
+            {
+                _lruList.Remove(entry.Node);
+                _lruList.AddLast(entry.Node);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Releases a previously cached entry and removes it from LRU tracking.
     /// </summary>
     public static void Release(string path)
     {
-        if (_cache.TryRemove(path, out var removed))
+        if (string.IsNullOrEmpty(path)) return;
+        lock (_cacheLock)
         {
-            Interlocked.Add(ref _cacheSizeBytes, -removed.PcmData.Length);
-            Console.WriteLine($"[AudioCache] Released '{path}'");
+            if (_cache.Remove(path, out var entry))
+            {
+                _lruList.Remove(entry.Node);
+                Interlocked.Add(ref _cacheSizeBytes, -entry.Data.PcmData.Length);
+                Console.WriteLine($"[AudioCache] Released '{path}'");
+            }
         }
     }
 
@@ -128,21 +171,35 @@ public static class AudioCache
     /// </summary>
     public static void Clear()
     {
-        _cache.Clear();
+        lock (_cacheLock)
+        {
+            _cache.Clear();
+            _lruList.Clear();
+        }
         _pending.Clear();
         Interlocked.Exchange(ref _cacheSizeBytes, 0);
     }
 
     private static void EvictIfNeeded(long neededBytes)
     {
-        while (Interlocked.Read(ref _cacheSizeBytes) + neededBytes > Interlocked.Read(ref _maxCacheSizeBytes) && _cache.Count > 0)
+        while (true)
         {
-            var key = _cache.Keys.FirstOrDefault();
-            if (key == null) break;
-            if (_cache.TryRemove(key, out var evicted))
+            long current = Interlocked.Read(ref _cacheSizeBytes);
+            long max = Interlocked.Read(ref _maxCacheSizeBytes);
+            if (current + neededBytes <= max) break;
+
+            string? evictKey;
+            lock (_cacheLock)
             {
-                Interlocked.Add(ref _cacheSizeBytes, -evicted.PcmData.Length);
-                Console.WriteLine($"[AudioCache] Evicted '{key}' ({evicted.PcmData.Length / 1024:N0} KB)");
+                var first = _lruList.First;
+                if (first == null) break;
+                evictKey = first.Value;
+                if (_cache.Remove(evictKey, out var entry))
+                {
+                    _lruList.RemoveFirst();
+                    Interlocked.Add(ref _cacheSizeBytes, -entry.Data.PcmData.Length);
+                    Console.WriteLine($"[AudioCache] Evicted '{evictKey}' ({entry.Data.PcmData.Length / 1024:N0} KB)");
+                }
             }
         }
     }

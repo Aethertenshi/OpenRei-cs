@@ -1,3 +1,4 @@
+using OpenRei.Tween;
 using Silk.NET.OpenAL;
 
 namespace OpenRei.Audio;
@@ -94,5 +95,60 @@ public static class AudioEngine
 
         _isInitialized = false;
         Console.WriteLine("[OpenRei AudioEngine] OpenAL Soft shut down.");
+    }
+
+    // ── Crossfade ──────────────────────────────────────────────────────────────
+
+    private static OpenRei.Tween.Tween? _fadeInTween;
+
+    /// <summary>
+    /// Smoothly transitions between two audio streams over the given duration.
+    /// Fade-in uses ease-In (accelerating), fade-out uses ease-Out (decelerating to 0).
+    /// Handles rapid re-calls: previous fade-in is stopped so its target stream
+    /// becomes the new old-stream at its current volume.
+    /// </summary>
+    public static void Crossfade(
+        AudioStream? oldStream,
+        AudioStream? newStream,
+        float duration,
+        Easing easing = Easing.Quadratic,
+        EasingDirection direction = EasingDirection.Out)
+    {
+        if (!_isInitialized || newStream == null || newStream == oldStream)
+            return;
+
+        // Stop previous fade-in so its target volume is frozen
+        _fadeInTween?.Stop();
+        _fadeInTween = null;
+
+        if (duration <= 0f)
+        {
+            // Instant snap
+            if (oldStream != null) { oldStream.Volume = 0f; oldStream.Stop(); }
+            newStream.Volume = 0f;
+            if (!newStream.IsPlaying) newStream.Play();
+            newStream.Volume = 1f;
+            return;
+        }
+
+        newStream.Volume = 0f;
+        if (!newStream.IsPlaying)
+            newStream.Play();
+
+        // Fade new in: 0 → 1 (ease-in)
+        _fadeInTween = new OpenRei.Tween.Tween(0f, 1f, duration,
+            v => newStream.Volume = v,
+            easing, EasingDirection.In);
+        _fadeInTween.Start();
+
+        // Fade old out: current → 0 (ease-out), stop on complete
+        if (oldStream != null && oldStream != newStream)
+        {
+            float startVol = oldStream.Volume;
+            new OpenRei.Tween.Tween(startVol, 0f, duration,
+                v => oldStream.Volume = v,
+                easing, EasingDirection.Out,
+                onComplete: () => { oldStream.Stop(); oldStream.Volume = 0f; }).Start();
+        }
     }
 }

@@ -183,7 +183,7 @@ public sealed class Tween
         }
     }
 
-    private static float ApplyEasing(float t, Easing easing, EasingDirection dir)
+    internal static float ApplyEasing(float t, Easing easing, EasingDirection dir)
     {
         if (easing == Easing.Linear) return t;
 
@@ -198,7 +198,7 @@ public sealed class Tween
         };
     }
 
-    private static float EaseIn(float t, Easing easing)
+    internal static float EaseIn(float t, Easing easing)
     {
         return easing switch
         {

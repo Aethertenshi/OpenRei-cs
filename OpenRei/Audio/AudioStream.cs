@@ -133,6 +133,12 @@ public class AudioStream
                     AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Pitch, Pitch);
                     AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Gain, Volume);
                     AudioEngine.AL.SourcePlay(_sourceId);
+
+                    if (_pendingSeekMs.HasValue)
+                    {
+                        AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.SecOffset, (float)(_pendingSeekMs.Value / 1000.0));
+                        _pendingSeekMs = null;
+                    }
                 }
                 _playRequested = false;
             }
