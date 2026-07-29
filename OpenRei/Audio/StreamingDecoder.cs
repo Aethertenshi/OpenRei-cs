@@ -33,6 +33,7 @@ internal abstract class StreamingDecoder : IDisposable
 internal sealed class Mp3StreamingDecoder : StreamingDecoder
 {
     private readonly MpegFile _mpeg;
+    private float[]? _floatBuf;
 
     public override int SampleRate => _mpeg.SampleRate;
     public override int Channels => _mpeg.Channels;
@@ -45,11 +46,24 @@ internal sealed class Mp3StreamingDecoder : StreamingDecoder
     public override int ReadPcm16(byte[] buffer, int offset, int maxBytes)
     {
         int frameSize = _mpeg.Channels * 2;
-        int maxFrames = (maxBytes / frameSize);
+        int maxFrames = maxBytes / frameSize;
         if (maxFrames <= 0) return 0;
 
-        int samplesRead = _mpeg.ReadSamplesInt16(buffer, offset, maxFrames * _mpeg.Channels);
+        int maxSamples = maxFrames * _mpeg.Channels;
+        if (_floatBuf == null || _floatBuf.Length < maxSamples)
+            _floatBuf = new float[maxSamples];
+
+        int samplesRead = _mpeg.ReadSamples(_floatBuf, 0, maxSamples);
         int framesRead = samplesRead / _mpeg.Channels;
+        int totalSamples = framesRead * _mpeg.Channels;
+
+        for (int i = 0; i < totalSamples; i++)
+        {
+            short val = (short)Math.Clamp(_floatBuf[i] * 32767f, -32768f, 32767f);
+            buffer[offset + i * 2] = (byte)(val & 0xFF);
+            buffer[offset + i * 2 + 1] = (byte)((val >> 8) & 0xFF);
+        }
+
         return framesRead * frameSize;
     }
 
