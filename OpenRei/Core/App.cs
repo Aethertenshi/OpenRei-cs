@@ -250,6 +250,9 @@ public class App
                 // 3. Tick active animation tweens
                 OpenRei.Tween.Tween.TickAll(deltaTime);
 
+                // 3b. Tick streaming music track buffers
+                OpenRei.Audio.AudioEngine.TickMusicTracks();
+
                 // 4. Fire completed Delay timers
                 for (int i = _timers.Count - 1; i >= 0; i--)
                 {

@@ -108,8 +108,8 @@ public static class AudioEngine
     /// becomes the new old-stream at its current volume.
     /// </summary>
     public static void Crossfade(
-        AudioStream? oldStream,
-        AudioStream? newStream,
+        IAudioTrack? oldStream,
+        IAudioTrack? newStream,
         float duration,
         Easing easing = Easing.Quadratic,
         EasingDirection direction = EasingDirection.Out)
@@ -149,6 +149,46 @@ public static class AudioEngine
                 v => oldStream.Volume = v,
                 easing, EasingDirection.Out,
                 onComplete: () => { oldStream.Stop(); oldStream.Volume = 0f; }).Start();
+        }
+    }
+
+    // ── MusicTrack Registry ────────────────────────────────────────────────────
+
+    private static readonly List<WeakReference<MusicTrack>> _musicTracks = new();
+
+    internal static void RegisterMusicTrack(MusicTrack track)
+    {
+        lock (_musicTracks)
+            _musicTracks.Add(new WeakReference<MusicTrack>(track));
+    }
+
+    internal static void UnregisterMusicTrack(MusicTrack track)
+    {
+        lock (_musicTracks)
+        {
+            for (int i = _musicTracks.Count - 1; i >= 0; i--)
+            {
+                if (_musicTracks[i].TryGetTarget(out var t) && t == track)
+                {
+                    _musicTracks.RemoveAt(i);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>Call every frame from the main loop. Refills streaming buffers.</summary>
+    internal static void TickMusicTracks()
+    {
+        lock (_musicTracks)
+        {
+            for (int i = _musicTracks.Count - 1; i >= 0; i--)
+            {
+                if (_musicTracks[i].TryGetTarget(out var track))
+                    track.Tick();
+                else
+                    _musicTracks.RemoveAt(i);
+            }
         }
     }
 }

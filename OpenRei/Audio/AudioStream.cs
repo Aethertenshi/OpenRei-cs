@@ -2,7 +2,7 @@ using Silk.NET.OpenAL;
 
 namespace OpenRei.Audio;
 
-public class AudioStream
+public class AudioStream : IAudioTrack
 {
     private uint _sourceId;
     private uint _bufferId;
