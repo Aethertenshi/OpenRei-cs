@@ -6,7 +6,7 @@ using SDL;
 namespace OpenRei.Graphics;
 
 /// <summary>
-/// Executes Hardware-Accelerated Multi-Pass Gaussian Blur using weighted additive accumulation and bilinear filtering.
+/// Executes Hardware-Accelerated Multi-Pass Gaussian Blur and Drop Shadow rendering using FBO ping-pong targets.
 /// </summary>
 public unsafe class BlurPipeline : IDisposable
 {
@@ -17,25 +17,9 @@ public unsafe class BlurPipeline : IDisposable
     private int _currentH;
     private bool _isDisposed;
 
-    private static SDL_BlendMode _additiveBlendMode;
-    private static bool _blendModeInitialized;
-
     public BlurPipeline(SDL_Renderer* renderer)
     {
         _renderer = renderer;
-        EnsureBlendMode();
-    }
-
-    private static void EnsureBlendMode()
-    {
-        if (!_blendModeInitialized)
-        {
-            _additiveBlendMode = SDL3.SDL_ComposeCustomBlendMode(
-                SDL_BlendFactor.SDL_BLENDFACTOR_SRC_ALPHA, SDL_BlendFactor.SDL_BLENDFACTOR_ONE, SDL_BlendOperation.SDL_BLENDOPERATION_ADD,
-                SDL_BlendFactor.SDL_BLENDFACTOR_SRC_ALPHA, SDL_BlendFactor.SDL_BLENDFACTOR_ONE, SDL_BlendOperation.SDL_BLENDOPERATION_ADD
-            );
-            _blendModeInitialized = true;
-        }
     }
 
     private void EnsureRenderTargets(int width, int height)
@@ -62,15 +46,15 @@ public unsafe class BlurPipeline : IDisposable
                 width, height);
 
             SDL3.SDL_SetTextureScaleMode(_pingTexture, SDL_ScaleMode.SDL_SCALEMODE_LINEAR);
-            SDL3.SDL_SetTextureBlendMode(_pingTexture, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureBlendMode(_pingTexture, SDL_BlendMode.SDL_BLENDMODE_BLEND);
 
             SDL3.SDL_SetTextureScaleMode(_pongTexture, SDL_ScaleMode.SDL_SCALEMODE_LINEAR);
-            SDL3.SDL_SetTextureBlendMode(_pongTexture, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureBlendMode(_pongTexture, SDL_BlendMode.SDL_BLENDMODE_BLEND);
         }
     }
 
     /// <summary>
-    /// Renders a texture directly onto the screen with Multi-Pass Gaussian Blur applied with true additive weighted summation.
+    /// Renders a texture directly onto the screen with Multi-Pass Gaussian Blur applied ONLY to the texture itself.
     /// </summary>
     public void RenderBlurredTexture(Texture texture, Rect destBounds, Rect? sourceRect, Color color, BlurFilter filter)
     {
@@ -92,10 +76,10 @@ public unsafe class BlurPipeline : IDisposable
         };
         SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
 
-        // Step 1: Render source texture into Ping FBO
+        // Step 1: Render source texture at FULL opacity into Ping FBO
         SDL3.SDL_SetTextureBlendMode(texture.Handle, SDL_BlendMode.SDL_BLENDMODE_NONE);
         SDL3.SDL_SetTextureColorModFloat(texture.Handle, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
-        SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, Math.Clamp(color.A, 0f, 1f));
+        SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, 1.0f);
 
         SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
         SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
@@ -115,72 +99,65 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_RenderTexture(_renderer, texture.Handle, null, &fboDest);
         }
 
-        // Step 2: Multi-Pass True Weighted Additive Gaussian Blur
+        // Step 2: Multi-Pass 5-Tap Gaussian Kernel Sampling
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
 
-        float step = (filter.Radius / (float)downscale) / (float)passes * 0.8f;
+        float step = (filter.Radius / (float)downscale) / (float)passes * 0.75f;
 
         for (int p = 0; p < passes; p++)
         {
             float offset = (p + 1.0f) * step;
 
-            // --- Horizontal 1D Additive Pass ---
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
-            SDL3.SDL_SetTextureBlendMode(readTarget, _additiveBlendMode);
 
-            // Center (weight 0.383)
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.383f);
+            // Tap 0: Center (0, 0)
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
 
-            // Left (-offset, weight 0.308)
-            SDL_FRect hLeft = new SDL_FRect { x = -offset, y = 0, w = targetW, h = targetH };
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hLeft);
+            // Tap 1: Left (-offset, 0)
+            SDL_FRect t1 = new SDL_FRect { x = -offset, y = 0, w = targetW, h = targetH };
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t1);
 
-            // Right (+offset, weight 0.308)
-            SDL_FRect hRight = new SDL_FRect { x = offset, y = 0, w = targetW, h = targetH };
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hRight);
+            // Tap 2: Right (+offset, 0)
+            SDL_FRect t2 = new SDL_FRect { x = offset, y = 0, w = targetW, h = targetH };
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t2);
 
-            var tmpH = readTarget; readTarget = writeTarget; writeTarget = tmpH;
+            // Tap 3: Top (0, -offset)
+            SDL_FRect t3 = new SDL_FRect { x = 0, y = -offset, w = targetW, h = targetH };
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t3);
 
-            // --- Vertical 1D Additive Pass ---
-            SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
-            SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
-            SDL3.SDL_RenderClear(_renderer);
-            SDL3.SDL_SetTextureBlendMode(readTarget, _additiveBlendMode);
+            // Tap 4: Bottom (0, +offset)
+            SDL_FRect t4 = new SDL_FRect { x = 0, y = offset, w = targetW, h = targetH };
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t4);
 
-            // Center (weight 0.383)
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.383f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
-
-            // Top (-offset, weight 0.308)
-            SDL_FRect vTop = new SDL_FRect { x = 0, y = -offset, w = targetW, h = targetH };
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vTop);
-
-            // Bottom (+offset, weight 0.308)
-            SDL_FRect vBot = new SDL_FRect { x = 0, y = offset, w = targetW, h = targetH };
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vBot);
-
-            var tmpV = readTarget; readTarget = writeTarget; writeTarget = tmpV;
+            // Swap Ping-Pong targets
+            SDL_Texture* temp = readTarget;
+            readTarget = writeTarget;
+            writeTarget = temp;
         }
 
-        // Step 3: Composite back onto main screen
+        // Step 3: Composite final blurred target onto main screen with color.A opacity
         SDL3.SDL_SetRenderTarget(_renderer, null);
         SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
         SDL3.SDL_SetTextureColorModFloat(readTarget, 1f, 1f, 1f);
-        SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1f);
+        SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f));
         SDL3.SDL_RenderTexture(_renderer, readTarget, null, &destArea);
     }
 
     /// <summary>
-    /// Renders Photoshop-quality smooth Gaussian Drop Shadow respecting cornerRadius silhouette
-    /// using true additive weighted summation (SDL_BLENDMODE_ADD).
+    /// Renders Photoshop-quality smooth Gaussian Drop Shadow respecting cornerRadius silhouette.
     /// </summary>
     public void RenderShadow(Rect bounds, Color color, CornerRadius cornerRadius, BlurFilter filter)
     {
@@ -220,7 +197,7 @@ public unsafe class BlurPipeline : IDisposable
         float innerW = bounds.Width * scaleFactor;
         float innerH = bounds.Height * scaleFactor;
 
-        // Step 1: Clear FBOs and render shadow shape (respecting cornerRadius) into Ping FBO
+        // Step 1: Clear FBOs and draw solid white mask shape into Ping FBO (FULL 1.0 opacity)
         SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
         SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
         SDL3.SDL_RenderClear(_renderer);
@@ -231,8 +208,8 @@ public unsafe class BlurPipeline : IDisposable
 
         SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
         Rect shadowQuadBounds = new Rect(innerX, innerY, innerW, innerH);
+        Color maskColor = Color.White; // Solid white mask for alpha blur computation
 
-        // Render rounded quad silhouette if cornerRadius is present, otherwise fill rect
         if (cornerRadius.TopLeft > 1f || cornerRadius.TopRight > 1f || cornerRadius.BottomLeft > 1f || cornerRadius.BottomRight > 1f)
         {
             CornerRadius scaledCorner = new CornerRadius(
@@ -241,16 +218,16 @@ public unsafe class BlurPipeline : IDisposable
                 cornerRadius.BottomLeft * scaleFactor,
                 cornerRadius.BottomRight * scaleFactor
             );
-            RenderRoundedShadowQuad(shadowQuadBounds, color, scaledCorner);
+            RenderRoundedShadowQuad(shadowQuadBounds, maskColor, scaledCorner);
         }
         else
         {
-            SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
+            SDL3.SDL_SetRenderDrawColorFloat(_renderer, 1f, 1f, 1f, 1f);
             SDL_FRect innerRect = new SDL_FRect { x = innerX, y = innerY, w = innerW, h = innerH };
             SDL3.SDL_RenderFillRect(_renderer, &innerRect);
         }
 
-        // Step 2: Multi-Pass True Weighted Additive Gaussian Blur
+        // Step 2: Multi-Pass 1D Horizontal & Vertical Gaussian Blur Passes
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
 
@@ -261,55 +238,59 @@ public unsafe class BlurPipeline : IDisposable
         {
             float offset = (p + 1.0f) * step;
 
-            // --- 1D Horizontal Additive Gaussian Pass ---
+            // --- 1D Horizontal Pass ---
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
-            SDL3.SDL_SetTextureBlendMode(readTarget, _additiveBlendMode);
 
-            // Center (weight 0.383)
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.383f);
+            // Center (weight 0.4)
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboFull);
 
-            // Left (-offset, weight 0.308)
+            // Left (-offset)
             SDL_FRect hLeft = new SDL_FRect { x = -offset, y = 0, w = tW, h = tH };
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.30f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hLeft);
 
-            // Right (+offset, weight 0.308)
+            // Right (+offset)
             SDL_FRect hRight = new SDL_FRect { x = offset, y = 0, w = tW, h = tH };
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.30f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hRight);
 
             var tmpH = readTarget; readTarget = writeTarget; writeTarget = tmpH;
 
-            // --- 1D Vertical Additive Gaussian Pass ---
+            // --- 1D Vertical Pass ---
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
-            SDL3.SDL_SetTextureBlendMode(readTarget, _additiveBlendMode);
 
-            // Center (weight 0.383)
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.383f);
+            // Center (weight 0.4)
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboFull);
 
-            // Top (-offset, weight 0.308)
+            // Top (-offset)
             SDL_FRect vTop = new SDL_FRect { x = 0, y = -offset, w = tW, h = tH };
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.30f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vTop);
 
-            // Bottom (+offset, weight 0.308)
+            // Bottom (+offset)
             SDL_FRect vBot = new SDL_FRect { x = 0, y = offset, w = tW, h = tH };
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.30f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vBot);
 
             var tmpV = readTarget; readTarget = writeTarget; writeTarget = tmpV;
         }
 
-        // Step 3: Composite smooth Gaussian shadow back onto screen with hardware bilinear interpolation
+        // Step 3: Composite final blurred shadow mask onto screen modulated with shadow Color & Alpha
         SDL3.SDL_SetRenderTarget(_renderer, null);
         SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-        SDL3.SDL_SetTextureColorModFloat(readTarget, 1f, 1f, 1f);
+        SDL3.SDL_SetTextureColorModFloat(readTarget, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
         SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f));
         SDL3.SDL_RenderTexture(_renderer, readTarget, null, &compositeDst);
     }

@@ -556,10 +556,10 @@ public unsafe class GraphicsDevice : IDisposable
 
         // 4 contours: Outer AA (transparent), Outer Solid, Inner Solid, Inner AA (transparent)
         int totalVerts = contourCount * 4;
-        int totalQuads = (contourCount - 1) * 3; // 3 quad rings between 4 contours
+        int totalQuads = contourCount * 3; // 3 quad rings of contourCount quads each
         int totalIndices = totalQuads * 6;
 
-        if (_strokeVerts.Length < totalVerts)
+        if (_strokeVerts.Length < totalVerts || _strokeIndices.Length < totalIndices)
         {
             _strokeVerts = new SDL_Vertex[Math.Max(totalVerts, _strokeVerts.Length * 2)];
             _strokeIndices = new int[Math.Max(totalIndices, _strokeIndices.Length * 2)];
