@@ -133,31 +133,31 @@ public unsafe class BlurPipeline : IDisposable
             // Tap 0: Center (0, 0)
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboDest, &fboDest);
 
             // Tap 1: Left (-offset, 0)
             SDL_FRect t1 = new SDL_FRect { x = -offset, y = 0, w = targetW, h = targetH };
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t1);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboDest, &t1);
 
             // Tap 2: Right (+offset, 0)
             SDL_FRect t2 = new SDL_FRect { x = offset, y = 0, w = targetW, h = targetH };
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t2);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboDest, &t2);
 
             // Tap 3: Top (0, -offset)
             SDL_FRect t3 = new SDL_FRect { x = 0, y = -offset, w = targetW, h = targetH };
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t3);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboDest, &t3);
 
             // Tap 4: Bottom (0, +offset)
             SDL_FRect t4 = new SDL_FRect { x = 0, y = offset, w = targetW, h = targetH };
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t4);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboDest, &t4);
 
             // Swap Ping-Pong targets
             SDL_Texture* temp = readTarget;
