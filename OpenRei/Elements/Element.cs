@@ -206,6 +206,9 @@ public class Element
     {
         if (!Visible) return;
 
+        // Skip elements outside the visible viewport (culling)
+        if (!context.IsVisible(AbsoluteBounds)) return;
+
         // Process filters BEFORE drawing the element's own content
         foreach (var filter in Filters)
         {

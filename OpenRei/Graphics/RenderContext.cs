@@ -49,19 +49,47 @@ public readonly struct FifoCommand
 public class RenderContext
 {
     private readonly List<FifoCommand> _commands = new();
+    private readonly Stack<Rect> _visibleStack = new();
+    private Rect _visibleBounds;
 
     internal unsafe SDL_Renderer* RendererHandle { get; set; }
 
     public IReadOnlyList<FifoCommand> Commands => _commands;
 
+    /// <summary>Must be set each frame to the full window rect before traversal.</summary>
+    public Rect VisibleBounds
+    {
+        get => _visibleBounds;
+        set { _visibleStack.Clear(); _visibleBounds = value; }
+    }
+
+    /// <summary>True if the given rect intersects the current visible area.</summary>
+    public bool IsVisible(Rect rect) =>
+        rect.X < _visibleBounds.X + _visibleBounds.Width &&
+        rect.X + rect.Width > _visibleBounds.X &&
+        rect.Y < _visibleBounds.Y + _visibleBounds.Height &&
+        rect.Y + rect.Height > _visibleBounds.Y;
+
     public unsafe void PushClipRect(Rect bounds)
     {
         _commands.Add(FifoCommand.ClipPush(bounds));
+        _visibleStack.Push(_visibleBounds);
+        _visibleBounds = Intersect(_visibleBounds, bounds);
     }
 
     public unsafe void PopClipRect()
     {
         _commands.Add(FifoCommand.ClipPop());
+        _visibleBounds = _visibleStack.Count > 0 ? _visibleStack.Pop() : _visibleBounds;
+    }
+
+    private static Rect Intersect(Rect a, Rect b)
+    {
+        float x = Math.Max(a.X, b.X);
+        float y = Math.Max(a.Y, b.Y);
+        float w = Math.Max(0, Math.Min(a.X + a.Width, b.X + b.Width) - x);
+        float h = Math.Max(0, Math.Min(a.Y + a.Height, b.Y + b.Height) - y);
+        return new Rect(x, y, w, h);
     }
 
     public void DrawQuad(Rect bounds, Color color, CornerRadius cornerRadius = default, float zIndex = 1.0f)

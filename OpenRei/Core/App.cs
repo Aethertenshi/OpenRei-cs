@@ -286,6 +286,7 @@ public class App
 
                 // 4. Render pass (traversal collects FIFO commands)
                 var renderContext = new RenderContext();
+                renderContext.VisibleBounds = new Rect(0, 0, Size.X, Size.Y);
                 RootElement.Render(renderContext);
 
                 // 5. Hardware GPU Render Pass Execution
