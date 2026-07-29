@@ -84,9 +84,9 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
         for (int i = 0; i < BufferCount; i++)
             _bufferIds[i] = AudioEngine.AL.GenBuffer();
 
-        // Fill one buffer synchronously for instant startup (~25-50ms instead of ~200ms)
-        // Background thread fills the rest.
-        FillOneBuffer();
+        // Fill two buffers synchronously (~50-100ms blocking, 1s of headroom)
+        // Background thread fills the rest before the first buffer drains.
+        FillTwoBuffers();
 
         // Background thread keeps the ring buffer full
         _cts = new CancellationTokenSource();
@@ -95,25 +95,28 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
         AudioEngine.RegisterMusicTrack(this);
     }
 
-    /// <summary>Reads from decoder and queues one buffer (fast path for constructor).</summary>
-    private void FillOneBuffer()
+    /// <summary>Fills 2 buffers synchronously (fast constructor path).</summary>
+    private void FillTwoBuffers()
     {
         var format = _decoder.Channels == 1 ? BufferFormat.Mono16 : BufferFormat.Stereo16;
         int bufSize = (int)(SampleRate * 2 * _decoder.Channels * BufferSeconds);
 
-        byte[] chunk = new byte[bufSize];
-        int bytes = _decoder.ReadPcm16(chunk, 0, bufSize);
-        if (bytes == 0) return;
+        for (int i = 0; i < 2; i++)
+        {
+            byte[] chunk = new byte[bufSize];
+            int bytes = _decoder.ReadPcm16(chunk, 0, bufSize);
+            if (bytes == 0) break;
 
-        fixed (byte* p = chunk)
-        {
-            AudioEngine.AL.BufferData(_bufferIds[0], format, p, bytes, _decoder.SampleRate);
+            fixed (byte* p = chunk)
+            {
+                AudioEngine.AL.BufferData(_bufferIds[i], format, p, bytes, _decoder.SampleRate);
+            }
+            fixed (uint* pBuf = &_bufferIds[i])
+            {
+                AudioEngine.AL.SourceQueueBuffers(_sourceId, 1, pBuf);
+            }
+            _queuedCount++;
         }
-        fixed (uint* pBuf = &_bufferIds[0])
-        {
-            AudioEngine.AL.SourceQueueBuffers(_sourceId, 1, pBuf);
-        }
-        _queuedCount = 1;
     }
 
     /// <summary>Reads from decoder and queues all 4 buffers. Used by Seek (infrequent).</summary>
