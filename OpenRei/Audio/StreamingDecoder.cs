@@ -34,14 +34,87 @@ internal sealed class Mp3StreamingDecoder : StreamingDecoder
 {
     private readonly MpegFile _mpeg;
     private float[]? _floatBuf;
+    private double _delaySeconds;
 
     public override int SampleRate => _mpeg.SampleRate;
     public override int Channels => _mpeg.Channels;
-    public override double LengthSeconds => _mpeg.Duration.TotalSeconds;
-    public override double PositionSeconds => _mpeg.Time.TotalSeconds;
+    public override double LengthSeconds => Math.Max(0, _mpeg.Duration.TotalSeconds - _delaySeconds);
+    public override double PositionSeconds => Math.Max(0, _mpeg.Time.TotalSeconds - _delaySeconds);
     public override bool CanSeek => _mpeg.CanSeek;
 
-    public Mp3StreamingDecoder(string path) => _mpeg = new MpegFile(path);
+    public Mp3StreamingDecoder(string path)
+    {
+        _mpeg = new MpegFile(path);
+        _floatBuf = new float[8192];
+        int delaySamples = ParseXingDelay(path);
+        if (delaySamples <= 0 || delaySamples > 1152 * 10)
+            delaySamples = 1152;
+        _delaySeconds = delaySamples / (double)_mpeg.SampleRate;
+    }
+
+    /// <summary>Parses the Xing/LAME header in the first MP3 frame for encoder delay.</summary>
+    private static int ParseXingDelay(string path)
+    {
+        try
+        {
+            byte[] data = new byte[4096];
+            int read;
+            using (var fs = File.OpenRead(path))
+                read = fs.Read(data, 0, data.Length);
+            if (read < 100) return 0;
+
+            int syncPos = -1;
+            for (int i = 0; i < read - 8; i++)
+            {
+                if (data[i] == 0xFF && (data[i + 1] & 0xE0) == 0xE0)
+                {
+                    syncPos = i;
+                    break;
+                }
+            }
+            if (syncPos < 0) return 0;
+
+            int h2 = data[syncPos + 2];
+            int h3 = data[syncPos + 3];
+            int version = (h2 >> 3) & 3;
+            int channelMode = (h3 >> 6) & 3;
+
+            int sideInfoSize;
+            if (version == 3)
+                sideInfoSize = channelMode == 3 ? 17 : 32;
+            else
+                sideInfoSize = channelMode == 3 ? 9 : 17;
+
+            bool hasCrc = (h2 & 1) == 0;
+            int xingOffset = syncPos + 4 + sideInfoSize + (hasCrc ? 2 : 0);
+
+            if (xingOffset + 12 > read) return 0;
+
+            bool hasXing = false;
+            for (int v = 0; v < 2; v++)
+            {
+                string marker = v == 0 ? "Xing" : "Info";
+                bool found = true;
+                for (int m = 0; m < 4; m++)
+                    if (data[xingOffset + m] != marker[m]) { found = false; break; }
+                if (found) { hasXing = true; break; }
+            }
+            if (!hasXing) return 0;
+
+            int flags = (data[xingOffset + 4] << 24) | (data[xingOffset + 5] << 16)
+                      | (data[xingOffset + 6] << 8) | data[xingOffset + 7];
+
+            if ((flags & 0x0004) == 0) return 0;
+            if (xingOffset + 16 > read) return 0;
+
+            return (data[xingOffset + 8] << 24) | (data[xingOffset + 9] << 16)
+                 | (data[xingOffset + 10] << 8) | data[xingOffset + 11];
+        }
+        catch
+        {
+            return 0;
+        }
+    }
 
     public override int ReadPcm16(byte[] buffer, int offset, int maxBytes)
     {
@@ -49,12 +122,22 @@ internal sealed class Mp3StreamingDecoder : StreamingDecoder
         int maxFrames = maxBytes / frameSize;
         if (maxFrames <= 0) return 0;
 
-        int maxSamples = maxFrames * _mpeg.Channels;
-        if (_floatBuf == null || _floatBuf.Length < maxSamples)
-            _floatBuf = new float[maxSamples];
+        int totalSamplesRequested = maxFrames * _mpeg.Channels;
+        if (_floatBuf == null || _floatBuf.Length < totalSamplesRequested)
+            _floatBuf = new float[totalSamplesRequested];
 
-        int samplesRead = _mpeg.ReadSamples(_floatBuf, 0, maxSamples);
-        int framesRead = samplesRead / _mpeg.Channels;
+        // NLayer may return fewer samples than requested (MP3 frame boundaries).
+        // Loop until buffer is full or EOF.
+        int totalSamplesRead = 0;
+        while (totalSamplesRead < totalSamplesRequested)
+        {
+            int read = _mpeg.ReadSamples(_floatBuf, totalSamplesRead,
+                totalSamplesRequested - totalSamplesRead);
+            if (read <= 0) break;
+            totalSamplesRead += read;
+        }
+
+        int framesRead = totalSamplesRead / _mpeg.Channels;
         int totalSamples = framesRead * _mpeg.Channels;
 
         for (int i = 0; i < totalSamples; i++)
@@ -69,7 +152,7 @@ internal sealed class Mp3StreamingDecoder : StreamingDecoder
 
     public override void SeekSeconds(double seconds)
     {
-        _mpeg.Time = TimeSpan.FromSeconds(Math.Clamp(seconds, 0, _mpeg.Duration.TotalSeconds));
+        _mpeg.Time = TimeSpan.FromSeconds(Math.Clamp(seconds + _delaySeconds, _delaySeconds, _mpeg.Duration.TotalSeconds));
     }
 
     public override void Dispose() => _mpeg?.Dispose();
