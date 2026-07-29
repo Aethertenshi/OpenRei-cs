@@ -166,14 +166,14 @@ public class App
 
             Console.WriteLine("[OpenRei App] Native SDL3 Window created successfully! Entering main loop...");
 
-            ulong lastTicks = SDL3.SDL_GetTicks();
+            ulong perfFreq = SDL3.SDL_GetPerformanceFrequency();
+            ulong lastCounter = SDL3.SDL_GetPerformanceCounter();
 
             while (IsRunning)
             {
-                // Calculate Delta Time in seconds
-                ulong currentTicks = SDL3.SDL_GetTicks();
-                float deltaTime = MathF.Max((currentTicks - lastTicks) / 1000.0f, 0.0001f);
-                lastTicks = currentTicks;
+                ulong frameStartCounter = SDL3.SDL_GetPerformanceCounter();
+                float deltaTime = MathF.Max((float)((double)(frameStartCounter - lastCounter) / perfFreq), 0.0001f);
+                lastCounter = frameStartCounter;
 
                 bool mousePressed = false;
                 bool mouseReleased = false;
@@ -291,20 +291,25 @@ public class App
                 // 5. Hardware GPU Render Pass Execution
                 graphicsDevice.RenderPass(null!, renderContext);
 
-                // Frame rate cap
+                // Frame rate cap (uses high-res performance counter for sub-ms precision)
                 if (vsync)
                 {
-                    // VSync handles timing; small sleep prevents busy-wait
                     SDL3.SDL_Delay(1);
                 }
                 else if (TargetFrameRate > 0)
                 {
-                    uint targetMs = (uint)(1000f / TargetFrameRate);
-                    uint elapsedMs = (uint)(SDL3.SDL_GetTicks() - currentTicks);
-                    if (elapsedMs < targetMs)
-                        SDL3.SDL_Delay(targetMs - elapsedMs);
+                    double targetSec = 1.0 / TargetFrameRate;
+                    double elapsedSec = (double)(SDL3.SDL_GetPerformanceCounter() - frameStartCounter) / perfFreq;
+                    double remainingSec = targetSec - elapsedSec;
+                    if (remainingSec > 0.001)
+                    {
+                        // Coarse wait via SDL_Delay (yields CPU)
+                        SDL3.SDL_Delay(Math.Max(1u, (uint)((remainingSec - 0.001) * 1000)));
+                    }
+                    // Fine-grained spin-wait for sub-ms precision
+                    while ((double)(SDL3.SDL_GetPerformanceCounter() - frameStartCounter) / perfFreq < targetSec)
+                        System.Threading.Thread.SpinWait(1);
                 }
-                // TargetFrameRate == 0: uncapped, no delay
             }
 
             OpenRei.IO.FileDropHandler.Shutdown();

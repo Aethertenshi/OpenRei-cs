@@ -28,8 +28,8 @@ FileDropHandler.OnFileDropped += (file) =>
 
 // 2. Initialize application entry point:
 // App.Window(new Vector2D(1280, 720), "title", WindowFlags)
-var app = App.Window(new Vector2D(1280, 720), "OpenRei 2D Engine", WindowFlags.Borderless | WindowFlags.VSync);
-
+var app = App.Window(new Vector2D(1280, 720), "OpenRei 2D Engine", WindowFlags.Borderless);
+app.TargetFrameRate = 300;
 // <-- game / app code lives here -->
 
 var mainCard = new Panel
