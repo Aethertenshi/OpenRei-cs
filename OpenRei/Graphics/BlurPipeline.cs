@@ -6,7 +6,7 @@ using SDL;
 namespace OpenRei.Graphics;
 
 /// <summary>
-/// Executes Hardware-Accelerated Multi-Pass Gaussian Blur using multi-pass FBO sampling and bilinear filtering.
+/// Executes Hardware-Accelerated Multi-Pass Gaussian Blur using weighted additive accumulation and bilinear filtering.
 /// </summary>
 public unsafe class BlurPipeline : IDisposable
 {
@@ -17,9 +17,25 @@ public unsafe class BlurPipeline : IDisposable
     private int _currentH;
     private bool _isDisposed;
 
+    private static SDL_BlendMode _additiveBlendMode;
+    private static bool _blendModeInitialized;
+
     public BlurPipeline(SDL_Renderer* renderer)
     {
         _renderer = renderer;
+        EnsureBlendMode();
+    }
+
+    private static void EnsureBlendMode()
+    {
+        if (!_blendModeInitialized)
+        {
+            _additiveBlendMode = SDL3.SDL_ComposeCustomBlendMode(
+                SDL_BlendFactor.SDL_BLENDFACTOR_SRC_ALPHA, SDL_BlendFactor.SDL_BLENDFACTOR_ONE, SDL_BlendOperation.SDL_BLENDOPERATION_ADD,
+                SDL_BlendFactor.SDL_BLENDFACTOR_SRC_ALPHA, SDL_BlendFactor.SDL_BLENDFACTOR_ONE, SDL_BlendOperation.SDL_BLENDOPERATION_ADD
+            );
+            _blendModeInitialized = true;
+        }
     }
 
     private void EnsureRenderTargets(int width, int height)
@@ -54,8 +70,7 @@ public unsafe class BlurPipeline : IDisposable
     }
 
     /// <summary>
-    /// Renders a texture directly onto the screen with Multi-Pass Gaussian Blur applied ONLY to the texture itself.
-    /// Reverted to original 1:1 tap structure as requested.
+    /// Renders a texture directly onto the screen with Multi-Pass Gaussian Blur applied with true additive weighted summation.
     /// </summary>
     public void RenderBlurredTexture(Texture texture, Rect destBounds, Rect? sourceRect, Color color, BlurFilter filter)
     {
@@ -77,7 +92,7 @@ public unsafe class BlurPipeline : IDisposable
         };
         SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
 
-        // Step 1: Render source texture WITH color tint modulation into Ping FBO
+        // Step 1: Render source texture into Ping FBO
         SDL3.SDL_SetTextureBlendMode(texture.Handle, SDL_BlendMode.SDL_BLENDMODE_NONE);
         SDL3.SDL_SetTextureColorModFloat(texture.Handle, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
         SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, Math.Clamp(color.A, 0f, 1f));
@@ -100,59 +115,63 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_RenderTexture(_renderer, texture.Handle, null, &fboDest);
         }
 
-        // Step 2: Multi-Pass 5-Tap Gaussian Kernel Sampling (Reverted 1:1 tap structure)
+        // Step 2: Multi-Pass True Weighted Additive Gaussian Blur
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
 
-        float kernelSpread = (filter.Radius / (float)downscale) / (float)passes * 0.35f;
+        float step = (filter.Radius / (float)downscale) / (float)passes * 0.8f;
 
         for (int p = 0; p < passes; p++)
         {
-            float offset = (p + 1.0f) * kernelSpread;
+            float offset = (p + 1.0f) * step;
 
+            // --- Horizontal 1D Additive Pass ---
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
+            SDL3.SDL_SetTextureBlendMode(readTarget, _additiveBlendMode);
 
-            // Tap 0: Center (0, 0)
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+            // Center (weight 0.383)
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.383f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
 
-            // Tap 1: Top-Left (-offset, -offset)
-            SDL_FRect t1 = new SDL_FRect { x = -offset, y = -offset, w = targetW + offset, h = targetH + offset };
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.35f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t1);
+            // Left (-offset, weight 0.308)
+            SDL_FRect hLeft = new SDL_FRect { x = -offset, y = 0, w = targetW, h = targetH };
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hLeft);
 
-            // Tap 2: Top-Right (+offset, -offset)
-            SDL_FRect t2 = new SDL_FRect { x = 0, y = -offset, w = targetW + offset, h = targetH + offset };
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.25f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t2);
+            // Right (+offset, weight 0.308)
+            SDL_FRect hRight = new SDL_FRect { x = offset, y = 0, w = targetW, h = targetH };
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hRight);
 
-            // Tap 3: Bottom-Left (-offset, +offset)
-            SDL_FRect t3 = new SDL_FRect { x = -offset, y = 0, w = targetW + offset, h = targetH + offset };
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.20f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t3);
+            var tmpH = readTarget; readTarget = writeTarget; writeTarget = tmpH;
 
-            // Tap 4: Bottom-Right (+offset, +offset)
-            SDL_FRect t4 = new SDL_FRect { x = 0, y = 0, w = targetW + offset, h = targetH + offset };
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.15f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &t4);
+            // --- Vertical 1D Additive Pass ---
+            SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
+            SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
+            SDL3.SDL_RenderClear(_renderer);
+            SDL3.SDL_SetTextureBlendMode(readTarget, _additiveBlendMode);
 
-            // Swap Ping-Pong targets
-            SDL_Texture* temp = readTarget;
-            readTarget = writeTarget;
-            writeTarget = temp;
+            // Center (weight 0.383)
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.383f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboDest);
+
+            // Top (-offset, weight 0.308)
+            SDL_FRect vTop = new SDL_FRect { x = 0, y = -offset, w = targetW, h = targetH };
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vTop);
+
+            // Bottom (+offset, weight 0.308)
+            SDL_FRect vBot = new SDL_FRect { x = 0, y = offset, w = targetW, h = targetH };
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vBot);
+
+            var tmpV = readTarget; readTarget = writeTarget; writeTarget = tmpV;
         }
 
-        // Step 3: Reset main swapchain render target back to main screen
+        // Step 3: Composite back onto main screen
         SDL3.SDL_SetRenderTarget(_renderer, null);
-
-        // Step 4: Configure final blend mode and composite
         SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
         SDL3.SDL_SetTextureColorModFloat(readTarget, 1f, 1f, 1f);
         SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1f);
@@ -160,8 +179,8 @@ public unsafe class BlurPipeline : IDisposable
     }
 
     /// <summary>
-    /// Renders Photoshop-quality smooth Gaussian Drop Shadow using Separable 1D Horizontal & Vertical Gaussian Passes
-    /// and hardware bilinear downsampling. Eliminates all box/block artifacts.
+    /// Renders Photoshop-quality smooth Gaussian Drop Shadow respecting cornerRadius silhouette
+    /// using true additive weighted summation (SDL_BLENDMODE_ADD).
     /// </summary>
     public void RenderShadow(Rect bounds, Color color, CornerRadius cornerRadius, BlurFilter filter)
     {
@@ -170,7 +189,7 @@ public unsafe class BlurPipeline : IDisposable
         int winW = 0, winH = 0;
         SDL3.SDL_GetRenderOutputSize(_renderer, &winW, &winH);
 
-        // Expand bounds by BlurRadius on all sides so Gaussian blur has room to spread smoothly
+        // Expand bounds by BlurRadius so Gaussian blur spread doesn't clip
         float expand = filter.Radius * 2.5f;
         float eX = bounds.X - expand;
         float eY = bounds.Y - expand;
@@ -184,8 +203,7 @@ public unsafe class BlurPipeline : IDisposable
         float cW = cR - cX, cH = cB - cY;
         if (cW <= 0f || cH <= 0f) return;
 
-        // Downscale FBO for hardware bilinear filtering and smooth Gaussian dispersion
-        int downscale = (filter.Radius > 10.0f) ? 4 : 2;
+        int downscale = (filter.Radius > 10.0f) ? 2 : 1;
         int tW = (int)Math.Max(cW / downscale, 1);
         int tH = (int)Math.Max(cH / downscale, 1);
 
@@ -202,7 +220,7 @@ public unsafe class BlurPipeline : IDisposable
         float innerW = bounds.Width * scaleFactor;
         float innerH = bounds.Height * scaleFactor;
 
-        // Step 1: Clear FBOs and draw solid shadow quad into Ping FBO
+        // Step 1: Clear FBOs and render shadow shape (respecting cornerRadius) into Ping FBO
         SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
         SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
         SDL3.SDL_RenderClear(_renderer);
@@ -212,70 +230,79 @@ public unsafe class BlurPipeline : IDisposable
         SDL3.SDL_RenderClear(_renderer);
 
         SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
-        SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
-        SDL_FRect innerRect = new SDL_FRect { x = innerX, y = innerY, w = innerW, h = innerH };
-        SDL3.SDL_RenderFillRect(_renderer, &innerRect);
+        Rect shadowQuadBounds = new Rect(innerX, innerY, innerW, innerH);
 
-        // Step 2: Separable 1D Gaussian Passes (Horizontal + Vertical Passes)
-        // 1D Gaussian kernel weights: Center 0.383, 1D Offsets (+1.333) 0.308 each
-        int passes = Math.Clamp(filter.Passes, 2, 6);
-        float step = (filter.Radius / (float)downscale) / (float)passes * 1.2f;
+        // Render rounded quad silhouette if cornerRadius is present, otherwise fill rect
+        if (cornerRadius.TopLeft > 1f || cornerRadius.TopRight > 1f || cornerRadius.BottomLeft > 1f || cornerRadius.BottomRight > 1f)
+        {
+            CornerRadius scaledCorner = new CornerRadius(
+                cornerRadius.TopLeft * scaleFactor,
+                cornerRadius.TopRight * scaleFactor,
+                cornerRadius.BottomLeft * scaleFactor,
+                cornerRadius.BottomRight * scaleFactor
+            );
+            RenderRoundedShadowQuad(shadowQuadBounds, color, scaledCorner);
+        }
+        else
+        {
+            SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
+            SDL_FRect innerRect = new SDL_FRect { x = innerX, y = innerY, w = innerW, h = innerH };
+            SDL3.SDL_RenderFillRect(_renderer, &innerRect);
+        }
 
+        // Step 2: Multi-Pass True Weighted Additive Gaussian Blur
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
+
+        int passes = Math.Clamp(filter.Passes, 2, 5);
+        float step = (filter.Radius / (float)downscale) / (float)passes * 0.9f;
 
         for (int p = 0; p < passes; p++)
         {
             float offset = (p + 1.0f) * step;
 
-            // --- 1D Horizontal Gaussian Pass (Ping -> Pong) ---
+            // --- 1D Horizontal Additive Gaussian Pass ---
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
+            SDL3.SDL_SetTextureBlendMode(readTarget, _additiveBlendMode);
 
-            // Center (weight 0.4)
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+            // Center (weight 0.383)
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.383f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboFull);
 
-            // Horizontal Left (-offset, 0)
+            // Left (-offset, weight 0.308)
             SDL_FRect hLeft = new SDL_FRect { x = -offset, y = 0, w = tW, h = tH };
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hLeft);
 
-            // Horizontal Right (+offset, 0)
+            // Right (+offset, weight 0.308)
             SDL_FRect hRight = new SDL_FRect { x = offset, y = 0, w = tW, h = tH };
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hRight);
 
-            // Swap targets
             var tmpH = readTarget; readTarget = writeTarget; writeTarget = tmpH;
 
-            // --- 1D Vertical Gaussian Pass (Pong -> Ping) ---
+            // --- 1D Vertical Additive Gaussian Pass ---
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
+            SDL3.SDL_SetTextureBlendMode(readTarget, _additiveBlendMode);
 
-            // Center (weight 0.4)
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
-            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+            // Center (weight 0.383)
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.383f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboFull);
 
-            // Vertical Top (0, -offset)
+            // Top (-offset, weight 0.308)
             SDL_FRect vTop = new SDL_FRect { x = 0, y = -offset, w = tW, h = tH };
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vTop);
 
-            // Vertical Bottom (0, +offset)
+            // Bottom (+offset, weight 0.308)
             SDL_FRect vBot = new SDL_FRect { x = 0, y = offset, w = tW, h = tH };
-            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.308f);
             SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vBot);
 
-            // Swap targets
             var tmpV = readTarget; readTarget = writeTarget; writeTarget = tmpV;
         }
 
@@ -285,6 +312,80 @@ public unsafe class BlurPipeline : IDisposable
         SDL3.SDL_SetTextureColorModFloat(readTarget, 1f, 1f, 1f);
         SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f));
         SDL3.SDL_RenderTexture(_renderer, readTarget, null, &compositeDst);
+    }
+
+    /// <summary>
+    /// Helper to draw a rounded quad silhouette inside an FBO target for rounded drop shadows.
+    /// </summary>
+    private void RenderRoundedShadowQuad(Rect bounds, Color color, CornerRadius radius)
+    {
+        float x = bounds.X, y = bounds.Y, w = bounds.Width, h = bounds.Height;
+        float maxR = MathF.Min(w, h) * 0.5f;
+
+        float rTL = MathF.Min(radius.TopLeft, maxR);
+        float rTR = MathF.Min(radius.TopRight, maxR);
+        float rBL = MathF.Min(radius.BottomLeft, maxR);
+        float rBR = MathF.Min(radius.BottomRight, maxR);
+
+        SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
+
+        float maxTopR = MathF.Max(rTL, rTR);
+        float maxBotR = MathF.Max(rBL, rBR);
+
+        SDL_FRect midRect = new SDL_FRect { x = x, y = y + maxTopR, w = w, h = MathF.Max(0f, h - maxTopR - maxBotR) };
+        if (midRect.h > 0f) SDL3.SDL_RenderFillRect(_renderer, &midRect);
+
+        SDL_FRect topRect = new SDL_FRect { x = x + rTL, y = y, w = MathF.Max(0f, w - rTL - rTR), h = maxTopR };
+        if (topRect.w > 0f && topRect.h > 0f) SDL3.SDL_RenderFillRect(_renderer, &topRect);
+
+        SDL_FRect botRect = new SDL_FRect { x = x + rBL, y = y + h - maxBotR, w = MathF.Max(0f, w - rBL - rBR), h = maxBotR };
+        if (botRect.w > 0f && botRect.h > 0f) SDL3.SDL_RenderFillRect(_renderer, &botRect);
+
+        int segments = 12;
+        int vertsPerCorner = 1 + (segments + 1);
+        int totalVerts = 4 * vertsPerCorner;
+        var verts = new SDL_Vertex[totalVerts];
+        int[] indices = new int[4 * (3 * segments)];
+
+        SDL_FColor solidColor = new SDL_FColor { r = color.R, g = color.G, b = color.B, a = color.A };
+
+        var corners = new[] {
+            (x + rTL,     y + rTL,     rTL, 180f, 270f),
+            (x + w - rTR, y + rTR,     rTR, 270f, 360f),
+            (x + w - rBR, y + h - rBR, rBR, 0f,   90f),
+            (x + rBL,     y + h - rBL, rBL, 90f,  180f),
+        };
+
+        int vIdx = 0, iIdx = 0;
+        foreach (var (cx, cy, r, startAngle, endAngle) in corners)
+        {
+            int baseVert = vIdx;
+            verts[vIdx++] = new SDL_Vertex { position = new SDL_FPoint { x = cx, y = cy }, color = solidColor };
+            int innerStart = vIdx;
+
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = (startAngle + (endAngle - startAngle) * i / segments) * MathF.PI / 180f;
+                verts[vIdx++] = new SDL_Vertex
+                {
+                    position = new SDL_FPoint { x = cx + r * MathF.Cos(angle), y = cy + r * MathF.Sin(angle) },
+                    color = solidColor
+                };
+            }
+
+            for (int i = 0; i < segments; i++)
+            {
+                indices[iIdx++] = baseVert;
+                indices[iIdx++] = innerStart + i;
+                indices[iIdx++] = innerStart + i + 1;
+            }
+        }
+
+        fixed (SDL_Vertex* vPtr = verts)
+        fixed (int* iPtr = indices)
+        {
+            SDL3.SDL_RenderGeometry(_renderer, null, vPtr, totalVerts, iPtr, iIdx);
+        }
     }
 
     public void Dispose()
