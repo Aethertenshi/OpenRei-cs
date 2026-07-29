@@ -69,7 +69,11 @@ public class Button : Element
         // Submit button text command
         if (!string.IsNullOrEmpty(Text))
         {
-            context.DrawText(Font, Text, AbsoluteBounds, TextColor, ZIndex);
+            Font? resolved = Font ?? FontEngine.DefaultFont;
+            if (resolved != null)
+            {
+                context.DrawText(resolved, FontSize, Text, AbsoluteBounds, TextColor, ZIndex);
+            }
         }
     }
 }

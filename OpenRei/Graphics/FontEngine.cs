@@ -1,3 +1,4 @@
+using OpenRei.Types;
 using SDL;
 
 namespace OpenRei.Graphics;
@@ -9,6 +10,7 @@ public static class FontEngine
 {
     private static bool _isInitialized;
     private static readonly Dictionary<string, Font> _fontCache = new(StringComparer.OrdinalIgnoreCase);
+    private static string? _defaultFontPath;
 
     public static bool IsInitialized => _isInitialized;
 
@@ -38,7 +40,8 @@ public static class FontEngine
 
             if (foundFontPath != null)
             {
-                DefaultFont = LoadFont("Default", foundFontPath, 24.0f);
+                _defaultFontPath = foundFontPath;
+                DefaultFont = LoadFont("Default", foundFontPath, 16.0f);
             }
             else
             {
@@ -54,7 +57,7 @@ public static class FontEngine
     /// <summary>
     /// Loads a TrueType/OpenType font from file path and caches it under the specified name.
     /// </summary>
-    public static Font? LoadFont(string name, string path, float fontSize)
+    public static Font? LoadFont(string name, string path, float defaultSize = 16.0f)
     {
         Initialize();
 
@@ -69,18 +72,42 @@ public static class FontEngine
             return null;
         }
 
-        var font = new Font(path, fontSize);
+        var font = new Font(path, defaultSize);
         _fontCache[name] = font;
-        Console.WriteLine($"[FontEngine] Font '{name}' ({fontSize}pt) loaded and cached successfully.");
+        Console.WriteLine($"[FontEngine] Font '{name}' loaded and cached successfully.");
         return font;
     }
 
     /// <summary>
-    /// Retrieves a previously loaded font by name from cache.
+    /// Loads a TrueType/OpenType font from file path and caches it using the file path as key.
+    /// </summary>
+    public static Font? LoadFont(string path, float defaultSize = 16.0f) => LoadFont(path, path, defaultSize);
+
+    /// <summary>
+    /// Retrieves a previously loaded font by name or file path from cache.
     /// </summary>
     public static Font? GetFont(string name)
     {
         return _fontCache.TryGetValue(name, out var font) ? font : null;
+    }
+
+    /// <summary>
+    /// Measures text at the given point size.
+    /// If no font is provided, uses <see cref="DefaultFont"/>.
+    /// </summary>
+    public static Vector2D MeasureString(string text, float fontSize, Font? font = null)
+    {
+        font ??= DefaultFont;
+        return font?.MeasureString(text, fontSize) ?? Vector2D.Zero;
+    }
+
+    /// <summary>
+    /// Measures text using the provided font's default size or DefaultFont.
+    /// </summary>
+    public static Vector2D MeasureString(string text, Font? font = null)
+    {
+        font ??= DefaultFont;
+        return font?.MeasureString(text) ?? Vector2D.Zero;
     }
 
     /// <summary>

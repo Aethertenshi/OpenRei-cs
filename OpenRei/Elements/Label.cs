@@ -34,7 +34,10 @@ public class Label : Element
         // Draw background if color is non-transparent
         base.Render(context);
 
-        // Submit text render command
-        context.DrawText(Font, Text, AbsoluteBounds, TextColor, ZIndex);
+        Font? resolved = Font ?? FontEngine.DefaultFont;
+        if (resolved != null)
+        {
+            context.DrawText(resolved, FontSize, Text, AbsoluteBounds, TextColor, ZIndex);
+        }
     }
 }

@@ -48,10 +48,13 @@ public unsafe class GraphicsDevice : IDisposable
     /// <summary>
     /// Renders text using SDL3_ttf blended font surface with alpha blending support.
     /// </summary>
-    public void RenderText(Font? font, string text, Rect bounds, Color color)
+    public void RenderText(Font? font, float fontSize, string text, Rect bounds, Color color)
     {
         font ??= FontEngine.DefaultFont;
-        if (!IsInitialized || _renderer == null || font == null || font.Handle == null || string.IsNullOrEmpty(text) || color.A <= 0.001f) return;
+        if (!IsInitialized || _renderer == null || font == null || string.IsNullOrEmpty(text) || color.A <= 0.001f) return;
+
+        TTF_Font* fontHandle = font.GetHandle(fontSize);
+        if (fontHandle == null) return;
 
         byte[] textBytes = System.Text.Encoding.UTF8.GetBytes(text + "\0");
         SDL_Color fgColor = new SDL_Color
@@ -64,7 +67,7 @@ public unsafe class GraphicsDevice : IDisposable
 
         fixed (byte* tPtr = textBytes)
         {
-            SDL_Surface* surface = SDL3_ttf.TTF_RenderText_Blended(font.Handle, tPtr, (nuint)text.Length, fgColor);
+            SDL_Surface* surface = SDL3_ttf.TTF_RenderText_Blended(fontHandle, tPtr, (nuint)text.Length, fgColor);
             if (surface == null) return;
 
             SDL_Texture* texture = SDL3.SDL_CreateTextureFromSurface(_renderer, surface);
@@ -77,15 +80,20 @@ public unsafe class GraphicsDevice : IDisposable
                 SDL3.SDL_SetTextureBlendMode(texture, SDL_BlendMode.SDL_BLENDMODE_BLEND);
                 SDL3.SDL_SetTextureAlphaModFloat(texture, Math.Clamp(color.A, 0f, 1f));
 
-                // Center text inside bounds
-                float posX = bounds.X + (bounds.Width - textW) * 0.5f;
-                float posY = bounds.Y + (bounds.Height - textH) * 0.5f;
+                // Center text inside bounds (round to pixel grid to prevent blur)
+                float posX = MathF.Floor(bounds.X + (bounds.Width - textW) * 0.5f);
+                float posY = MathF.Floor(bounds.Y + (bounds.Height - textH) * 0.5f);
 
                 SDL_FRect destRect = new SDL_FRect { x = posX, y = posY, w = textW, h = textH };
                 SDL3.SDL_RenderTexture(_renderer, texture, null, &destRect);
                 SDL3.SDL_DestroyTexture(texture);
             }
         }
+    }
+
+    public void RenderText(Font? font, string text, Rect bounds, Color color)
+    {
+        RenderText(font, font?.DefaultSize ?? 16.0f, text, bounds, color);
     }
 
     public void RenderImage(Texture texture, Rect destBounds, Rect? sourceRect, Color color)
@@ -168,7 +176,7 @@ public unsafe class GraphicsDevice : IDisposable
                 case 2: // Text
                     {
                         if (cmd.TextString != null)
-                            RenderText(cmd.Font, cmd.TextString, cmd.Bounds, cmd.Color);
+                            RenderText(cmd.Font, cmd.FontSize, cmd.TextString, cmd.Bounds, cmd.Color);
                         break;
                     }
                 case 3: // ClipPush
@@ -237,8 +245,10 @@ public unsafe class GraphicsDevice : IDisposable
         SDL_FRect botRect = new SDL_FRect { x = x + rBL, y = y + h - maxBotR, w = MathF.Max(0f, w - rBL - rBR), h = maxBotR };
         if (botRect.w > 0f && botRect.h > 0f) SDL3.SDL_RenderFillRect(_renderer, &botRect);
 
-        // 4. Render 4 corner fans (or degenerate fallback if r == 0)
-        int segments = 8;
+        // 4. Render 4 corner fans with adaptive segments (finer arcs for larger radii)
+        float maxSegR = MathF.Max(MathF.Max(rTL, rTR), MathF.Max(rBL, rBR));
+        int segments = maxSegR <= 1f ? 0 : Math.Clamp((int)(maxSegR / 3f) + 6, 6, 24);
+        if (segments <= 0) return;
         int totalVerts = 4 * (segments + 2);
         var verts = new SDL_Vertex[totalVerts];
         int idx = 0;
@@ -358,7 +368,8 @@ public unsafe class GraphicsDevice : IDisposable
         float rBL = MathF.Min(radius.BottomLeft, maxR);
         float rBR = MathF.Min(radius.BottomRight, maxR);
 
-        int segments = 8;
+        float maxSegR = MathF.Max(MathF.Max(rTL, rTR), MathF.Max(rBL, rBR));
+        int segments = maxSegR <= 1f ? 0 : Math.Clamp((int)(maxSegR / 3f) + 6, 6, 24);
 
         // Build UV-mapped vertices for 3 fill rects (6 verts each = 18) + 4 corner fans (segments+2 each)
         int rectVerts = 18;
@@ -497,7 +508,7 @@ public unsafe class GraphicsDevice : IDisposable
         float crBR = MathF.Min(cornerRadius.BottomRight, maxR);
 
         // Adaptive segment count
-        static int Segs(float r) => r <= 1f ? 0 : Math.Clamp((int)(r / 8f) + 4, 4, 16);
+        static int Segs(float r) => r <= 1f ? 0 : Math.Clamp((int)(r / 3f) + 6, 6, 24);
 
         // Outer contour: radius = element radius + expand (the stroke's outer edge)
         // Corner centers shift outward by expand:

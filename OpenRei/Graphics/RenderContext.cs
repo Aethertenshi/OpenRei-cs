@@ -18,23 +18,24 @@ public readonly struct FifoCommand
     public readonly Rect? SourceRect;
     public readonly BlurFilter? BlurFilter;
     public readonly Font? Font;
+    public readonly float FontSize;
     public readonly string? TextString;
     public readonly StrokeInfo Stroke;
 
     private FifoCommand(byte type, Rect bounds, Color color, CornerRadius cornerRadius, float zIndex,
         Texture? texture = null, Rect? sourceRect = null, BlurFilter? blurFilter = null,
-        Font? font = null, string? text = null, StrokeInfo stroke = default)
+        Font? font = null, float fontSize = 16.0f, string? text = null, StrokeInfo stroke = default)
     {
         Type = type; Bounds = bounds; Color = color; CornerRadius = cornerRadius; ZIndex = zIndex;
         Texture = texture; SourceRect = sourceRect; BlurFilter = blurFilter;
-        Font = font; TextString = text; Stroke = stroke;
+        Font = font; FontSize = fontSize; TextString = text; Stroke = stroke;
     }
 
     internal static FifoCommand Quad(Rect b, Color c, CornerRadius r, float z) => new(0, b, c, r, z);
     internal static FifoCommand Image(Texture t, Rect d, Rect? s, Color c, BlurFilter? b, float z, CornerRadius r = default) =>
         new(1, d, c, r, z, texture: t, sourceRect: s, blurFilter: b);
-    internal static FifoCommand MakeText(Font? f, string t, Rect b, Color c, float z) =>
-        new(2, b, c, CornerRadius.Zero, z, font: f, text: t);
+    internal static FifoCommand MakeText(Font? f, float fontSize, string t, Rect b, Color c, float z) =>
+        new(2, b, c, CornerRadius.Zero, z, font: f, fontSize: fontSize, text: t);
     internal static FifoCommand ClipPush(Rect b) => new(3, b, default, CornerRadius.Zero, 0);
     internal static FifoCommand ClipPop() => new(4, default, default, CornerRadius.Zero, 0);
     internal static FifoCommand BlurRegion(Rect b, Color c, CornerRadius r, BlurFilter f) => new(5, b, c, r, 0, blurFilter: f);
@@ -68,12 +69,17 @@ public class RenderContext
         _commands.Add(FifoCommand.Quad(bounds, color, cornerRadius, zIndex));
     }
 
-    public void DrawText(Font? font, string text, Rect bounds, Color color, float zIndex = 1f)
+    public void DrawText(Font? font, float fontSize, string text, Rect bounds, Color color, float zIndex = 1f)
     {
         if (!string.IsNullOrEmpty(text))
         {
-            _commands.Add(FifoCommand.MakeText(font, text, bounds, color, zIndex));
+            _commands.Add(FifoCommand.MakeText(font, fontSize, text, bounds, color, zIndex));
         }
+    }
+
+    public void DrawText(Font? font, string text, Rect bounds, Color color, float zIndex = 1f)
+    {
+        DrawText(font, font?.DefaultSize ?? 16.0f, text, bounds, color, zIndex);
     }
 
     public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null, BlurFilter? blurFilter = null, float zIndex = 1f, CornerRadius cornerRadius = default)

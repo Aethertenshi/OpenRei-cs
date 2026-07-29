@@ -92,4 +92,21 @@ public readonly record struct Color(float R, float G, float B, float A = 1.0f)
     public static Color FromHex(int hex) => FromHex((uint)hex);
 
     public Color WithAlpha(float alpha) => new(R, G, B, Math.Clamp(alpha, 0f, 1f));
+
+    public static Color operator *(Color c, float scalar) =>
+        new(Math.Clamp(c.R * scalar, 0f, 1f),
+            Math.Clamp(c.G * scalar, 0f, 1f),
+            Math.Clamp(c.B * scalar, 0f, 1f), c.A);
+
+    public static Color operator *(float scalar, Color c) => c * scalar;
+
+    /// <summary>Darkens toward black. Factor 0 = black, 1 = unchanged.</summary>
+    public Color Darken(float factor) =>
+        new(R * factor, G * factor, B * factor, A);
+
+    /// <summary>Lightens toward white. Factor 0 = white, 1 = unchanged.</summary>
+    public Color Lighten(float factor) =>
+        new(1f - (1f - R) * factor,
+            1f - (1f - G) * factor,
+            1f - (1f - B) * factor, A);
 }
