@@ -165,11 +165,18 @@ public class Sprite : Element
             }
         }
 
-        // 2. Render child elements on top of this sprite's image
+        // 2. Draw stroke outline if active (before children)
+        if (Stroke.Thickness > 0f && Stroke.Color.A > 0f)
+            context.DrawStroke(AbsoluteBounds, Stroke, CornerRadius, ZIndex + 0.1f);
+
+        // 3. Render child elements on top of this sprite's image
         var sortedChildren = GetSortedChildren();
         foreach (var child in sortedChildren)
         {
-            child.Render(context);
+            if (child.Visible)
+            {
+                child.Render(context);
+            }
         }
     }
 }

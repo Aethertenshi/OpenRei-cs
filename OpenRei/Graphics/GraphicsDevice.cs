@@ -466,44 +466,157 @@ public unsafe class GraphicsDevice : IDisposable
         SDL3.SDL_DestroyTexture(fbo);
     }
 
+        // ── Reusable vertex pool for stroke geometry ───────────────────────────────
+    private SDL_Vertex[] _strokeVerts = new SDL_Vertex[256];
+    private int[] _strokeIndices = new int[512];
+
     /// <summary>
-    /// Draws an outline stroke around bounds using 4 edge quads, respecting StrokeAlignment (Inside/Center/Outside).
-    /// Rounded corners are handled by rendering thin rounded-rect quads at reduced size.
+    /// Draws a rounded-outline stroke ring using SDL_RenderGeometry.
     /// </summary>
     private void RenderStroke(Rect bounds, StrokeInfo stroke, CornerRadius cornerRadius)
     {
         float t = stroke.Thickness;
         Color c = stroke.Color;
+        if (t <= 0f || c.A <= 0f) return;
 
-        // Adjust bounds based on alignment
         float expand = stroke.Alignment switch
         {
             StrokeAlignment.Outside => t,
             StrokeAlignment.Center => t * 0.5f,
-            _ => 0f // Inside: stroke is fully inside the element bounds
+            _ => 0f
         };
 
-        float x = bounds.X - expand;
-        float y = bounds.Y - expand;
-        float w = bounds.Width + expand * 2f;
-        float h = bounds.Height + expand * 2f;
+        float bx = bounds.X, by = bounds.Y, bw = bounds.Width, bh = bounds.Height;
+        float ox = bx - expand, oy = by - expand;
+        float ow = bw + expand * 2f, oh = bh + expand * 2f;
 
-        SDL3.SDL_SetRenderDrawColorFloat(_renderer, c.R, c.G, c.B, c.A);
+        float maxR = MathF.Min(bw, bh) * 0.5f;
+        float crTL = MathF.Min(cornerRadius.TopLeft, maxR);
+        float crTR = MathF.Min(cornerRadius.TopRight, maxR);
+        float crBL = MathF.Min(cornerRadius.BottomLeft, maxR);
+        float crBR = MathF.Min(cornerRadius.BottomRight, maxR);
 
-        // Top edge
+        // Adaptive segment count
+        static int Segs(float r) => r <= 1f ? 0 : Math.Clamp((int)(r / 8f) + 4, 4, 16);
+
+        // Outer contour: radius = element radius + expand (the stroke's outer edge)
+        // Corner centers shift outward by expand:
+        //   cx = ox + (cr + expand), cy = oy + (cr + expand) for TL
+        // Edge endpoints at expanded bounds: top edge y = oy, right edge x = ox+ow, etc.
+        float outerTL = crTL + expand, outerTR = crTR + expand;
+        float outerBL = crBL + expand, outerBR = crBR + expand;
+        int sTL = Segs(outerTL), sTR = Segs(outerTR);
+        int sBL = Segs(outerBL), sBR = Segs(outerBR);
+        int totalSegs = sTL + sTR + sBL + sBR;
+
+        if (totalSegs == 0) { FastRectStroke(ox, oy, ow, oh, t, c); return; }
+
+        int vertsPerCorner(int s) => Math.Max(s, 0) + 2;
+        int outerVerts = vertsPerCorner(sTL) + vertsPerCorner(sTR) + vertsPerCorner(sBL) + vertsPerCorner(sBR);
+        int totalVerts = outerVerts * 2;
+        int totalIndices = totalSegs * 6;
+
+        if (_strokeVerts.Length < totalVerts)
+        {
+            _strokeVerts = new SDL_Vertex[Math.Max(totalVerts, _strokeVerts.Length * 2)];
+            _strokeIndices = new int[Math.Max(totalIndices, _strokeIndices.Length * 2)];
+        }
+
+        int vi = 0;
+        void EmitV(float px, float py)
+        {
+            _strokeVerts[vi++] = new SDL_Vertex
+            {
+                position = new SDL_FPoint { x = px, y = py },
+                color = new SDL_FColor { r = c.R, g = c.G, b = c.B, a = c.A }
+            };
+        }
+
+        void Arc(float cx, float cy, float r, int segs, float startDeg)
+        {
+            if (segs <= 0) { EmitV(cx, cy); return; }
+            float sr = startDeg * MathF.PI / 180f;
+            for (int i = 0; i <= segs; i++)
+            {
+                float a = sr - (MathF.PI * 0.5f) * i / segs;
+                EmitV(cx + r * MathF.Cos(a), cy - r * MathF.Sin(a));
+            }
+        }
+
+        // ── Outer contour (expanded bounds) ──────────────────────────────────
+        // Corner centers at expanded position
+        float otlCx = ox + outerTL, otlCy = oy + outerTL;
+        float otrCx = ox + ow - outerTR, otrCy = oy + outerTR;
+        float obrCx = ox + ow - outerBR, obrCy = oy + oh - outerBR;
+        float oblCx = ox + outerBL, oblCy = oy + oh - outerBL;
+
+        Arc(otlCx, otlCy, outerTL, sTL, 180f);
+        EmitV(ox + ow - outerTR, oy);
+        Arc(otrCx, otrCy, outerTR, sTR, 90f);
+        EmitV(ox + ow, oy + oh - outerBR);
+        Arc(obrCx, obrCy, outerBR, sBR, 0f);
+        EmitV(ox + outerBL, oy + oh);
+        Arc(oblCx, oblCy, outerBL, sBL, 270f);
+        EmitV(ox, oy + outerTL); // back near TL start
+
+        int outerCount = vi;
+
+        // ── Inner contour (element bounds) ───────────────────────────────────
+        // Inner radius = cr for Outside/Center (inner edge = element edge);
+        //               cr - t for Inside (inner edge is insetted)
+        float innerAdj = stroke.Alignment == StrokeAlignment.Inside ? t : 0f;
+        float inTL = MathF.Max(0f, crTL - innerAdj);
+        float inTR = MathF.Max(0f, crTR - innerAdj);
+        float inBL = MathF.Max(0f, crBL - innerAdj);
+        float inBR = MathF.Max(0f, crBR - innerAdj);
+
+        // Corner centers at ELEMENT corner centers (bx,by = element top-left)
+        float itlCx = bx + crTL, itlCy = by + crTL;
+        float itrCx = bx + bw - crTR, itrCy = by + crTR;
+        float ibrCx = bx + bw - crBR, ibrCy = by + bh - crBR;
+        float iblCx = bx + crBL, iblCy = by + bh - crBL;
+
+        // Edge endpoints at element bounds
+        Arc(itlCx, itlCy, inTL, sTL, 180f);
+        EmitV(bx + bw - crTR, by);
+        Arc(itrCx, itrCy, inTR, sTR, 90f);
+        EmitV(bx + bw, by + bh - crBR);
+        Arc(ibrCx, ibrCy, inBR, sBR, 0f);
+        EmitV(bx + crBL, by + bh);
+        Arc(iblCx, iblCy, inBL, sBL, 270f);
+        EmitV(bx, by + crTL);
+
+        int totalVertsActual = vi;
+
+        // Stitch outer → inner
+        int idx = 0;
+        for (int i = 0; i < outerCount - 1; i++)
+        {
+            _strokeIndices[idx++] = i;
+            _strokeIndices[idx++] = i + 1;
+            _strokeIndices[idx++] = outerCount + i;
+
+            _strokeIndices[idx++] = i + 1;
+            _strokeIndices[idx++] = outerCount + i + 1;
+            _strokeIndices[idx++] = outerCount + i;
+        }
+
+        fixed (SDL_Vertex* vPtr = _strokeVerts)
+        fixed (int* iPtr = _strokeIndices)
+            SDL3.SDL_RenderGeometry(_renderer, null, vPtr, totalVertsActual, iPtr, idx);
+    }
+
+    /// <summary>Fast path for sharp-corner rectangles: 4 filled edge quads.</summary>
+    private void FastRectStroke(float x, float y, float w, float h, float t, Color c)
+    {
         SDL_FRect top = new SDL_FRect { x = x, y = y, w = w, h = t };
-        SDL3.SDL_RenderFillRect(_renderer, &top);
-
-        // Bottom edge
         SDL_FRect bot = new SDL_FRect { x = x, y = y + h - t, w = w, h = t };
-        SDL3.SDL_RenderFillRect(_renderer, &bot);
-
-        // Left edge (between top and bottom)
         SDL_FRect left = new SDL_FRect { x = x, y = y + t, w = t, h = MathF.Max(0f, h - t * 2f) };
-        SDL3.SDL_RenderFillRect(_renderer, &left);
-
-        // Right edge (between top and bottom)
         SDL_FRect right = new SDL_FRect { x = x + w - t, y = y + t, w = t, h = MathF.Max(0f, h - t * 2f) };
+        SDL3.SDL_SetRenderDrawColorFloat(_renderer, c.R, c.G, c.B, c.A);
+        SDL3.SDL_RenderFillRect(_renderer, &top);
+        SDL3.SDL_RenderFillRect(_renderer, &bot);
+        SDL3.SDL_RenderFillRect(_renderer, &left);
         SDL3.SDL_RenderFillRect(_renderer, &right);
     }
 
