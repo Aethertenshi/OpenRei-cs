@@ -52,8 +52,9 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
         {
             if (_isPlaying)
             {
+                double baseMs = _seekOffsetMs + _buffersConsumed * BufferSeconds * 1000.0;
                 AudioEngine.AL.GetSourceProperty(_sourceId, SourceFloat.SecOffset, out float secOffset);
-                return _seekOffsetMs + secOffset * 1000.0;
+                return baseMs + secOffset * 1000.0;
             }
             return _pausedPositionMs;
         }
