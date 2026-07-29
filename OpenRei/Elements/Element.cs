@@ -209,20 +209,21 @@ public class Element
         // Process filters BEFORE drawing the element's own content
         foreach (var filter in Filters)
         {
-            if (filter is DropShadowFilter dsf && dsf.Enabled)
+            if (filter is DropShadowFilter dsf && dsf.Enabled && dsf.Color.A > 0.001f)
             {
-                // 1. Draw shadow quad at offset with shadow color
                 Rect shadowBounds = new Rect(
                     AbsoluteBounds.X + dsf.Offset.X,
                     AbsoluteBounds.Y + dsf.Offset.Y,
                     AbsoluteBounds.Width, AbsoluteBounds.Height);
-                context.DrawQuad(shadowBounds, dsf.Color, CornerRadius, ZIndex - 0.5f);
 
-                // 2. Blur the shadow region if radius > 0 (FBO-only, no readback)
                 if (dsf.BlurRadius > 0.5f)
                 {
                     var blurFilter = new BlurFilter(dsf.BlurRadius);
                     context.ApplyBlur(shadowBounds, blurFilter, dsf.Color, CornerRadius);
+                }
+                else
+                {
+                    context.DrawQuad(shadowBounds, dsf.Color, CornerRadius, ZIndex - 0.5f);
                 }
             }
         }

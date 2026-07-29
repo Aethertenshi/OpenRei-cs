@@ -161,7 +161,7 @@ public unsafe class BlurPipeline : IDisposable
     /// </summary>
     public void RenderShadow(Rect bounds, Color color, CornerRadius cornerRadius, BlurFilter filter)
     {
-        if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
+        if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f || color.A <= 0.001f) return;
 
         int winW = 0, winH = 0;
         SDL3.SDL_GetRenderOutputSize(_renderer, &winW, &winH);
@@ -231,7 +231,7 @@ public unsafe class BlurPipeline : IDisposable
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
 
-        int passes = Math.Clamp(filter.Passes, 2, 5);
+        int passes = Math.Clamp(filter.Passes, 1, 2);
         float step = (filter.Radius / (float)downscale) / (float)passes * 0.9f;
 
         for (int p = 0; p < passes; p++)
