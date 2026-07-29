@@ -7,7 +7,7 @@ namespace OpenRei.Graphics;
 
 /// <summary>
 /// Executes Hardware-Accelerated Multi-Pass Gaussian Blur and Drop Shadow rendering using FBO ping-pong targets.
-/// Uses grow-only pooled FBO targets to guarantee zero VRAM allocations during size tweens.
+/// Uses grow-only pooled FBO targets with native pixel format matching to guarantee zero VRAM allocations and zero color tinting.
 /// </summary>
 public unsafe class BlurPipeline : IDisposable
 {
@@ -25,33 +25,32 @@ public unsafe class BlurPipeline : IDisposable
 
     /// <summary>
     /// Ensures ping-pong render targets are large enough.
-    /// Uses a grow-only capacity strategy to prevent per-frame texture allocation/destruction during size tweens.
+    /// Uses native pixel format (SDL_PIXELFORMAT_UNKNOWN) to eliminate Red/Blue channel swap tints across DirectX/OpenGL/Vulkan.
     /// </summary>
     private void EnsureRenderTargets(int requiredW, int requiredH)
     {
         requiredW = Math.Max(requiredW, 1);
         requiredH = Math.Max(requiredH, 1);
 
-        // Only reallocate if requested size exceeds current VRAM texture capacity
         if (_pingTexture == null || _pongTexture == null || requiredW > _currentW || requiredH > _currentH)
         {
             if (_pingTexture != null) SDL3.SDL_DestroyTexture(_pingTexture);
             if (_pongTexture != null) SDL3.SDL_DestroyTexture(_pongTexture);
 
-            // Grow with padding (next power of 2 or +256px step) to avoid frequent reallocations during scale tweens
             int newW = Math.Max(_currentW, Pow2Ceil(requiredW + 64));
             int newH = Math.Max(_currentH, Pow2Ceil(requiredH + 64));
 
             _currentW = newW;
             _currentH = newH;
 
+            // Use SDL_PIXELFORMAT_UNKNOWN to match GPU renderer's exact native color channel format
             _pingTexture = SDL3.SDL_CreateTexture(_renderer,
-                SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888,
+                SDL_PixelFormat.SDL_PIXELFORMAT_UNKNOWN,
                 SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET,
                 newW, newH);
 
             _pongTexture = SDL3.SDL_CreateTexture(_renderer,
-                SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888,
+                SDL_PixelFormat.SDL_PIXELFORMAT_UNKNOWN,
                 SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET,
                 newW, newH);
 
@@ -93,7 +92,7 @@ public unsafe class BlurPipeline : IDisposable
         };
         SDL_FRect fboDest = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
 
-        // Step 1: Render source texture at FULL opacity into Ping FBO
+        // Step 1: Render source texture at FULL opacity into Ping FBO with exact color tint modulation
         SDL3.SDL_SetTextureBlendMode(texture.Handle, SDL_BlendMode.SDL_BLENDMODE_NONE);
         SDL3.SDL_SetTextureColorModFloat(texture.Handle, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
         SDL3.SDL_SetTextureAlphaModFloat(texture.Handle, 1.0f);
@@ -116,6 +115,9 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_RenderTexture(_renderer, texture.Handle, null, &fboDest);
         }
 
+        // Reset source texture color modulation
+        SDL3.SDL_SetTextureColorModFloat(texture.Handle, 1.0f, 1.0f, 1.0f);
+
         // Step 2: Multi-Pass 5-Tap Gaussian Kernel Sampling
         SDL_Texture* readTarget = _pingTexture;
         SDL_Texture* writeTarget = _pongTexture;
@@ -129,6 +131,9 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
+
+            // Ensure intermediate ping-pong textures use neutral 1.0 color modulation
+            SDL3.SDL_SetTextureColorModFloat(readTarget, 1.0f, 1.0f, 1.0f);
 
             // Tap 0: Center (0, 0)
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
@@ -168,7 +173,7 @@ public unsafe class BlurPipeline : IDisposable
         // Step 3: Composite final blurred target onto main screen with color.A opacity
         SDL3.SDL_SetRenderTarget(_renderer, null);
         SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-        SDL3.SDL_SetTextureColorModFloat(readTarget, 1f, 1f, 1f);
+        SDL3.SDL_SetTextureColorModFloat(readTarget, 1.0f, 1.0f, 1.0f);
         SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f));
 
         SDL_FRect fboSrcArea = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
@@ -259,6 +264,8 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
 
+            SDL3.SDL_SetTextureColorModFloat(readTarget, 1.0f, 1.0f, 1.0f);
+
             // Center (weight 0.4)
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
@@ -282,6 +289,8 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
             SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
             SDL3.SDL_RenderClear(_renderer);
+
+            SDL3.SDL_SetTextureColorModFloat(readTarget, 1.0f, 1.0f, 1.0f);
 
             // Center (weight 0.4)
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
