@@ -7,6 +7,7 @@ namespace OpenRei.Graphics;
 
 /// <summary>
 /// Executes Hardware-Accelerated Multi-Pass Gaussian Blur and Drop Shadow rendering using FBO ping-pong targets.
+/// Uses grow-only pooled FBO targets to guarantee zero VRAM allocations during size tweens.
 /// </summary>
 public unsafe class BlurPipeline : IDisposable
 {
@@ -22,28 +23,37 @@ public unsafe class BlurPipeline : IDisposable
         _renderer = renderer;
     }
 
-    private void EnsureRenderTargets(int width, int height)
+    /// <summary>
+    /// Ensures ping-pong render targets are large enough.
+    /// Uses a grow-only capacity strategy to prevent per-frame texture allocation/destruction during size tweens.
+    /// </summary>
+    private void EnsureRenderTargets(int requiredW, int requiredH)
     {
-        width = Math.Max(width, 1);
-        height = Math.Max(height, 1);
+        requiredW = Math.Max(requiredW, 1);
+        requiredH = Math.Max(requiredH, 1);
 
-        if (_pingTexture == null || _pongTexture == null || _currentW != width || _currentH != height)
+        // Only reallocate if requested size exceeds current VRAM texture capacity
+        if (_pingTexture == null || _pongTexture == null || requiredW > _currentW || requiredH > _currentH)
         {
             if (_pingTexture != null) SDL3.SDL_DestroyTexture(_pingTexture);
             if (_pongTexture != null) SDL3.SDL_DestroyTexture(_pongTexture);
 
-            _currentW = width;
-            _currentH = height;
+            // Grow with padding (next power of 2 or +256px step) to avoid frequent reallocations during scale tweens
+            int newW = Math.Max(_currentW, Pow2Ceil(requiredW + 64));
+            int newH = Math.Max(_currentH, Pow2Ceil(requiredH + 64));
+
+            _currentW = newW;
+            _currentH = newH;
 
             _pingTexture = SDL3.SDL_CreateTexture(_renderer,
                 SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888,
                 SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET,
-                width, height);
+                newW, newH);
 
             _pongTexture = SDL3.SDL_CreateTexture(_renderer,
                 SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888,
                 SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET,
-                width, height);
+                newW, newH);
 
             SDL3.SDL_SetTextureScaleMode(_pingTexture, SDL_ScaleMode.SDL_SCALEMODE_LINEAR);
             SDL3.SDL_SetTextureBlendMode(_pingTexture, SDL_BlendMode.SDL_BLENDMODE_BLEND);
@@ -51,6 +61,13 @@ public unsafe class BlurPipeline : IDisposable
             SDL3.SDL_SetTextureScaleMode(_pongTexture, SDL_ScaleMode.SDL_SCALEMODE_LINEAR);
             SDL3.SDL_SetTextureBlendMode(_pongTexture, SDL_BlendMode.SDL_BLENDMODE_BLEND);
         }
+    }
+
+    private static int Pow2Ceil(int value)
+    {
+        int v = 64;
+        while (v < value && v < 4096) v <<= 1;
+        return v;
     }
 
     /// <summary>
@@ -153,7 +170,9 @@ public unsafe class BlurPipeline : IDisposable
         SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
         SDL3.SDL_SetTextureColorModFloat(readTarget, 1f, 1f, 1f);
         SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f));
-        SDL3.SDL_RenderTexture(_renderer, readTarget, null, &destArea);
+
+        SDL_FRect fboSrcArea = new SDL_FRect { x = 0, y = 0, w = targetW, h = targetH };
+        SDL3.SDL_RenderTexture(_renderer, readTarget, &fboSrcArea, &destArea);
     }
 
     /// <summary>
@@ -243,19 +262,19 @@ public unsafe class BlurPipeline : IDisposable
             // Center (weight 0.4)
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboFull);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboFull, &fboFull);
 
             // Left (-offset)
             SDL_FRect hLeft = new SDL_FRect { x = -offset, y = 0, w = tW, h = tH };
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.30f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hLeft);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboFull, &hLeft);
 
             // Right (+offset)
             SDL_FRect hRight = new SDL_FRect { x = offset, y = 0, w = tW, h = tH };
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.30f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &hRight);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboFull, &hRight);
 
             var tmpH = readTarget; readTarget = writeTarget; writeTarget = tmpH;
 
@@ -267,19 +286,19 @@ public unsafe class BlurPipeline : IDisposable
             // Center (weight 0.4)
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fboFull);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboFull, &fboFull);
 
             // Top (-offset)
             SDL_FRect vTop = new SDL_FRect { x = 0, y = -offset, w = tW, h = tH };
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.30f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vTop);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboFull, &vTop);
 
             // Bottom (+offset)
             SDL_FRect vBot = new SDL_FRect { x = 0, y = offset, w = tW, h = tH };
             SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
             SDL3.SDL_SetTextureAlphaModFloat(readTarget, 0.30f);
-            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &vBot);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, &fboFull, &vBot);
 
             var tmpV = readTarget; readTarget = writeTarget; writeTarget = tmpV;
         }
@@ -289,7 +308,9 @@ public unsafe class BlurPipeline : IDisposable
         SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
         SDL3.SDL_SetTextureColorModFloat(readTarget, Math.Clamp(color.R, 0f, 1f), Math.Clamp(color.G, 0f, 1f), Math.Clamp(color.B, 0f, 1f));
         SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f));
-        SDL3.SDL_RenderTexture(_renderer, readTarget, null, &compositeDst);
+
+        SDL_FRect shadowSrcArea = new SDL_FRect { x = 0, y = 0, w = tW, h = tH };
+        SDL3.SDL_RenderTexture(_renderer, readTarget, &shadowSrcArea, &compositeDst);
     }
 
     /// <summary>
