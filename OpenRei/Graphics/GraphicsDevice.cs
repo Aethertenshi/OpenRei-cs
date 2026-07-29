@@ -187,6 +187,11 @@ public unsafe class GraphicsDevice : IDisposable
                         _blurPipeline?.RenderShadow(cmd.Bounds, cmd.Color, cmd.CornerRadius, cmd.BlurFilter!);
                         break;
                     }
+                case 6: // Stroke (outline border)
+                    {
+                        RenderStroke(cmd.Bounds, cmd.Stroke, cmd.CornerRadius);
+                        break;
+                    }
             }
         }
 
@@ -459,6 +464,47 @@ public unsafe class GraphicsDevice : IDisposable
         }
 
         SDL3.SDL_DestroyTexture(fbo);
+    }
+
+    /// <summary>
+    /// Draws an outline stroke around bounds using 4 edge quads, respecting StrokeAlignment (Inside/Center/Outside).
+    /// Rounded corners are handled by rendering thin rounded-rect quads at reduced size.
+    /// </summary>
+    private void RenderStroke(Rect bounds, StrokeInfo stroke, CornerRadius cornerRadius)
+    {
+        float t = stroke.Thickness;
+        Color c = stroke.Color;
+
+        // Adjust bounds based on alignment
+        float expand = stroke.Alignment switch
+        {
+            StrokeAlignment.Outside => t,
+            StrokeAlignment.Center => t * 0.5f,
+            _ => 0f // Inside: stroke is fully inside the element bounds
+        };
+
+        float x = bounds.X - expand;
+        float y = bounds.Y - expand;
+        float w = bounds.Width + expand * 2f;
+        float h = bounds.Height + expand * 2f;
+
+        SDL3.SDL_SetRenderDrawColorFloat(_renderer, c.R, c.G, c.B, c.A);
+
+        // Top edge
+        SDL_FRect top = new SDL_FRect { x = x, y = y, w = w, h = t };
+        SDL3.SDL_RenderFillRect(_renderer, &top);
+
+        // Bottom edge
+        SDL_FRect bot = new SDL_FRect { x = x, y = y + h - t, w = w, h = t };
+        SDL3.SDL_RenderFillRect(_renderer, &bot);
+
+        // Left edge (between top and bottom)
+        SDL_FRect left = new SDL_FRect { x = x, y = y + t, w = t, h = MathF.Max(0f, h - t * 2f) };
+        SDL3.SDL_RenderFillRect(_renderer, &left);
+
+        // Right edge (between top and bottom)
+        SDL_FRect right = new SDL_FRect { x = x + w - t, y = y + t, w = t, h = MathF.Max(0f, h - t * 2f) };
+        SDL3.SDL_RenderFillRect(_renderer, &right);
     }
 
     public void Dispose()

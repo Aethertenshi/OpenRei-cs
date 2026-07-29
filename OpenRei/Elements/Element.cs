@@ -22,6 +22,7 @@ public class Element
     public CornerRadius CornerRadius { get; set; } = CornerRadius.Zero;
     public bool Visible { get; set; } = true;
     public bool ClipsToBounds { get; set; } = false;
+    public StrokeInfo Stroke { get; set; } = StrokeInfo.None;
 
     public List<Filter> Filters { get; init; } = new();
 
@@ -230,6 +231,12 @@ public class Element
         if (Color.A > 0f && AbsoluteSize.X > 0f && AbsoluteSize.Y > 0f)
         {
             context.DrawQuad(AbsoluteBounds, Color, CornerRadius, ZIndex);
+        }
+
+        // Draw stroke outline if active
+        if (Stroke.Thickness > 0f && Stroke.Color.A > 0f)
+        {
+            context.DrawStroke(AbsoluteBounds, Stroke, CornerRadius, ZIndex + 0.1f);
         }
 
         // Render children according to local ZIndex stacking order

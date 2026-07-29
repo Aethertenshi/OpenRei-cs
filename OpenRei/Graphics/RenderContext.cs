@@ -9,7 +9,7 @@ namespace OpenRei.Graphics;
 /// </summary>
 public readonly struct FifoCommand
 {
-    public readonly byte Type; // 0=Quad, 1=Image, 2=Text, 3=ClipPush, 4=ClipPop
+    public readonly byte Type; // 0=Quad, 1=Image, 2=Text, 3=ClipPush, 4=ClipPop, 5=BlurRegion, 6=Stroke
     public readonly Rect Bounds;
     public readonly Color Color;
     public readonly CornerRadius CornerRadius;
@@ -19,14 +19,15 @@ public readonly struct FifoCommand
     public readonly BlurFilter? BlurFilter;
     public readonly Font? Font;
     public readonly string? TextString;
+    public readonly StrokeInfo Stroke;
 
     private FifoCommand(byte type, Rect bounds, Color color, CornerRadius cornerRadius, float zIndex,
         Texture? texture = null, Rect? sourceRect = null, BlurFilter? blurFilter = null,
-        Font? font = null, string? text = null)
+        Font? font = null, string? text = null, StrokeInfo stroke = default)
     {
         Type = type; Bounds = bounds; Color = color; CornerRadius = cornerRadius; ZIndex = zIndex;
         Texture = texture; SourceRect = sourceRect; BlurFilter = blurFilter;
-        Font = font; TextString = text;
+        Font = font; TextString = text; Stroke = stroke;
     }
 
     internal static FifoCommand Quad(Rect b, Color c, CornerRadius r, float z) => new(0, b, c, r, z);
@@ -37,6 +38,7 @@ public readonly struct FifoCommand
     internal static FifoCommand ClipPush(Rect b) => new(3, b, default, CornerRadius.Zero, 0);
     internal static FifoCommand ClipPop() => new(4, default, default, CornerRadius.Zero, 0);
     internal static FifoCommand BlurRegion(Rect b, Color c, CornerRadius r, BlurFilter f) => new(5, b, c, r, 0, blurFilter: f);
+    internal static FifoCommand StrokeCmd(Rect b, StrokeInfo s, CornerRadius r, float z) => new(6, b, s.Color, r, z, stroke: s);
 }
 
 /// <summary>
@@ -87,6 +89,12 @@ public class RenderContext
     {
         if (filter?.Enabled == true && filter.Radius > 0.05f)
             _commands.Add(FifoCommand.BlurRegion(bounds, tint ?? Color.White, cornerRadius, filter));
+    }
+
+    public void DrawStroke(Rect bounds, StrokeInfo stroke, CornerRadius cornerRadius = default, float zIndex = 1f)
+    {
+        if (stroke.Thickness <= 0f || stroke.Color.A <= 0f) return;
+        _commands.Add(FifoCommand.StrokeCmd(bounds, stroke, cornerRadius, zIndex));
     }
 
     public void DrawSpline(List<Vector2D> points, float strokeWidth, Color color, float zIndex = 1.0f)
