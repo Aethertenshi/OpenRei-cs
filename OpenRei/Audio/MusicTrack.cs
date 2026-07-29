@@ -28,7 +28,7 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
     private bool _disposed;
     private bool _eofReached;
     private int _queuedCount;
-    private int _buffersConsumed; // total buffers played to completion
+    private long _framesConsumed; // total sample frames played to completion
     private double _seekOffsetMs;
     private double _pausedPositionMs;
 
@@ -52,9 +52,9 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
         {
             if (_isPlaying)
             {
-                double baseMs = _seekOffsetMs + _buffersConsumed * BufferSeconds * 1000.0;
                 AudioEngine.AL.GetSourceProperty(_sourceId, SourceFloat.SecOffset, out float secOffset);
-                return baseMs + secOffset * 1000.0;
+                double elapsedMs = _framesConsumed * 1000.0 / SampleRate;
+                return _seekOffsetMs + elapsedMs + secOffset * 1000.0;
             }
             return _pausedPositionMs;
         }
@@ -73,7 +73,7 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
 
         _decoder = StreamingDecoder.Open(path);
         _seekOffsetMs = startPositionMs;
-        _buffersConsumed = 0;
+        _framesConsumed = 0;
 
         // Seek before reading any data (reliable startup, no race with fill task)
         if (startPositionMs > 0)
@@ -171,7 +171,7 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
         UnqueueAll();
         _seekOffsetMs = positionMs;
         _pausedPositionMs = positionMs;
-        _buffersConsumed = 0;
+        _framesConsumed = 0;
         _decoder.SeekSeconds(positionMs / 1000.0);
 
         // Re-fill all buffers at new position (synchronous)
@@ -213,7 +213,11 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
             uint bufId;
             AudioEngine.AL.SourceUnqueueBuffers(_sourceId, 1, &bufId);
             _queuedCount--;
-            _buffersConsumed++;
+
+            // Track exact frames consumed from the unqueued buffer's byte size
+            AudioEngine.AL.GetBufferProperty(bufId, GetBufferInteger.Size, out int bufSizeBytes);
+            int frameSize = _decoder.Channels * 2;
+            if (frameSize > 0) _framesConsumed += bufSizeBytes / frameSize;
 
             if (!_eofReached && _chunkQueue.TryDequeue(out byte[]? chunk))
             {
