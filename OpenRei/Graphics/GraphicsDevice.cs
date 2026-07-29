@@ -180,6 +180,11 @@ public unsafe class GraphicsDevice : IDisposable
                         SDL3.SDL_SetRenderClipRect(_renderer, null);
                         break;
                     }
+                case 5: // BlurRegion (FBO-only shadow blur, no readback)
+                    {
+                        _blurPipeline?.RenderShadow(cmd.Bounds, cmd.Color, cmd.CornerRadius, cmd.BlurFilter!);
+                        break;
+                    }
             }
         }
 

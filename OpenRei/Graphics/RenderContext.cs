@@ -36,6 +36,7 @@ public readonly struct FifoCommand
         new(2, b, c, CornerRadius.Zero, z, font: f, text: t);
     internal static FifoCommand ClipPush(Rect b) => new(3, b, default, CornerRadius.Zero, 0);
     internal static FifoCommand ClipPop() => new(4, default, default, CornerRadius.Zero, 0);
+    internal static FifoCommand BlurRegion(Rect b, Color c, CornerRadius r, BlurFilter f) => new(5, b, c, r, 0, blurFilter: f);
 }
 
 /// <summary>
@@ -79,6 +80,13 @@ public class RenderContext
         {
             _commands.Add(FifoCommand.Image(texture, destBounds, sourceRect, color ?? Color.White, blurFilter, zIndex));
         }
+    }
+
+    /// <summary>Captures the current screen region, blurs it, and composites back.</summary>
+    public void ApplyBlur(Rect bounds, BlurFilter filter, Color? tint = null, CornerRadius cornerRadius = default)
+    {
+        if (filter?.Enabled == true && filter.Radius > 0.05f)
+            _commands.Add(FifoCommand.BlurRegion(bounds, tint ?? Color.White, cornerRadius, filter));
     }
 
     public void DrawSpline(List<Vector2D> points, float strokeWidth, Color color, float zIndex = 1.0f)

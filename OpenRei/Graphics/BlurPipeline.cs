@@ -154,6 +154,101 @@ public unsafe class BlurPipeline : IDisposable
         SDL3.SDL_RenderTexture(_renderer, readTarget, null, &destArea);
     }
 
+    /// <summary>
+    /// Renders a shadow quad into an FBO, blurs it with multi-tap kernel (no readback),
+    /// and composites the soft shadow onto the screen.
+    /// </summary>
+    public void RenderShadow(Rect bounds, Color color, CornerRadius cornerRadius, BlurFilter filter)
+    {
+        if (_renderer == null || filter == null || !filter.Enabled || filter.Radius <= 0.05f) return;
+
+        int winW = 0, winH = 0;
+        SDL3.SDL_GetRenderOutputSize(_renderer, &winW, &winH);
+
+        // Expand bounds by BlurRadius on all sides so the blur has room to spread
+        float expand = filter.Radius * 1.5f;
+        float eX = bounds.X - expand;
+        float eY = bounds.Y - expand;
+        float eW = bounds.Width + expand * 2f;
+        float eH = bounds.Height + expand * 2f;
+
+        // Clamp expanded region to screen
+        float cX = MathF.Max(eX, 0f), cY = MathF.Max(eY, 0f);
+        float cR = MathF.Min(eX + eW, winW);
+        float cB = MathF.Min(eY + eH, winH);
+        float cW = cR - cX, cH = cB - cY;
+        if (cW <= 0f || cH <= 0f) return;
+
+        int tW = (int)Math.Max(cW / 2, 1), tH = (int)Math.Max(cH / 2, 1);
+        EnsureRenderTargets(tW, tH);
+        if (_pingTexture == null || _pongTexture == null) return;
+
+        SDL_FRect compositeDst = new SDL_FRect { x = cX, y = cY, w = cW, h = cH };
+        SDL_FRect fbo = new SDL_FRect { x = 0, y = 0, w = tW, h = tH };
+
+        // The shadow quad position relative to the expanded FBO
+        float innerX = (bounds.X - cX) / cW * tW;
+        float innerY = (bounds.Y - cY) / cH * tH;
+        float innerW = bounds.Width / cW * tW;
+        float innerH = bounds.Height / cH * tH;
+
+        // Step 1: Render shadow quad into ping FBO
+        SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
+        SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
+        SDL3.SDL_RenderClear(_renderer);
+        SDL3.SDL_SetRenderTarget(_renderer, _pongTexture);
+        SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
+        SDL3.SDL_RenderClear(_renderer);
+
+        SDL3.SDL_SetRenderTarget(_renderer, _pingTexture);
+        SDL3.SDL_SetRenderDrawColorFloat(_renderer, color.R, color.G, color.B, color.A);
+        SDL_FRect innerRect = new SDL_FRect { x = innerX, y = innerY, w = innerW, h = innerH };
+        SDL3.SDL_RenderFillRect(_renderer, &innerRect);
+
+        // Step 2: Multi-tap Kawase blur
+        SDL_Texture* readTarget = _pingTexture;
+        SDL_Texture* writeTarget = _pongTexture;
+        int passes = Math.Clamp(filter.Passes, 1, 4);
+        float kernel = (filter.Radius / 2f) / (float)passes * 0.65f;
+        float fw = fbo.w, fh = fbo.h;
+
+        for (int p = 0; p < passes; p++)
+        {
+            float off = (p + 1.0f) * kernel;
+            SDL3.SDL_SetRenderTarget(_renderer, writeTarget);
+            SDL3.SDL_SetRenderDrawColorFloat(_renderer, 0, 0, 0, 0);
+            SDL3.SDL_RenderClear(_renderer);
+
+            // Center tap (full copy, no blend)
+            SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_NONE);
+            SDL3.SDL_SetTextureAlphaModFloat(readTarget, 1.0f);
+            SDL3.SDL_RenderTexture(_renderer, readTarget, null, &fbo);
+
+            // Four offset taps with blend
+            for (int ti = 0; ti < 4; ti++)
+            {
+                float ox = ti < 2 ? -off : off;
+                float oy = ti % 2 == 0 ? -off : off;
+                float tx = ox < 0 ? -ox : 0f;
+                float ty = oy < 0 ? -oy : 0f;
+                float alp = ti == 0 ? 0.35f : ti == 1 ? 0.25f : ti == 2 ? 0.20f : 0.15f;
+
+                SDL_FRect r = new SDL_FRect { x = tx, y = ty, w = fw + MathF.Abs(ox), h = fh + MathF.Abs(oy) };
+                SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+                SDL3.SDL_SetTextureAlphaModFloat(readTarget, alp);
+                SDL3.SDL_RenderTexture(_renderer, readTarget, null, &r);
+            }
+
+            var tmp = readTarget; readTarget = writeTarget; writeTarget = tmp;
+        }
+
+        // Step 3: Composite blurred shadow back onto screen (expanded region)
+        SDL3.SDL_SetRenderTarget(_renderer, null);
+        SDL3.SDL_SetTextureBlendMode(readTarget, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+        SDL3.SDL_SetTextureAlphaModFloat(readTarget, Math.Clamp(color.A, 0f, 1f));
+        SDL3.SDL_RenderTexture(_renderer, readTarget, null, &compositeDst);
+    }
+
     public void Dispose()
     {
         if (!_isDisposed)
