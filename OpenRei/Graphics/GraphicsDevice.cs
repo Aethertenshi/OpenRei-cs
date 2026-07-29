@@ -13,6 +13,7 @@ public unsafe class GraphicsDevice : IDisposable
     private bool _isDisposed;
 
     private BlurPipeline? _blurPipeline;
+    private TTF_TextEngine* _ttfEngine;
 
     public SDL_Renderer* RendererHandle => _renderer;
     public bool IsInitialized => _renderer != null;
@@ -39,6 +40,9 @@ public unsafe class GraphicsDevice : IDisposable
         // Initialize FontEngine and default font
         FontEngine.Initialize();
 
+        // Create SDL3_ttf renderer text engine (glyph atlas — no per-frame surface alloc)
+        _ttfEngine = SDL3_ttf.TTF_CreateRendererTextEngine(_renderer);
+
         // Initialize Multi-Pass Gaussian Blur FBO Pipeline
         _blurPipeline = new BlurPipeline(_renderer);
 
@@ -46,48 +50,33 @@ public unsafe class GraphicsDevice : IDisposable
     }
 
     /// <summary>
-    /// Renders text using SDL3_ttf blended font surface with alpha blending support.
+    /// Renders text using SDL3_ttf renderer text engine (glyph atlas, zero per-frame texture alloc).
     /// </summary>
     public void RenderText(Font? font, float fontSize, string text, Rect bounds, Color color)
     {
         font ??= FontEngine.DefaultFont;
-        if (!IsInitialized || _renderer == null || font == null || string.IsNullOrEmpty(text) || color.A <= 0.001f) return;
+        if (!IsInitialized || _ttfEngine == null || font == null || string.IsNullOrEmpty(text) || color.A <= 0.001f) return;
 
         TTF_Font* fontHandle = font.GetHandle(fontSize);
         if (fontHandle == null) return;
 
-        byte[] textBytes = System.Text.Encoding.UTF8.GetBytes(text + "\0");
-        SDL_Color fgColor = new SDL_Color
+        var ttfText = SDL3_ttf.TTF_CreateText(_ttfEngine, fontHandle, text, (nuint)text.Length);
+        if (ttfText == null) return;
+
+        try
         {
-            r = (byte)(color.R * 255),
-            g = (byte)(color.G * 255),
-            b = (byte)(color.B * 255),
-            a = (byte)(color.A * 255)
-        };
+            // Center text inside bounds
+            int textW = 0, textH = 0;
+            SDL3_ttf.TTF_GetTextSize(ttfText, &textW, &textH);
+            float posX = MathF.Floor(bounds.X + (bounds.Width - textW) * 0.5f);
+            float posY = MathF.Floor(bounds.Y + (bounds.Height - textH) * 0.5f);
 
-        fixed (byte* tPtr = textBytes)
+            SDL3_ttf.TTF_SetTextColorFloat(ttfText, color.R, color.G, color.B, color.A);
+            SDL3_ttf.TTF_DrawRendererText(ttfText, posX, posY);
+        }
+        finally
         {
-            SDL_Surface* surface = SDL3_ttf.TTF_RenderText_Blended(fontHandle, tPtr, (nuint)text.Length, fgColor);
-            if (surface == null) return;
-
-            SDL_Texture* texture = SDL3.SDL_CreateTextureFromSurface(_renderer, surface);
-            float textW = surface->w;
-            float textH = surface->h;
-            SDL3.SDL_DestroySurface(surface);
-
-            if (texture != null)
-            {
-                SDL3.SDL_SetTextureBlendMode(texture, SDL_BlendMode.SDL_BLENDMODE_BLEND);
-                SDL3.SDL_SetTextureAlphaModFloat(texture, Math.Clamp(color.A, 0f, 1f));
-
-                // Center text inside bounds (round to pixel grid to prevent blur)
-                float posX = MathF.Floor(bounds.X + (bounds.Width - textW) * 0.5f);
-                float posY = MathF.Floor(bounds.Y + (bounds.Height - textH) * 0.5f);
-
-                SDL_FRect destRect = new SDL_FRect { x = posX, y = posY, w = textW, h = textH };
-                SDL3.SDL_RenderTexture(_renderer, texture, null, &destRect);
-                SDL3.SDL_DestroyTexture(texture);
-            }
+            SDL3_ttf.TTF_DestroyText(ttfText);
         }
     }
 
@@ -670,6 +659,11 @@ public unsafe class GraphicsDevice : IDisposable
         if (!_isDisposed)
         {
             _blurPipeline?.Dispose();
+            if (_ttfEngine != null)
+            {
+                SDL3_ttf.TTF_DestroyRendererTextEngine(_ttfEngine);
+                _ttfEngine = null;
+            }
             if (_renderer != null)
             {
                 SDL3.SDL_DestroyRenderer(_renderer);
