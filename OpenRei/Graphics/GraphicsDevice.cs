@@ -520,39 +520,55 @@ public unsafe class GraphicsDevice : IDisposable
         Color c = stroke.Color;
         if (t <= 0f || c.A <= 0f) return;
 
-        float expand = stroke.Alignment switch
-        {
-            StrokeAlignment.Outside => t,
-            StrokeAlignment.Center => t * 0.5f,
-            _ => 0f
-        };
-
         float bx = bounds.X, by = bounds.Y, bw = bounds.Width, bh = bounds.Height;
-        float ox = bx - expand, oy = by - expand;
-        float ow = bw + expand * 2f, oh = bh + expand * 2f;
-
         float maxR = MathF.Min(bw, bh) * 0.5f;
+
         float crTL = MathF.Min(cornerRadius.TopLeft, maxR);
         float crTR = MathF.Min(cornerRadius.TopRight, maxR);
         float crBL = MathF.Min(cornerRadius.BottomLeft, maxR);
         float crBR = MathF.Min(cornerRadius.BottomRight, maxR);
 
-        float outerTL = crTL + expand, outerTR = crTR + expand;
-        float outerBL = crBL + expand, outerBR = crBR + expand;
+        // Determine base outer and inner bounding rectangles & corner radii
+        float outX, outY, outW, outH;
+        float inX, inY, inW, inH;
+        float outTL, outTR, outBR, outBL;
+        float inTL, inTR, inBR, inBL;
 
-        float innerAdj = stroke.Alignment == StrokeAlignment.Inside ? t : 0f;
-        float inTL = MathF.Max(0f, crTL - innerAdj);
-        float inTR = MathF.Max(0f, crTR - innerAdj);
-        float inBL = MathF.Max(0f, crBL - innerAdj);
-        float inBR = MathF.Max(0f, crBR - innerAdj);
+        switch (stroke.Alignment)
+        {
+            case StrokeAlignment.Outside:
+                outX = bx - t; outY = by - t; outW = bw + t * 2f; outH = bh + t * 2f;
+                inX = bx; inY = by; inW = bw; inH = bh;
+
+                outTL = crTL + t; outTR = crTR + t; outBR = crBR + t; outBL = crBL + t;
+                inTL = crTL; inTR = crTR; inBR = crBR; inBL = crBL;
+                break;
+
+            case StrokeAlignment.Center:
+                float hT = t * 0.5f;
+                outX = bx - hT; outY = by - hT; outW = bw + t; outH = bh + t;
+                inX = bx + hT; inY = by + hT; inW = MathF.Max(0f, bw - t); inH = MathF.Max(0f, bh - t);
+
+                outTL = crTL + hT; outTR = crTR + hT; outBR = crBR + hT; outBL = crBL + hT;
+                inTL = MathF.Max(0f, crTL - hT); inTR = MathF.Max(0f, crTR - hT);
+                inBR = MathF.Max(0f, crBR - hT); inBL = MathF.Max(0f, crBL - hT);
+                break;
+
+            default: // Inside
+                outX = bx; outY = by; outW = bw; outH = bh;
+                inX = bx + t; inY = by + t; inW = MathF.Max(0f, bw - t * 2f); inH = MathF.Max(0f, bh - t * 2f);
+
+                outTL = crTL; outTR = crTR; outBR = crBR; outBL = crBL;
+                inTL = MathF.Max(0f, crTL - t); inTR = MathF.Max(0f, crTR - t);
+                inBR = MathF.Max(0f, crBR - t); inBL = MathF.Max(0f, crBL - t);
+                break;
+        }
 
         // Adaptive segment count
         static int Segs(float r) => Math.Clamp((int)(r * 0.75f) + 8, 12, 32);
 
-        int sTL = Segs(outerTL), sTR = Segs(outerTR);
-        int sBL = Segs(outerBL), sBR = Segs(outerBR);
-
-        int contourCount = (sTL + 1) + (sTR + 1) + (sBL + 1) + (sBR + 1);
+        int sTL = Segs(outTL), sTR = Segs(outTR), sBR = Segs(outBR), sBL = Segs(outBL);
+        int contourCount = (sTL + 1) + (sTR + 1) + (sBR + 1) + (sBL + 1);
 
         // 4 contours: Outer AA (transparent), Outer Solid, Inner Solid, Inner AA (transparent)
         int totalVerts = contourCount * 4;
@@ -570,57 +586,53 @@ public unsafe class GraphicsDevice : IDisposable
 
         int vi = 0;
 
-        void EmitContour(float offset, SDL_FColor color, bool isInner)
+        void EmitContour(float rx, float ry, float rw, float rh, float rTL, float rTR, float rBR, float rBL, float delta, SDL_FColor color)
         {
-            float oTL = MathF.Max(0f, isInner ? inTL + offset : outerTL + offset);
-            float oTR = MathF.Max(0f, isInner ? inTR + offset : outerTR + offset);
-            float oBR = MathF.Max(0f, isInner ? inBR + offset : outerBR + offset);
-            float oBL = MathF.Max(0f, isInner ? inBL + offset : outerBL + offset);
+            float x = rx - delta, y = ry - delta, w = rw + delta * 2f, h = rh + delta * 2f;
+            float cTL = MathF.Max(0f, rTL + delta);
+            float cTR = MathF.Max(0f, rTR + delta);
+            float cBR = MathF.Max(0f, rBR + delta);
+            float cBL = MathF.Max(0f, rBL + delta);
 
-            float baseX = isInner ? bx + (stroke.Alignment == StrokeAlignment.Inside ? 0 : expand) : ox;
-            float baseY = isInner ? by + (stroke.Alignment == StrokeAlignment.Inside ? 0 : expand) : oy;
-            float baseW = isInner ? bw - (stroke.Alignment == StrokeAlignment.Inside ? 0 : expand * 2f) : ow;
-            float baseH = isInner ? bh - (stroke.Alignment == StrokeAlignment.Inside ? 0 : expand * 2f) : oh;
-
-            float cxTL = baseX + oTL, cyTL = baseY + oTL;
-            float cxTR = baseX + baseW - oTR, cyTR = baseY + oTR;
-            float cxBR = baseX + baseW - oBR, cyBR = baseY + baseH - oBR;
-            float cxBL = baseX + oBL, cyBL = baseY + baseH - oBL;
+            float cxTL = x + cTL, cyTL = y + cTL;
+            float cxTR = x + w - cTR, cyTR = y + cTR;
+            float cxBR = x + w - cBR, cyBR = y + h - cBR;
+            float cxBL = x + cBL, cyBL = y + h - cBL;
 
             // Top-Left corner
             for (int i = 0; i <= sTL; i++)
             {
                 float a = (180f + 90f * i / sTL) * MathF.PI / 180f;
-                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxTL + oTL * MathF.Cos(a), y = cyTL + oTL * MathF.Sin(a) }, color = color };
+                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxTL + cTL * MathF.Cos(a), y = cyTL + cTL * MathF.Sin(a) }, color = color };
             }
             // Top-Right corner
             for (int i = 0; i <= sTR; i++)
             {
                 float a = (270f + 90f * i / sTR) * MathF.PI / 180f;
-                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxTR + oTR * MathF.Cos(a), y = cyTR + oTR * MathF.Sin(a) }, color = color };
+                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxTR + cTR * MathF.Cos(a), y = cyTR + cTR * MathF.Sin(a) }, color = color };
             }
             // Bottom-Right corner
             for (int i = 0; i <= sBR; i++)
             {
                 float a = (0f + 90f * i / sBR) * MathF.PI / 180f;
-                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxBR + oBR * MathF.Cos(a), y = cyBR + oBR * MathF.Sin(a) }, color = color };
+                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxBR + cBR * MathF.Cos(a), y = cyBR + cBR * MathF.Sin(a) }, color = color };
             }
             // Bottom-Left corner
             for (int i = 0; i <= sBL; i++)
             {
                 float a = (90f + 90f * i / sBL) * MathF.PI / 180f;
-                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxBL + oBL * MathF.Cos(a), y = cyBL + oBL * MathF.Sin(a) }, color = color };
+                _strokeVerts[vi++] = new SDL_Vertex { position = new SDL_FPoint { x = cxBL + cBL * MathF.Cos(a), y = cyBL + cBL * MathF.Sin(a) }, color = color };
             }
         }
 
         // Contour 0: Outer AA Transparent Fringe (+0.5px)
-        EmitContour(0.5f, transC, isInner: false);
+        EmitContour(outX, outY, outW, outH, outTL, outTR, outBR, outBL, 0.5f, transC);
         // Contour 1: Outer Solid Boundary (-0.5px)
-        EmitContour(-0.5f, solidC, isInner: false);
+        EmitContour(outX, outY, outW, outH, outTL, outTR, outBR, outBL, -0.5f, solidC);
         // Contour 2: Inner Solid Boundary (+0.5px)
-        EmitContour(0.5f, solidC, isInner: true);
+        EmitContour(inX, inY, inW, inH, inTL, inTR, inBR, inBL, 0.5f, solidC);
         // Contour 3: Inner AA Transparent Fringe (-0.5px)
-        EmitContour(-0.5f, transC, isInner: true);
+        EmitContour(inX, inY, inW, inH, inTL, inTR, inBR, inBL, -0.5f, transC);
 
         // Build quad indices connecting the 4 contours
         int ii = 0;
