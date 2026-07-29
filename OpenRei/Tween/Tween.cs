@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace OpenRei.Tween;
 
@@ -30,7 +30,9 @@ public enum EasingDirection
 /// </summary>
 public sealed class Tween
 {
-    private static readonly ConcurrentBag<Tween> _active = new();
+    private static readonly List<Tween> _active = new();
+    private static readonly List<Tween> _toRemove = new();
+    private static readonly object _lock = new();
 
     private readonly Action<float> _onUpdate;
     private readonly Action? _onComplete;
@@ -51,13 +53,6 @@ public sealed class Tween
     /// <summary>True while the tween is actively animating (running and not paused).</summary>
     public bool IsPlaying => _running && !_paused;
 
-    /// <param name="startValue">Initial value when t = 0.</param>
-    /// <param name="endValue">Final value when t = 1.</param>
-    /// <param name="duration">Tween duration in seconds. Clamped to a minimum of 0.001.</param>
-    /// <param name="onUpdate">Called every frame with the current interpolated value.</param>
-    /// <param name="easing">Easing curve (default Linear).</param>
-    /// <param name="direction">Ease-in, ease-out, or both (default In).</param>
-    /// <param name="onComplete">Optional callback invoked once when the tween finishes.</param>
     public Tween(float startValue, float endValue, float duration,
         Action<float> onUpdate,
         Easing easing = Easing.Linear,
@@ -81,10 +76,13 @@ public sealed class Tween
         _elapsed = 0f;
         _running = true;
         _paused = false;
-        if (!_inBag)
+        lock (_lock)
         {
-            _active.Add(this);
-            _inBag = true;
+            if (!_inBag)
+            {
+                _active.Add(this);
+                _inBag = true;
+            }
         }
     }
 
@@ -102,10 +100,13 @@ public sealed class Tween
         _elapsed = 0f;
         _running = true;
         _paused = false;
-        if (!_inBag)
+        lock (_lock)
         {
-            _active.Add(this);
-            _inBag = true;
+            if (!_inBag)
+            {
+                _active.Add(this);
+                _inBag = true;
+            }
         }
     }
 
@@ -133,28 +134,34 @@ public sealed class Tween
     /// </summary>
     public static void TickAll(float dt)
     {
-        foreach (var tween in _active)
+        lock (_lock)
         {
-            if (tween._running && !tween._paused)
-                tween.Tick(dt);
-        }
+            if (_active.Count == 0) return;
 
-        while (_active.TryPeek(out var t) && !t._running)
-        {
-            t._inBag = false;
-            _active.TryTake(out _);
-        }
+            for (int i = 0; i < _active.Count; i++)
+            {
+                var tween = _active[i];
+                if (tween._running && !tween._paused)
+                {
+                    tween.Tick(dt);
+                }
+                if (!tween._running)
+                {
+                    _toRemove.Add(tween);
+                }
+            }
 
-        var survivors = new List<Tween>();
-        while (_active.TryTake(out var t))
-        {
-            if (t._running)
-                survivors.Add(t);
-            else
-                t._inBag = false;
+            if (_toRemove.Count > 0)
+            {
+                for (int i = 0; i < _toRemove.Count; i++)
+                {
+                    var t = _toRemove[i];
+                    t._inBag = false;
+                    _active.Remove(t);
+                }
+                _toRemove.Clear();
+            }
         }
-        foreach (var t in survivors)
-            _active.Add(t);
     }
 
     private void Tick(float dt)
