@@ -21,22 +21,18 @@
     <Content Include="GoogleSans-Regular.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <!-- Native OpenAL Soft library (platform-conditional) -->
-    <Content Include="ThirdParty\win-x64\soft_oal.dll" Condition="'$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win'))">
+    <!-- Native OpenAL Soft library (all platforms included; runtime loads the right one) -->
+    <Content Include="ThirdParty\win-x64\soft_oal.dll" Condition="Exists('ThirdParty\win-x64\soft_oal.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>soft_oal.dll</Link>
     </Content>
-    <Content Include="ThirdParty\linux-x64\libopenal.so.1" Condition="$(RuntimeIdentifier.StartsWith('linux'))">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>libopenal.so.1</Link>
-    </Content>
-    <Content Include="ThirdParty\osx-arm64\libopenal.1.dylib" Condition="$(RuntimeIdentifier.StartsWith('osx'))">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>libopenal.1.dylib</Link>
-    </Content>
-    <Content Include="ThirdParty\android-arm64\libopenal.so" Condition="$(RuntimeIdentifier.StartsWith('android'))">
+    <Content Include="ThirdParty\linux-x64\libopenal.so.1" Condition="Exists('ThirdParty\linux-x64\libopenal.so.1')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>libopenal.so</Link>
+    </Content>
+    <Content Include="ThirdParty\osx-arm64\libopenal.1.dylib" Condition="Exists('ThirdParty\osx-arm64\libopenal.1.dylib')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>libopenal.dylib</Link>
     </Content>
   </ItemGroup>
 
