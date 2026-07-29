@@ -5,8 +5,8 @@ using Silk.NET.OpenAL;
 namespace OpenRei.Audio;
 
 /// <summary>
-/// Streaming audio player for music tracks. Uses a robust ring buffer of OpenAL sources
-/// filled by a background decode thread. Pre-buffers 4 OpenAL targets to eliminate stuttering and noise artifacts.
+/// Streaming audio player for music tracks. Uses a thread-safe ring buffer of OpenAL sources
+/// filled exclusively by a background decode thread. Eliminates concurrent decoder race conditions.
 /// </summary>
 public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
 {
@@ -85,11 +85,18 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
             _freeBuffers.Enqueue(id);
         }
 
-        // Start background decode thread immediately
+        // Start background decode thread EXCLUSIVELY to handle all decoder reads
         _cts = new CancellationTokenSource();
         _fillTask = Task.Run(() => FillLoop(_cts.Token));
 
-        // Pre-fill OpenAL buffer ring synchronously with first chunks
+        // Briefly wait for background thread to decode initial chunks
+        int spin = 0;
+        while (_chunkQueue.IsEmpty && !_eofReached && spin++ < 20)
+        {
+            Thread.Sleep(1);
+        }
+
+        // Pre-fill OpenAL buffer ring using background-decoded chunks
         PreFillOpenALBuffers();
 
         AudioEngine.RegisterMusicTrack(this);
@@ -97,26 +104,14 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
 
     private void PreFillOpenALBuffers()
     {
-        int frameSize = _decoder.Channels * 2;
-        int bufSize = (int)(SampleRate * frameSize * BufferSeconds);
-        bufSize = (bufSize / frameSize) * frameSize;
-
         var format = _decoder.Channels == 1 ? BufferFormat.Mono16 : BufferFormat.Stereo16;
 
-        while (_freeBuffers.Count > 0)
+        while (_freeBuffers.Count > 0 && _chunkQueue.TryDequeue(out byte[]? chunk))
         {
-            byte[] chunk = new byte[bufSize];
-            int bytes = _decoder.ReadPcm16(chunk, 0, bufSize);
-            if (bytes <= 0)
-            {
-                _eofReached = true;
-                break;
-            }
-
             uint bufId = _freeBuffers.Dequeue();
             fixed (byte* p = chunk)
             {
-                AudioEngine.AL.BufferData(bufId, format, p, bytes, _decoder.SampleRate);
+                AudioEngine.AL.BufferData(bufId, format, p, chunk.Length, _decoder.SampleRate);
             }
             AudioEngine.AL.SourceQueueBuffers(_sourceId, 1, &bufId);
             _queuedCount++;
@@ -134,7 +129,7 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
         Tick();
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.Gain, _volume);
 
-        if (!_startedOnce)
+        if (!_startedOnce || _queuedCount == 0)
         {
             PreFillOpenALBuffers();
         }
@@ -169,6 +164,12 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
 
         _cts = new CancellationTokenSource();
         _fillTask = Task.Run(() => FillLoop(_cts.Token));
+
+        int spin = 0;
+        while (_chunkQueue.IsEmpty && !_eofReached && spin++ < 20)
+        {
+            Thread.Sleep(1);
+        }
         PreFillOpenALBuffers();
     }
 
@@ -190,6 +191,12 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
 
         _cts = new CancellationTokenSource();
         _fillTask = Task.Run(() => FillLoop(_cts.Token));
+
+        int spin = 0;
+        while (_chunkQueue.IsEmpty && !_eofReached && spin++ < 20)
+        {
+            Thread.Sleep(1);
+        }
         PreFillOpenALBuffers();
 
         if (wasPlaying)
