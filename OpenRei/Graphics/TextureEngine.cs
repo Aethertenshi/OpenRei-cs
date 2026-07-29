@@ -6,6 +6,7 @@ namespace OpenRei.Graphics;
 
 /// <summary>
 /// Thread-safe, time-budgeted asynchronous Texture Engine managing background disk I/O, CPU image decoding, and VRAM upload.
+/// Robust error handling for cross-platform Linux/Windows image codecs (JPG, PNG, WEBP).
 /// </summary>
 public static unsafe class TextureEngine
 {
@@ -63,17 +64,18 @@ public static unsafe class TextureEngine
                 return null;
             }
 
-            byte[] fileBytes = System.Text.Encoding.UTF8.GetBytes(resolvedPath + "\0");
+            byte[] pathBytes = System.Text.Encoding.UTF8.GetBytes(resolvedPath + "\0");
             SDL_Surface* surface = null;
 
-            fixed (byte* pathPtr = fileBytes)
+            fixed (byte* pathPtr = pathBytes)
             {
                 surface = SDL3_image.IMG_Load(pathPtr);
             }
 
-            if (surface == null)
+            if (surface == null || surface->w <= 0 || surface->h <= 0 || (nint)surface->pixels == 0)
             {
                 Console.WriteLine($"[TextureEngine Warning] Failed to decode image '{resolvedPath}': {SDL3.SDL_GetError()}");
+                if (surface != null) SDL3.SDL_DestroySurface(surface);
                 return null;
             }
 
@@ -99,6 +101,12 @@ public static unsafe class TextureEngine
 
         while (_uploadQueue.TryDequeue(out var pending))
         {
+            if (pending.Surface == null || pending.Surface->w <= 0 || pending.Surface->h <= 0 || (nint)pending.Surface->pixels == 0)
+            {
+                pending.Tcs?.TrySetResult(null);
+                continue;
+            }
+
             SDL_Texture* gpuTexture = SDL3.SDL_CreateTextureFromSurface(graphicsDevice.RendererHandle, pending.Surface);
             int width = pending.Surface->w;
             int height = pending.Surface->h;
