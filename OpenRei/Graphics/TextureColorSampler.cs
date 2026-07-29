@@ -16,7 +16,7 @@ public static class TextureColorSampler
     private static string? _cachePath;
     private static readonly object _fileLock = new();
 
-    private const uint Magic = 0x494F5243; // "CIR" in LE = "ROIC" in file = Color Info
+    private const uint Magic = 0x494F5244; // "CIRD" LE magic for byte-correct RGBA32 cache
 
     /// <summary>Call once at startup with a writable base directory.</summary>
     public static void Initialize(string baseDirectory)
@@ -27,11 +27,11 @@ public static class TextureColorSampler
 
     /// <summary>
     /// Returns the average color of the texture at <paramref name="texturePath"/>.
-    /// Samples a deterministic grid of <paramref name="samples"/> points.
+    /// Samples a deterministic grid of <paramref name="samples"/> points (default 256 points).
     /// Results are cached in-memory and persisted to disk.
     /// Returns Color.White if the texture cannot be loaded.
     /// </summary>
-    public static Color GetAverage(string texturePath, int samples = 15)
+    public static Color GetAverage(string texturePath, int samples = 256)
     {
         if (string.IsNullOrEmpty(texturePath))
             return Color.White;
@@ -75,12 +75,12 @@ public static class TextureColorSampler
                 return Color.White;
             }
 
-            // Determine grid dimensions
+            // Determine grid dimensions (default 16x16 = 256 grid points for true visual coverage)
             int gridSize = (int)MathF.Ceiling(MathF.Sqrt(samples));
             int totalPixels = gridSize * gridSize;
 
-            // Convert surface to RGBA8888 for uniform pixel reading
-            SDL_Surface* converted = SDL3.SDL_ConvertSurface(surface, SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888);
+            // Convert surface to ABGR8888 (guarantees byte 0=R, 1=G, 2=B, 3=A in memory order on Little-Endian x86_64)
+            SDL_Surface* converted = SDL3.SDL_ConvertSurface(surface, SDL_PixelFormat.SDL_PIXELFORMAT_ABGR8888);
             SDL3.SDL_DestroySurface(surface);
             if (converted == null)
                 return Color.White;
@@ -102,9 +102,17 @@ public static class TextureColorSampler
                     py = Math.Clamp(py, 0, h - 1);
 
                     int offset = py * pitch + px * bpp;
-                    sumR += pixels[offset + 0]; // R
-                    sumG += pixels[offset + 1]; // G
-                    sumB += pixels[offset + 2]; // B
+                    byte r = pixels[offset + 0];
+                    byte g = pixels[offset + 1];
+                    byte b = pixels[offset + 2];
+                    byte a = pixels[offset + 3];
+
+                    // Skip fully transparent pixels
+                    if (a < 30) continue;
+
+                    sumR += r;
+                    sumG += g;
+                    sumB += b;
                     count++;
                 }
             }
@@ -147,7 +155,11 @@ public static class TextureColorSampler
 
             uint magic = BitConverter.ToUInt32(data, 0);
             if (magic != Magic)
+            {
+                // Old/incompatible cache format — delete corrupted file to re-sample
+                File.Delete(_cachePath);
                 return;
+            }
 
             int count = BitConverter.ToInt32(data, 4);
             int offset = 8;
@@ -178,6 +190,11 @@ public static class TextureColorSampler
     private static void AppendToCacheFile(string path, Color color)
     {
         if (_cachePath == null) return;
+
+        // Ensure directory exists
+        string? dir = Path.GetDirectoryName(_cachePath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
 
         byte[] pathBytes = System.Text.Encoding.UTF8.GetBytes(path);
         int entrySize = 2 + pathBytes.Length + 3;
@@ -214,19 +231,16 @@ public static class TextureColorSampler
                 {
                     // Append entry and update count
                     using var stream = new FileStream(_cachePath, FileMode.Open, FileAccess.ReadWrite);
-                    // Read current count
                     stream.Seek(4, SeekOrigin.Begin);
                     byte[] countBytes = new byte[4];
                     stream.ReadExactly(countBytes, 0, 4);
                     int count = BitConverter.ToInt32(countBytes, 0);
 
-                    // Update count
                     count++;
                     stream.Seek(4, SeekOrigin.Begin);
                     BitConverter.TryWriteBytes(countBytes.AsSpan(0, 4), count);
                     stream.Write(countBytes, 0, 4);
 
-                    // Append entry at end
                     stream.Seek(0, SeekOrigin.End);
                     stream.Write(entry, 0, entrySize);
                 }
