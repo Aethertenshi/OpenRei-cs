@@ -174,6 +174,7 @@ public class AudioStream : IAudioTrack
         if (_sourceId == 0)
         {
             _sourceId = AudioEngine.AL.GenSource();
+            AudioEngine.AL.SetSourceProperty(_sourceId, (SourceInteger)0x1033, 1);
             _bufferId = AudioEngine.AL.GenBuffer();
         }
 

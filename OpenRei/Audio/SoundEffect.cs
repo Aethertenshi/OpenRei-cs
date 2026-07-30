@@ -165,6 +165,7 @@ public class SoundEffect
                 for (int i = 0; i < _pendingPoolSize; i++)
                 {
                     uint source = AudioEngine.AL.GenSource();
+                    AudioEngine.AL.SetSourceProperty(source, (SourceInteger)0x1033, 1);
                     AudioEngine.AL.SetSourceProperty(source, SourceInteger.Buffer, (int)_bufferId);
                     _sourcePool.Add(source);
                 }

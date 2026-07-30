@@ -80,6 +80,9 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
             _decoder.SeekSeconds(startPositionMs / 1000.0);
 
         _sourceId = AudioEngine.AL.GenSource();
+        // Disable spatialization so stereo music plays in full stereo (no HRTF collapse)
+        // AL_DIRECT_CHANNELS_SOFT (0x1033): bypass HRTF/spatial virtualization for clean stereo
+        AudioEngine.AL.SetSourceProperty(_sourceId, (SourceInteger)0x1033, 1);
         _bufferIds = new uint[BufferCount];
         for (int i = 0; i < BufferCount; i++)
             _bufferIds[i] = AudioEngine.AL.GenBuffer();
