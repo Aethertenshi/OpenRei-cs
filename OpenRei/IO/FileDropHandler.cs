@@ -15,6 +15,7 @@ public static class FileDropHandler
 
     /// <summary>
     /// Event triggered when any file is dropped onto the window.
+    /// Guaranteed to fire exactly ONCE per file drop.
     /// </summary>
     public static event Action<string>? OnFileDropped;
 
@@ -26,7 +27,6 @@ public static class FileDropHandler
         if (_initialized) return;
 
         SDL3.SDL_SetEventEnabled((uint)SDL_EventType.SDL_EVENT_DROP_FILE, true);
-        SDL3.SDL_AddEventWatch(&DropEventFilter, IntPtr.Zero);
 
         _initialized = true;
         Console.WriteLine("[FileDropHandler] SDL3 Drag-and-Drop file listener initialized successfully.");
@@ -39,12 +39,11 @@ public static class FileDropHandler
     {
         if (!_initialized) return;
 
-        SDL3.SDL_RemoveEventWatch(&DropEventFilter, IntPtr.Zero);
         _initialized = false;
     }
 
     /// <summary>
-    /// Enqueues a file drop path directly into the processing queue.
+    /// Enqueues a file drop path and triggers OnFileDropped exactly once on the main thread.
     /// </summary>
     public static void Enqueue(string path)
     {
@@ -67,24 +66,5 @@ public static class FileDropHandler
                 onFile(path);
             }
         }
-    }
-
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe SDLBool DropEventFilter(IntPtr userdata, SDL_Event* evt)
-    {
-        if (evt == null || evt->type != (uint)SDL_EventType.SDL_EVENT_DROP_FILE)
-            return true;
-
-        byte* data = evt->drop.data;
-        if (data == null) return true;
-
-        string? path = Marshal.PtrToStringUTF8((IntPtr)data);
-        if (!string.IsNullOrEmpty(path))
-        {
-            _pending.Enqueue(path);
-            OnFileDropped?.Invoke(path);
-        }
-
-        return true;
     }
 }

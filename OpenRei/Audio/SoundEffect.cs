@@ -16,6 +16,19 @@ public class SoundEffect
     private bool _playRequested;
     private float _queuedVolume;
     private float _queuedPitch;
+    private float _volume = 1f;
+
+    public float Volume
+    {
+        get => _volume;
+        set
+        {
+            _volume = Math.Clamp(value, 0f, 1f);
+            if (!AudioEngine.IsInitialized) return;
+            foreach (var source in _sourcePool)
+                AudioEngine.AL.SetSourceProperty(source, SourceFloat.Gain, _volume);
+        }
+    }
 
     /// <summary>
     /// Indicates whether any voice in this sound effect pool is currently playing.
@@ -165,15 +178,17 @@ public class SoundEffect
     /// Triggers immediate hitsound playback. If async load is still in progress,
     /// queues the play to fire automatically when the data arrives.
     /// </summary>
-    public void Play(float volume = 1.0f, float pitch = 1.0f)
+    public void Play(float volumeMultiplier = 1.0f, float pitch = 1.0f)
     {
         if (!AudioEngine.IsInitialized) return;
+
+        float gain = Math.Clamp(_volume * volumeMultiplier, 0f, 1f);
 
         // Async load still in progress → queue
         if (_loadTask != null && !_loadTask.IsCompleted)
         {
             _playRequested = true;
-            _queuedVolume = volume;
+            _queuedVolume = gain;
             _queuedPitch = pitch;
             return;
         }
@@ -191,7 +206,7 @@ public class SoundEffect
         _poolIndex = (_poolIndex + 1) % _sourcePool.Count;
 
         AudioEngine.AL.SourceStop(source);
-        AudioEngine.AL.SetSourceProperty(source, SourceFloat.Gain, volume);
+        AudioEngine.AL.SetSourceProperty(source, SourceFloat.Gain, gain);
         AudioEngine.AL.SetSourceProperty(source, SourceFloat.Pitch, pitch);
         AudioEngine.AL.SourcePlay(source);
     }
