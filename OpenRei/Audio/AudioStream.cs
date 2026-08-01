@@ -2,7 +2,7 @@ using Silk.NET.OpenAL;
 
 namespace OpenRei.Audio;
 
-public class AudioStream : IAudioTrack
+public class AudioStream : IAudioTrack, IDisposable
 {
     private uint _sourceId;
     private uint _bufferId;
@@ -236,5 +236,28 @@ public class AudioStream : IAudioTrack
     {
         if (!AudioEngine.IsInitialized || _sourceId == 0) return;
         AudioEngine.AL.SourceStop(_sourceId);
+    }
+
+    private bool _disposed;
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (AudioEngine.IsInitialized)
+        {
+            if (_sourceId != 0)
+            {
+                AudioEngine.AL.SourceStop(_sourceId);
+                AudioEngine.AL.DeleteSource(_sourceId);
+                _sourceId = 0;
+            }
+            if (_bufferId != 0)
+            {
+                AudioEngine.AL.DeleteBuffer(_bufferId);
+                _bufferId = 0;
+            }
+        }
+        GC.SuppressFinalize(this);
     }
 }

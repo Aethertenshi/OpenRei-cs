@@ -196,6 +196,10 @@ public unsafe class GraphicsDevice : IDisposable
         SDL3.SDL_RenderPresent(_renderer);
     }
 
+    // ── Reusable vertex pool for rounded-rect geometry ─────────────────────────
+    private SDL_Vertex[] _rectVerts = new SDL_Vertex[256];
+    private int[] _rectIndices = new int[512];
+
     /// <summary>
     /// Draws a filled rounded rectangle with independent per-corner rounding and 1.0px Sub-Pixel AA Fringe Ring for crisp, resolution-independent anti-aliasing.
     /// </summary>
@@ -242,24 +246,31 @@ public unsafe class GraphicsDevice : IDisposable
         SDL_FColor solidColor = new SDL_FColor { r = cr, g = cg, b = cb, a = ca };
         SDL_FColor transparentColor = new SDL_FColor { r = cr, g = cg, b = cb, a = 0f };
 
-        var corners = new[] {
+        // Each corner fan has: 1 center vert + (segments + 1) inner verts (solid) + (segments + 1) outer verts (AA transparent)
+        int vertsPerCorner = 1 + (segments + 1) * 2;
+        int totalVerts = 4 * vertsPerCorner;
+
+        // Indices: 3 * segments for inner solid fan + 6 * segments for outer AA fringe quad ring
+        int indicesPerCorner = 3 * segments + 6 * segments;
+        int totalIndices = 4 * indicesPerCorner;
+
+        if (_rectVerts.Length < totalVerts)
+        {
+            _rectVerts = new SDL_Vertex[Math.Max(totalVerts, _rectVerts.Length * 2)];
+            _rectIndices = new int[Math.Max(totalIndices, _rectIndices.Length * 2)];
+        }
+
+        int vIdx = 0;
+        int iIdx = 0;
+
+        // Four corners: (cx, cy, r, startAngle, endAngle)
+        Span<(float cx, float cy, float r, float startAngle, float endAngle)> corners = stackalloc (float, float, float, float, float)[]
+        {
             (x + rTL,         y + rTL,         rTL, 180f, 270f), // Top-Left
             (x + w - rTR,     y + rTR,         rTR, 270f, 360f), // Top-Right
             (x + w - rBR,     y + h - rBR,     rBR, 0f,   90f),  // Bottom-Right
             (x + rBL,         y + h - rBL,     rBL, 90f,  180f), // Bottom-Left
         };
-
-        // Each corner fan has: 1 center vert + (segments + 1) inner verts (solid) + (segments + 1) outer verts (AA transparent)
-        int vertsPerCorner = 1 + (segments + 1) * 2;
-        int totalVerts = 4 * vertsPerCorner;
-        var verts = new SDL_Vertex[totalVerts];
-
-        // Indices: 3 * segments for inner solid fan + 6 * segments for outer AA fringe quad ring
-        int indicesPerCorner = 3 * segments + 6 * segments;
-        int[] indices = new int[4 * indicesPerCorner];
-
-        int vIdx = 0;
-        int iIdx = 0;
 
         foreach (var (cx, cy, r, startAngle, endAngle) in corners)
         {
@@ -270,7 +281,7 @@ public unsafe class GraphicsDevice : IDisposable
                 // Square corner fallback
                 for (int i = 0; i < vertsPerCorner; i++)
                 {
-                    verts[vIdx++] = new SDL_Vertex { position = new SDL_FPoint { x = cx, y = cy }, color = solidColor };
+                    _rectVerts[vIdx++] = new SDL_Vertex { position = new SDL_FPoint { x = cx, y = cy }, color = solidColor };
                 }
                 continue;
             }
@@ -279,14 +290,14 @@ public unsafe class GraphicsDevice : IDisposable
             float rOuter = r + 0.5f;
 
             // Center vertex
-            verts[vIdx++] = new SDL_Vertex { position = new SDL_FPoint { x = cx, y = cy }, color = solidColor };
+            _rectVerts[vIdx++] = new SDL_Vertex { position = new SDL_FPoint { x = cx, y = cy }, color = solidColor };
 
             int innerStartIdx = vIdx;
             // Inner solid arc
             for (int i = 0; i <= segments; i++)
             {
                 float angle = (startAngle + (endAngle - startAngle) * i / segments) * MathF.PI / 180f;
-                verts[vIdx++] = new SDL_Vertex
+                _rectVerts[vIdx++] = new SDL_Vertex
                 {
                     position = new SDL_FPoint { x = cx + rInner * MathF.Cos(angle), y = cy + rInner * MathF.Sin(angle) },
                     color = solidColor
@@ -298,7 +309,7 @@ public unsafe class GraphicsDevice : IDisposable
             for (int i = 0; i <= segments; i++)
             {
                 float angle = (startAngle + (endAngle - startAngle) * i / segments) * MathF.PI / 180f;
-                verts[vIdx++] = new SDL_Vertex
+                _rectVerts[vIdx++] = new SDL_Vertex
                 {
                     position = new SDL_FPoint { x = cx + rOuter * MathF.Cos(angle), y = cy + rOuter * MathF.Sin(angle) },
                     color = transparentColor
@@ -308,9 +319,9 @@ public unsafe class GraphicsDevice : IDisposable
             // Build inner solid fan indices
             for (int i = 0; i < segments; i++)
             {
-                indices[iIdx++] = cornerBaseVert;
-                indices[iIdx++] = innerStartIdx + i;
-                indices[iIdx++] = innerStartIdx + i + 1;
+                _rectIndices[iIdx++] = cornerBaseVert;
+                _rectIndices[iIdx++] = innerStartIdx + i;
+                _rectIndices[iIdx++] = innerStartIdx + i + 1;
             }
 
             // Build outer AA fringe ring quad indices (2 triangles per segment)
@@ -321,18 +332,18 @@ public unsafe class GraphicsDevice : IDisposable
                 int out1 = outerStartIdx + i;
                 int out2 = outerStartIdx + i + 1;
 
-                indices[iIdx++] = in1;
-                indices[iIdx++] = out1;
-                indices[iIdx++] = in2;
+                _rectIndices[iIdx++] = in1;
+                _rectIndices[iIdx++] = out1;
+                _rectIndices[iIdx++] = in2;
 
-                indices[iIdx++] = in2;
-                indices[iIdx++] = out1;
-                indices[iIdx++] = out2;
+                _rectIndices[iIdx++] = in2;
+                _rectIndices[iIdx++] = out1;
+                _rectIndices[iIdx++] = out2;
             }
         }
 
-        fixed (SDL_Vertex* vPtr = verts)
-        fixed (int* iPtr = indices)
+        fixed (SDL_Vertex* vPtr = _rectVerts)
+        fixed (int* iPtr = _rectIndices)
         {
             SDL3.SDL_RenderGeometry(_renderer, null, vPtr, totalVerts, iPtr, iIdx);
         }

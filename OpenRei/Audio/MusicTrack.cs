@@ -179,9 +179,15 @@ public sealed unsafe class MusicTrack : IAudioTrack, IDisposable
         _seekOffsetMs = 0;
         _isPlaying = false;
         _eofReached = false;
+        _framesConsumed = 0;
 
         UnqueueAll();
         _decoder.SeekSeconds(0);
+
+        // Re-prime buffers and restart the fill task so Play() works again
+        FillTwoBuffers();
+        _cts = new CancellationTokenSource();
+        _fillTask = Task.Run(() => FillLoop(_cts.Token));
     }
 
     public void Seek(double positionMs)

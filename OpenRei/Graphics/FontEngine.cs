@@ -32,8 +32,7 @@ public static class FontEngine
                 "GoogleSans-Regular.ttf",
                 "OpenRei/GoogleSans-Regular.ttf",
                 "../OpenRei/GoogleSans-Regular.ttf",
-                "../../OpenRei/GoogleSans-Regular.ttf",
-                @"E:\ProjectTemp-Server\OpenRei-cs\OpenRei\GoogleSans-Regular.ttf"
+                "../../OpenRei/GoogleSans-Regular.ttf"
             };
 
             string? foundFontPath = candidatePaths.FirstOrDefault(File.Exists);

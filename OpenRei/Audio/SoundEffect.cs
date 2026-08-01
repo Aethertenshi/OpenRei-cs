@@ -5,7 +5,7 @@ namespace OpenRei.Audio;
 /// <summary>
 /// Pre-buffered low-latency sound effect player for instant hitsounds.
 /// </summary>
-public class SoundEffect
+public class SoundEffect : IDisposable
 {
     private uint _bufferId;
     private readonly List<uint> _sourcePool = new();
@@ -210,5 +210,26 @@ public class SoundEffect
         AudioEngine.AL.SetSourceProperty(source, SourceFloat.Gain, gain);
         AudioEngine.AL.SetSourceProperty(source, SourceFloat.Pitch, pitch);
         AudioEngine.AL.SourcePlay(source);
+    }
+
+    private bool _disposed;
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (AudioEngine.IsInitialized)
+        {
+            foreach (var source in _sourcePool)
+                AudioEngine.AL.DeleteSource(source);
+            _sourcePool.Clear();
+
+            if (_bufferId != 0)
+            {
+                AudioEngine.AL.DeleteBuffer(_bufferId);
+                _bufferId = 0;
+            }
+        }
+        GC.SuppressFinalize(this);
     }
 }

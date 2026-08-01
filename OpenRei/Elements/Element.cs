@@ -12,12 +12,26 @@ public class Element
 {
     private Element? _parent;
     private readonly List<Element> _children = new();
+    private List<Element>? _sortedCache;
+    private bool _sortDirty = true;
 
     public string Name { get; set; } = nameof(Element);
     public UDim2 Position { get; set; } = UDim2.Zero;
     public UDim2 Size { get; set; } = UDim2.Zero;
     public Anchor Anchor { get; set; } = Anchor.TopLeft;
-    public int ZIndex { get; set; } = 1;
+    private int _zIndex = 1;
+    public int ZIndex
+    {
+        get => _zIndex;
+        set
+        {
+            if (_zIndex != value)
+            {
+                _zIndex = value;
+                MarkSortDirty();
+            }
+        }
+    }
     public Color Color { get; set; } = Color.White;
     public CornerRadius CornerRadius { get; set; } = CornerRadius.Zero;
     public bool Visible { get; set; } = true;
@@ -53,9 +67,16 @@ public class Element
         {
             if (_parent == value) return;
             _parent?._children.Remove(this);
+            _parent?._sortDirty = true;
             _parent = value;
             _parent?._children.Add(this);
+            _parent?._sortDirty = true;
         }
+    }
+
+    private void MarkSortDirty()
+    {
+        _sortDirty = true;
     }
 
     public IReadOnlyList<Element> Children => _children;
@@ -154,10 +175,16 @@ public class Element
 
     /// <summary>
     /// Returns children sorted by local ZIndex (Local Stacking Context).
+    /// Cached and rebuilt only when ZIndex or the child list changes.
     /// </summary>
     public List<Element> GetSortedChildren()
     {
-        return _children.OrderBy(c => c.ZIndex).ToList();
+        if (_sortedCache == null || _sortDirty)
+        {
+            _sortedCache = _children.OrderBy(c => c.ZIndex).ToList();
+            _sortDirty = false;
+        }
+        return _sortedCache;
     }
 
     /// <summary>
@@ -179,7 +206,9 @@ public class Element
             }
         }
 
-        foreach (var child in _children)
+        // Snapshot to allow safe mutation of children during update
+        var children = _children.ToArray();
+        foreach (var child in children)
         {
             if (child.Visible)
             {
@@ -192,9 +221,10 @@ public class Element
     {
         if (!Visible) return;
 
-        var sortedChildren = _children.OrderByDescending(c => c.ZIndex).ToList();
-        foreach (var child in sortedChildren)
+        var sortedChildren = GetSortedChildren();
+        for (int i = sortedChildren.Count - 1; i >= 0; i--)
         {
+            var child = sortedChildren[i];
             if (child.Visible)
             {
                 child.HandleInput(mousePos, mousePressed, mouseReleased);
@@ -221,8 +251,7 @@ public class Element
 
                 if (dsf.BlurRadius > 0.5f)
                 {
-                    var blurFilter = new BlurFilter(dsf.BlurRadius);
-                    context.ApplyBlur(shadowBounds, blurFilter, dsf.Color, CornerRadius);
+                    context.ApplyBlur(shadowBounds, dsf.GetBlurFilter(), dsf.Color, CornerRadius);
                 }
                 else
                 {
