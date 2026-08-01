@@ -254,7 +254,7 @@ public unsafe class GraphicsDevice : IDisposable
         int indicesPerCorner = 3 * segments + 6 * segments;
         int totalIndices = 4 * indicesPerCorner;
 
-        if (_rectVerts.Length < totalVerts)
+        if (_rectVerts.Length < totalVerts || _rectIndices.Length < totalIndices)
         {
             _rectVerts = new SDL_Vertex[Math.Max(totalVerts, _rectVerts.Length * 2)];
             _rectIndices = new int[Math.Max(totalIndices, _rectIndices.Length * 2)];
