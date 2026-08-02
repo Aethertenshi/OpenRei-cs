@@ -413,9 +413,28 @@ public unsafe class GraphicsDevice : IDisposable
         }
     }
 
+    // ── Grow-only pooled FBO for rounded-image rendering ───────────────────────
+    private SDL_Texture* _roundedImageFbo;
+    private int _roundedImageFboW;
+    private int _roundedImageFboH;
+
+    private void EnsureRoundedImageFbo(int requiredW, int requiredH)
+    {
+        if (_roundedImageFbo == null || requiredW > _roundedImageFboW || requiredH > _roundedImageFboH)
+        {
+            if (_roundedImageFbo != null) SDL3.SDL_DestroyTexture(_roundedImageFbo);
+            _roundedImageFboW = Math.Max(_roundedImageFboW, requiredW);
+            _roundedImageFboH = Math.Max(_roundedImageFboH, requiredH);
+            _roundedImageFbo = SDL3.SDL_CreateTexture(_renderer,
+                SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888,
+                SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET,
+                _roundedImageFboW, _roundedImageFboH);
+        }
+    }
+
     /// <summary>
     /// Renders a texture with per-corner rounding by drawing UV-mapped vertices through SDL_RenderGeometry.
-    /// The texture is rendered into an FBO first, then composited via rounded geometry to avoid UV complexity.
+    /// The texture is rendered into a pooled FBO first, then composited via rounded geometry to avoid UV complexity.
     /// </summary>
     private void RenderRoundedImage(Texture texture, Rect destBounds, Rect? sourceRect, Color color, CornerRadius radius)
     {
@@ -424,11 +443,9 @@ public unsafe class GraphicsDevice : IDisposable
         int tw = (int)MathF.Max(destBounds.Width, 1f);
         int th = (int)MathF.Max(destBounds.Height, 1f);
 
-        // Create a temporary render target to draw the image into
-        SDL_Texture* fbo = SDL3.SDL_CreateTexture(_renderer,
-            SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888,
-            SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET,
-            tw, th);
+        // Reuse a grow-only pooled render target (no per-frame create/destroy)
+        EnsureRoundedImageFbo(tw, th);
+        SDL_Texture* fbo = _roundedImageFbo;
         if (fbo == null) { RenderImage(texture, destBounds, sourceRect, color); return; }
 
         // Step 1: Render image into FBO
@@ -469,7 +486,14 @@ public unsafe class GraphicsDevice : IDisposable
         int rectVerts = 18;
         int fanVerts = 4 * (segments + 2);
         int totalVerts = rectVerts + fanVerts;
-        var verts = new SDL_Vertex[totalVerts];
+        int totalIndices = rectVerts + 4 * 3 * segments;
+
+        if (_rectVerts.Length < totalVerts || _rectIndices.Length < totalIndices)
+        {
+            _rectVerts = new SDL_Vertex[Math.Max(totalVerts, _rectVerts.Length * 2)];
+            _rectIndices = new int[Math.Max(totalIndices, _rectIndices.Length * 2)];
+        }
+        var verts = _rectVerts;
         int vi = 0;
 
         float maxTopR = MathF.Max(rTL, rTR);
@@ -507,7 +531,8 @@ public unsafe class GraphicsDevice : IDisposable
         AddQuadVert(bL, bT); AddQuadVert(bR, y + h); AddQuadVert(bL, y + h);
 
         // 4 corner fans
-        var corners = new[] {
+        Span<(float cx, float cy, float r, float startAngle, float endAngle)> corners = stackalloc (float, float, float, float, float)[]
+        {
             (x + rTL,         y + rTL,         rTL, 180f, 270f),
             (x + w - rTR,     y + rTR,         rTR, 270f, 360f),
             (x + w - rBR,     y + h - rBR,     rBR, 0f,   90f),
@@ -540,9 +565,7 @@ public unsafe class GraphicsDevice : IDisposable
         }
 
         // Build index buffer: 18 rect verts (drawn as triangles directly) + 4 corner fans
-        int rectIndices = 18;
-        int fanIndices = 4 * 3 * segments;
-        int[] indices = new int[rectIndices + fanIndices];
+        var indices = _rectIndices;
         int ii = 0;
 
         // Rect indices (already in triangle order)
@@ -567,8 +590,6 @@ public unsafe class GraphicsDevice : IDisposable
         {
             SDL3.SDL_RenderGeometry(_renderer, fbo, vPtr, totalVerts, iPtr, ii);
         }
-
-        SDL3.SDL_DestroyTexture(fbo);
     }
 
         // ── Reusable vertex pool for stroke geometry ───────────────────────────────
@@ -734,6 +755,11 @@ public unsafe class GraphicsDevice : IDisposable
         if (!_isDisposed)
         {
             _blurPipeline?.Dispose();
+            if (_roundedImageFbo != null)
+            {
+                SDL3.SDL_DestroyTexture(_roundedImageFbo);
+                _roundedImageFbo = null;
+            }
             if (_ttfEngine != null)
             {
                 SDL3_ttf.TTF_DestroyRendererTextEngine(_ttfEngine);
