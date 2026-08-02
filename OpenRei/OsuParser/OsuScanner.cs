@@ -89,6 +89,18 @@ public class OsuScanner
         }
     }
 
+    /// <summary>
+    /// Scans a directory tree on a background thread and returns all parsed beatmaps.
+    /// Backwards-compatible async equivalent of <see cref="ScanAll"/>.
+    /// </summary>
+    public Task<IReadOnlyList<OsuBeatmap>> ScanAllAsync(
+        string rootDirectory,
+        Action<string, Exception>? onError = null,
+        bool metadataOnly = false)
+    {
+        return Task.Run(() => ScanAll(rootDirectory, onError, metadataOnly));
+    }
+
     public IReadOnlyList<OsuBeatmap> ScanFiltered(
         string rootDirectory,
         Func<OsuBeatmap, bool> filter,

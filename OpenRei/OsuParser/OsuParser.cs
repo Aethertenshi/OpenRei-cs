@@ -23,8 +23,32 @@ public class OsuParser
         if (!File.Exists(path))
             throw new FileNotFoundException("File not found", path);
 
-        var lines = File.ReadAllLines(path);
-        return ParseLines(lines, path, metadataOnly);
+        if (metadataOnly)
+        {
+            // All metadata lives in [General]..[TimingPoints]. Stream-read only those
+            // sections and stop before [Colours]/[HitObjects] to avoid full-file I/O
+            // and allocation on large .osu files (storyboards, hit objects).
+            // Produces identical data to a full read for metadata consumers.
+            var lines = new List<string>(64);
+            using (var reader = new StreamReader(path))
+            {
+                string? line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string t = line.Trim();
+                    if (t.StartsWith("[") && t.EndsWith("]") &&
+                        (t == "[Colours]" || t == "[HitObjects]"))
+                    {
+                        break;
+                    }
+                    lines.Add(line);
+                }
+            }
+            return ParseLines(lines.ToArray(), path, true);
+        }
+
+        var allLines = File.ReadAllLines(path);
+        return ParseLines(allLines, path, false);
     }
 
     public OsuBeatmap ParseText(string content, string sourcePath = "", bool metadataOnly = false)
