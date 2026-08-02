@@ -142,18 +142,18 @@ public unsafe class GraphicsDevice : IDisposable
                         var r = cmd.CornerRadius;
                         if (r.TopLeft > 1.0f || r.TopRight > 1.0f || r.BottomLeft > 1.0f || r.BottomRight > 1.0f)
                         {
+                            FlushBatch();
                             RenderRoundedRect(cmd.Bounds, cmd.Color, cmd.CornerRadius);
                         }
                         else
                         {
-                            SDL_FRect rect = new SDL_FRect { x = cmd.Bounds.X, y = cmd.Bounds.Y, w = cmd.Bounds.Width, h = cmd.Bounds.Height };
-                            SDL3.SDL_SetRenderDrawColorFloat(_renderer, cmd.Color.R, cmd.Color.G, cmd.Color.B, cmd.Color.A);
-                            SDL3.SDL_RenderFillRect(_renderer, &rect);
+                            AppendQuad(cmd.Bounds, cmd.Color);
                         }
                         break;
                     }
                 case 1: // Image
                     {
+                        FlushBatch();
                         if (cmd.BlurFilter != null && cmd.BlurFilter.Enabled && cmd.BlurFilter.Radius > 0.05f)
                             _blurPipeline?.RenderBlurredTexture(cmd.Texture!, cmd.Bounds, cmd.SourceRect, cmd.Color, cmd.BlurFilter);
                         else if (cmd.CornerRadius.TopLeft > 1f || cmd.CornerRadius.TopRight > 1f || cmd.CornerRadius.BottomLeft > 1f || cmd.CornerRadius.BottomRight > 1f)
@@ -164,36 +164,100 @@ public unsafe class GraphicsDevice : IDisposable
                     }
                 case 2: // Text
                     {
+                        FlushBatch();
                         if (cmd.TextString != null)
                             RenderText(cmd.Font, cmd.FontSize, cmd.TextString, cmd.Bounds, cmd.Color);
                         break;
                     }
                 case 3: // ClipPush
                     {
+                        FlushBatch();
                         SDL_Rect r = new SDL_Rect { x = (int)cmd.Bounds.X, y = (int)cmd.Bounds.Y, w = (int)cmd.Bounds.Width, h = (int)cmd.Bounds.Height };
                         SDL3.SDL_SetRenderClipRect(_renderer, &r);
                         break;
                     }
                 case 4: // ClipPop
                     {
+                        FlushBatch();
                         SDL3.SDL_SetRenderClipRect(_renderer, null);
                         break;
                     }
                 case 5: // BlurRegion (FBO-only shadow blur, no readback)
                     {
+                        FlushBatch();
                         _blurPipeline?.RenderShadow(cmd.Bounds, cmd.Color, cmd.CornerRadius, cmd.BlurFilter!);
                         break;
                     }
                 case 6: // Stroke (outline border)
                     {
+                        FlushBatch();
                         RenderStroke(cmd.Bounds, cmd.Stroke, cmd.CornerRadius);
                         break;
                     }
             }
         }
 
-        // 3. Swap buffers (Present frame to window display)
+        // 3. Flush any remaining batched quads, then swap buffers
+        FlushBatch();
         SDL3.SDL_RenderPresent(_renderer);
+    }
+
+    // ── Solid quad batching (merges consecutive plain quads into one draw call) ─
+
+    private SDL_Vertex[] _batchVerts = new SDL_Vertex[512];
+    private int[] _batchIndices = new int[1024];
+    private int _batchVertexCount;
+    private int _batchIndexCount;
+
+    /// <summary>Flushes any accumulated solid quads via a single SDL_RenderGeometry call.</summary>
+    private void FlushBatch()
+    {
+        if (_batchVertexCount == 0) return;
+
+        fixed (SDL_Vertex* vPtr = _batchVerts)
+        fixed (int* iPtr = _batchIndices)
+        {
+            SDL3.SDL_RenderGeometry(_renderer, null, vPtr, _batchVertexCount, iPtr, _batchIndexCount);
+        }
+        _batchVertexCount = 0;
+        _batchIndexCount = 0;
+    }
+
+    /// <summary>Appends one solid-color quad (2 triangles) to the current batch.</summary>
+    private void AppendQuad(Rect b, Color c)
+    {
+        // Grow pools if needed, otherwise flush and continue (flushing is cheaper than a huge pool)
+        if (_batchVertexCount + 4 > _batchVerts.Length || _batchIndexCount + 6 > _batchIndices.Length)
+        {
+            if (_batchVerts.Length >= 4096)
+            {
+                FlushBatch();
+            }
+            else
+            {
+                _batchVerts = new SDL_Vertex[Math.Max(_batchVerts.Length * 2, _batchVertexCount + 4)];
+                _batchIndices = new int[Math.Max(_batchIndices.Length * 2, _batchIndexCount + 6)];
+            }
+        }
+
+        var color = new SDL_FColor { r = c.R, g = c.G, b = c.B, a = c.A };
+        int baseIdx = _batchVertexCount;
+
+        _batchVerts[baseIdx + 0] = new SDL_Vertex { position = new SDL_FPoint { x = b.X, y = b.Y }, color = color };
+        _batchVerts[baseIdx + 1] = new SDL_Vertex { position = new SDL_FPoint { x = b.X + b.Width, y = b.Y }, color = color };
+        _batchVerts[baseIdx + 2] = new SDL_Vertex { position = new SDL_FPoint { x = b.X + b.Width, y = b.Y + b.Height }, color = color };
+        _batchVerts[baseIdx + 3] = new SDL_Vertex { position = new SDL_FPoint { x = b.X, y = b.Y + b.Height }, color = color };
+
+        int iIdx = _batchIndexCount;
+        _batchIndices[iIdx + 0] = baseIdx + 0;
+        _batchIndices[iIdx + 1] = baseIdx + 1;
+        _batchIndices[iIdx + 2] = baseIdx + 2;
+        _batchIndices[iIdx + 3] = baseIdx + 0;
+        _batchIndices[iIdx + 4] = baseIdx + 2;
+        _batchIndices[iIdx + 5] = baseIdx + 3;
+
+        _batchVertexCount += 4;
+        _batchIndexCount += 6;
     }
 
     // ── Reusable vertex pool for rounded-rect geometry ─────────────────────────
