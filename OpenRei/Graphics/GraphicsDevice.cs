@@ -15,12 +15,23 @@ public unsafe class GraphicsDevice : IDisposable
     private BlurPipeline? _blurPipeline;
     private TTF_TextEngine* _ttfEngine;
 
+    /// <summary>
+    /// Preferred SDL render driver(s), as a comma-separated list tried in order
+    /// (e.g. "direct3d12,direct3d11"). Null lets SDL pick the platform default.
+    /// Set this before creating a GraphicsDevice.
+    /// </summary>
+    public static string? RenderDriver { get; set; } = "direct3d12,direct3d11";
+
     public SDL_Renderer* RendererHandle => _renderer;
     public bool IsInitialized => _renderer != null;
 
     public GraphicsDevice(SDL_Window* window, bool vsync = true)
     {
         _window = window;
+
+        // Prefer a specific render driver via SDL_HINT_RENDER_DRIVER (tried in order).
+        if (!string.IsNullOrEmpty(RenderDriver))
+            SDL3.SDL_SetHint("SDL_RENDER_DRIVER", RenderDriver);
 
         // Create Hardware-Accelerated SDL3 Renderer (Vulkan / Direct3D 12 / Metal)
         _renderer = SDL3.SDL_CreateRenderer(_window, (byte*)null);
@@ -30,6 +41,8 @@ public unsafe class GraphicsDevice : IDisposable
             Console.WriteLine($"[SDL3 Warning] Could not initialize native GPU renderer: {SDL3.SDL_GetError()}");
             return;
         }
+
+        Console.WriteLine($"[GraphicsDevice] Render driver in use: {SDL3.SDL_GetRendererName(_renderer)}");
 
         // VSync: 1 = enabled (mailbox presentation), 0 = immediate
         SDL3.SDL_SetRenderVSync(_renderer, vsync ? 1 : 0);
