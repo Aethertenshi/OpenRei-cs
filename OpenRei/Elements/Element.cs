@@ -18,7 +18,7 @@ public class Element
     public string Name { get; set; } = nameof(Element);
     public UDim2 Position { get; set; } = UDim2.Zero;
     public UDim2 Size { get; set; } = UDim2.Zero;
-    public Anchor Anchor { get; set; } = Anchor.TopLeft;
+    public virtual Anchor Anchor { get; set; } = Anchor.TopLeft;
     private int _zIndex = 1;
     public int ZIndex
     {
@@ -136,7 +136,7 @@ public class Element
         }
     }
 
-    public Vector2D AbsolutePosition
+    public virtual Vector2D AbsolutePosition
     {
         get
         {
