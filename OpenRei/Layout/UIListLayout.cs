@@ -101,7 +101,6 @@ public class UIListLayout : LayoutModifier
 
         var children = parent.GetSortedChildren();
         Vector2D parentSize = parent.AbsoluteSize;
-        if (parentSize.X <= 0f && parentSize.Y <= 0f) return;
 
         float betweenPx = FillDirection == FillDirection.Vertical
             ? PaddingBetween.GetAbsolute(parentSize.Y)
@@ -122,7 +121,8 @@ public class UIListLayout : LayoutModifier
 
             if (FillDirection == FillDirection.Vertical)
             {
-                float userX = child.Position.X.Offset;
+                float userXScale = child.Position.X.Scale;
+                float userXOffset = child.Position.X.Offset;
 
                 UDim posX;
                 float anchorX;
@@ -131,16 +131,16 @@ public class UIListLayout : LayoutModifier
                 {
                     case HorizontalAlignment.Right:
                         anchorX = 1.0f;
-                        posX = new UDim(1.0f, -padRight + userX);
+                        posX = new UDim(1.0f - userXScale, -padRight + userXOffset);
                         break;
                     case HorizontalAlignment.Center:
                         anchorX = 0.5f;
-                        posX = new UDim(0.5f, userX);
+                        posX = new UDim(0.5f + userXScale, userXOffset);
                         break;
                     case HorizontalAlignment.Left:
                     default:
                         anchorX = 0.0f;
-                        posX = new UDim(0.0f, padLeft + userX);
+                        posX = new UDim(userXScale, padLeft + userXOffset);
                         break;
                 }
 
@@ -148,9 +148,10 @@ public class UIListLayout : LayoutModifier
                 child.Position = new UDim2(posX, UDim.FromOffset(currentOffset));
                 currentOffset += childSize.Y + betweenPx;
             }
-            else // Horizontal
+            else // FillDirection == Horizontal
             {
-                float userY = child.Position.Y.Offset;
+                float userYScale = child.Position.Y.Scale;
+                float userYOffset = child.Position.Y.Offset;
 
                 UDim posY;
                 float anchorY;
@@ -159,16 +160,16 @@ public class UIListLayout : LayoutModifier
                 {
                     case VerticalAlignment.Bottom:
                         anchorY = 1.0f;
-                        posY = new UDim(1.0f, -padBot + userY);
+                        posY = new UDim(1.0f - userYScale, -padBot + userYOffset);
                         break;
                     case VerticalAlignment.Center:
                         anchorY = 0.5f;
-                        posY = new UDim(0.5f, userY);
+                        posY = new UDim(0.5f + userYScale, userYOffset);
                         break;
                     case VerticalAlignment.Top:
                     default:
                         anchorY = 0.0f;
-                        posY = new UDim(0.0f, padTop + userY);
+                        posY = new UDim(userYScale, padTop + userYOffset);
                         break;
                 }
 
