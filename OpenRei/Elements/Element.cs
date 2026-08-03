@@ -85,7 +85,7 @@ public class Element
     public DominantAxis AspectAxis { get; set; } = DominantAxis.Height;
     public bool AccountAspectOffset { get; set; } = true;
 
-    public Vector2D AbsoluteSize
+    public virtual Vector2D AbsoluteSize
     {
         get
         {

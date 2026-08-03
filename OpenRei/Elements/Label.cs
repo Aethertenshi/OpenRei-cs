@@ -11,7 +11,7 @@ public enum TextAlignment
 }
 
 /// <summary>
-/// A text rendering UI element.
+/// A text rendering UI element with automatic text measurement support.
 /// </summary>
 public class Label : Element
 {
@@ -25,6 +25,33 @@ public class Label : Element
     {
         Name = nameof(Label);
         Color = Color.Transparent;
+    }
+
+    /// <summary>
+    /// Computes absolute size, auto-measuring text bounds if Size is unassigned or zero.
+    /// </summary>
+    public override Vector2D AbsoluteSize
+    {
+        get
+        {
+            Vector2D userSize = base.AbsoluteSize;
+            if (userSize.X > 0f && userSize.Y > 0f) return userSize;
+
+            if (!string.IsNullOrEmpty(Text))
+            {
+                Font? font = Font ?? FontEngine.DefaultFont;
+                if (font != null)
+                {
+                    Vector2D measured = font.MeasureString(Text, FontSize);
+                    return new Vector2D(
+                        userSize.X > 0f ? userSize.X : measured.X,
+                        userSize.Y > 0f ? userSize.Y : measured.Y
+                    );
+                }
+            }
+
+            return userSize;
+        }
     }
 
     public override void Render(RenderContext context)
