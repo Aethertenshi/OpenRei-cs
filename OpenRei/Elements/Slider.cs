@@ -5,8 +5,8 @@ using OpenRei.Types;
 namespace OpenRei.Elements;
 
 /// <summary>
-/// A 1:1 osu!-style interactive settings slider featuring a tall rounded track container with an inner-fitting
-/// rounded rectangle knob handle, accent progress fills, hover/grab micro-animations, and step precision snapping.
+/// A 1:1 osu!-style interactive settings slider featuring a rounded track bar, filled progress area,
+/// and a highlighted right-end knob cap handle matching the osu! settings page design.
 /// </summary>
 public class Slider : Element
 {
@@ -17,8 +17,6 @@ public class Slider : Element
 
     private bool _isDragging;
     private bool _isHovered;
-    private float _knobScale = 1.0f;
-    private Tween.Tween? _knobTween;
 
     // ── Properties ─────────────────────────────────────────────────────────────
 
@@ -77,25 +75,13 @@ public class Slider : Element
 
     // ── Visual Styling ────────────────────────────────────────────────────────
 
-    public Color TrackColor { get; set; } = Color.FromRgba(25, 27, 34, 255);
-    public Color FillColor { get; set; } = Color.FromRgba(102, 204, 255, 255); // osu! Cyan Blue
-    public Color KnobColor { get; set; } = Color.White;
-    public Color KnobHoverColor { get; set; } = Color.FromRgba(240, 240, 255, 255);
-    public Color KnobBorderColor { get; set; } = Color.FromRgba(255, 255, 255, 180);
+    public Color TrackColor { get; set; } = Color.FromRgba(26, 25, 33, 255);      // Dark track
+    public Color FillColor { get; set; } = Color.FromRgba(104, 81, 214, 255);    // osu! Purple Fill
+    public Color KnobColor { get; set; } = Color.FromRgba(140, 116, 248, 255);   // Lighter Lavender End Cap
+    public Color KnobHoverColor { get; set; } = Color.FromRgba(163, 142, 250, 255);
 
-    public float TrackCornerRadius { get; set; } = 8f;
-    public float InnerPadding { get; set; } = 4f; // Space between outer track and inner knob/fill
-
-    /// <summary>Width of the rounded rectangle knob handle.</summary>
-    public float KnobWidth { get; set; } = 14f;
-
-    /// <summary>Height of the knob handle. If 0, automatically fits inside the track height minus padding.</summary>
-    public float KnobHeight { get; set; } = 0f;
-
-    /// <summary>Corner radius of the rounded rectangle knob handle.</summary>
-    public float KnobCornerRadius { get; set; } = 5f;
-
-    public float KnobBorderThickness { get; set; } = 0f;
+    /// <summary>Width of the right-end knob cap handle (in pixels).</summary>
+    public float KnobWidth { get; set; } = 10f;
 
     /// <summary>Optional formatting string or callback (e.g. "{0:0.0}" or "{0:P0}").</summary>
     public string FormatString { get; set; } = "{0:0.##}";
@@ -111,8 +97,9 @@ public class Slider : Element
     public Slider()
     {
         Name = nameof(Slider);
-        Color = Color.Transparent; // Outer background is transparent; track is rendered custom
-        Size = new UDim2(1f, 0f, 0f, 32f); // Default responsive slider height (32px tall bar)
+        Color = Color.Transparent; // Base background transparent; custom track rendered below
+        CornerRadius = 8f;         // Default rounded corners matching osu! settings
+        Size = new UDim2(1f, 0f, 0f, 32f); // Default responsive height
     }
 
     public override void HandleInput(Vector2D mousePos, bool mousePressed, bool mouseReleased)
@@ -122,18 +109,15 @@ public class Slider : Element
         if (contains && !_isHovered)
         {
             _isHovered = true;
-            if (!_isDragging) AnimateKnob(1.15f);
         }
         else if (!contains && _isHovered)
         {
             _isHovered = false;
-            if (!_isDragging) AnimateKnob(1.0f);
         }
 
         if (contains && mousePressed)
         {
             _isDragging = true;
-            AnimateKnob(1.25f);
             UpdateValueFromMouse(mousePos.X);
         }
 
@@ -143,7 +127,6 @@ public class Slider : Element
             if (mouseReleased)
             {
                 _isDragging = false;
-                AnimateKnob(_isHovered ? 1.15f : 1.0f);
             }
         }
 
@@ -155,19 +138,8 @@ public class Slider : Element
         var bounds = AbsoluteBounds;
         if (bounds.Width <= 0f) return;
 
-        float paddingLeft = InnerPadding + KnobWidth * 0.5f;
-        float paddingRight = InnerPadding + KnobWidth * 0.5f;
-        float usableWidth = bounds.Width - (paddingLeft + paddingRight);
-
-        if (usableWidth <= 0f)
-        {
-            NormalizedValue = (mouseX - bounds.X) / bounds.Width;
-        }
-        else
-        {
-            float relativeX = mouseX - (bounds.X + paddingLeft);
-            NormalizedValue = relativeX / usableWidth;
-        }
+        float relativeX = mouseX - bounds.X;
+        NormalizedValue = relativeX / bounds.Width;
     }
 
     private void UpdateValueLabel()
@@ -195,62 +167,29 @@ public class Slider : Element
         var bounds = AbsoluteBounds;
         if (bounds.Width <= 0f || bounds.Height <= 0f) return;
 
-        // 1. Draw Tall Outer Track Container Bar
-        context.DrawQuad(bounds, TrackColor, TrackCornerRadius, ZIndex);
-
-        // Calculate inner track bounds with InnerPadding
-        float pad = InnerPadding;
-        float innerX = bounds.X + pad;
-        float innerY = bounds.Y + pad;
-        float innerW = MathF.Max(0f, bounds.Width - pad * 2f);
-        float innerH = MathF.Max(0f, bounds.Height - pad * 2f);
-
-        // Knob dimensions (fits inside inner height)
-        float kw = KnobWidth * _knobScale;
-        float kh = (KnobHeight > 0f) ? MathF.Min(KnobHeight, innerH) : innerH;
-        float knobY = innerY + (innerH - kh) * 0.5f;
-
         float norm = NormalizedValue;
-        float knobPaddingX = kw * 0.5f;
-        float usableWidth = MathF.Max(0f, innerW - kw);
-        float knobCenterX = innerX + knobPaddingX + norm * usableWidth;
 
-        // 2. Draw Progress Fill Bar (left edge to knob center)
-        float fillWidth = MathF.Max(0f, knobCenterX - bounds.X);
+        // 1. Outer Dark Rounded Track Container
+        context.DrawQuad(bounds, TrackColor, CornerRadius, ZIndex);
+
+        // 2. Filled Progress Area (Left edge up to Value * Width)
+        float fillWidth = norm * bounds.Width;
         if (fillWidth > 0f)
         {
-            float fillRadius = MathF.Max(0f, TrackCornerRadius - pad);
             var fillBounds = new Rect(bounds.X, bounds.Y, fillWidth, bounds.Height);
-            context.DrawQuad(fillBounds, FillColor, fillRadius, ZIndex + 0.1f);
-        }
+            context.DrawQuad(fillBounds, FillColor, CornerRadius, ZIndex + 0.1f);
 
-        // 3. Draw Rounded Rect Knob Handle (Fits inside track bar)
-        var knobBounds = new Rect(
-            knobCenterX - kw * 0.5f,
-            knobY,
-            kw,
-            kh
-        );
-
-        Color activeKnobColor = _isHovered ? KnobHoverColor : KnobColor;
-
-        // Draw Knob Base Quad (Rounded Rectangle)
-        context.DrawQuad(knobBounds, activeKnobColor, KnobCornerRadius, ZIndex + 0.2f);
-
-        // Draw Knob Border Outline (if thickness > 0)
-        if (KnobBorderThickness > 0f)
-        {
-            context.DrawStroke(knobBounds, new StrokeInfo(KnobBorderThickness, KnobBorderColor), KnobCornerRadius, ZIndex + 0.3f);
+            // 3. Knob Handle Cap (Lighter Accent Bar at the right edge of the fill)
+            if (KnobWidth > 0f)
+            {
+                float kw = MathF.Min(KnobWidth, fillWidth);
+                var knobBounds = new Rect(bounds.X + fillWidth - kw, bounds.Y, kw, bounds.Height);
+                Color activeKnobColor = _isHovered ? KnobHoverColor : KnobColor;
+                context.DrawQuad(knobBounds, activeKnobColor, CornerRadius, ZIndex + 0.2f);
+            }
         }
 
         // Render any child elements
         base.Render(context);
-    }
-
-    private void AnimateKnob(float targetScale)
-    {
-        _knobTween?.Stop();
-        _knobTween = new OpenRei.Tween.Tween(_knobScale, targetScale, 0.15f, v => _knobScale = v, Easing.Cubic, EasingDirection.Out);
-        _knobTween.Start();
     }
 }
