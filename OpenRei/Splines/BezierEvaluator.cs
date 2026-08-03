@@ -36,16 +36,33 @@ public static class BezierEvaluator
     }
 
     /// <summary>
-    /// Evaluates a cubic Bézier from <see cref="UDim2"/> control points, resolved against
-    /// <paramref name="parentSize"/>. Returns absolute pixel points.
+    /// Evaluates a cubic Bézier from <see cref="UDim2"/> control points. The curve is evaluated
+    /// in UDim2 space (scale and offset interpolate independently), which is mathematically
+    /// equivalent to resolving controls and evaluating in pixels. Returns the curve as UDim2 points.
     /// </summary>
-    public static List<Vector2D> GenerateCubicPoints(UDim2 p0, UDim2 p1, UDim2 p2, UDim2 p3, Vector2D parentSize, int segments = 32)
+    public static UDim2 EvaluateCubic(UDim2 p0, UDim2 p1, UDim2 p2, UDim2 p3, float t)
     {
-        return GenerateCubicPoints(
-            p0.GetAbsolute(parentSize),
-            p1.GetAbsolute(parentSize),
-            p2.GetAbsolute(parentSize),
-            p3.GetAbsolute(parentSize),
-            segments);
+        float u = 1.0f - t;
+        float tt = t * t;
+        float uu = u * u;
+        float uuu = uu * u;
+        float ttt = tt * t;
+
+        return (p0 * uuu) + (p1 * (3.0f * uu * t)) + (p2 * (3.0f * u * tt)) + (p3 * ttt);
+    }
+
+    /// <summary>
+    /// Generates the sampled points of a cubic Bézier from <see cref="UDim2"/> control points,
+    /// returning UDim2 points (resolution-independent).
+    /// </summary>
+    public static List<UDim2> GenerateCubicPoints(UDim2 p0, UDim2 p1, UDim2 p2, UDim2 p3, int segments = 32)
+    {
+        var points = new List<UDim2>(segments + 1);
+        for (int i = 0; i <= segments; i++)
+        {
+            float t = (float)i / segments;
+            points.Add(EvaluateCubic(p0, p1, p2, p3, t));
+        }
+        return points;
     }
 }

@@ -18,4 +18,6 @@ public readonly record struct UDim(float Scale, float Offset)
 
     public static UDim operator +(UDim a, UDim b) => new(a.Scale + b.Scale, a.Offset + b.Offset);
     public static UDim operator -(UDim a, UDim b) => new(a.Scale - b.Scale, a.Offset - b.Offset);
+    public static UDim operator *(UDim a, float scalar) => new(a.Scale * scalar, a.Offset * scalar);
+    public static UDim operator *(float scalar, UDim a) => a * scalar;
 }

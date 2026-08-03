@@ -28,4 +28,6 @@ public readonly record struct UDim2(UDim X, UDim Y)
 
     public static UDim2 operator +(UDim2 a, UDim2 b) => new(a.X + b.X, a.Y + b.Y);
     public static UDim2 operator -(UDim2 a, UDim2 b) => new(a.X - b.X, a.Y - b.Y);
+    public static UDim2 operator *(UDim2 a, float scalar) => new(a.X * scalar, a.Y * scalar);
+    public static UDim2 operator *(float scalar, UDim2 a) => a * scalar;
 }
