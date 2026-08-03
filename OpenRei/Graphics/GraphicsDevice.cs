@@ -207,6 +207,13 @@ public unsafe class GraphicsDevice : IDisposable
                         RenderStroke(cmd.Bounds, cmd.Stroke, cmd.CornerRadius);
                         break;
                     }
+                case 7: // Polygon (filled)
+                    {
+                        FlushBatch();
+                        if (cmd.Points != null)
+                            RenderPolygon(cmd.Points, cmd.Color);
+                        break;
+                    }
             }
         }
 
@@ -221,6 +228,12 @@ public unsafe class GraphicsDevice : IDisposable
     private int[] _batchIndices = new int[1024];
     private int _batchVertexCount;
     private int _batchIndexCount;
+
+    // ── Filled polygon (ear-clipped) pools ─────────────────────────────────────
+    private SDL_Vertex[] _polyVerts = new SDL_Vertex[64];
+    private int[] _polyIndices = new int[128];
+    private readonly List<Vector2D> _polyScratchVerts = new();
+    private readonly List<int> _polyScratchIndices = new();
 
     /// <summary>Flushes any accumulated solid quads via a single SDL_RenderGeometry call.</summary>
     private void FlushBatch()
@@ -271,6 +284,42 @@ public unsafe class GraphicsDevice : IDisposable
 
         _batchVertexCount += 4;
         _batchIndexCount += 6;
+    }
+
+    /// <summary>Fills a closed polygon via ear-clipping triangulation. Degenerate shapes draw nothing.</summary>
+    private void RenderPolygon(List<Vector2D> points, Color color)
+    {
+        if (_renderer == null || points == null) return;
+
+        if (!OpenRei.Splines.PolygonTriangulator.Triangulate(points, _polyScratchVerts, _polyScratchIndices))
+            return;
+
+        int n = _polyScratchVerts.Count;
+        int idxCount = _polyScratchIndices.Count;
+        if (n < 3 || idxCount < 3) return;
+
+        if (_polyVerts.Length < n)
+            _polyVerts = new SDL_Vertex[Math.Max(n, _polyVerts.Length * 2)];
+        if (_polyIndices.Length < idxCount)
+            _polyIndices = new int[Math.Max(idxCount, _polyIndices.Length * 2)];
+
+        var vColor = new SDL_FColor { r = color.R, g = color.G, b = color.B, a = color.A };
+        for (int i = 0; i < n; i++)
+        {
+            _polyVerts[i] = new SDL_Vertex
+            {
+                position = new SDL_FPoint { x = _polyScratchVerts[i].X, y = _polyScratchVerts[i].Y },
+                color = vColor
+            };
+        }
+        for (int i = 0; i < idxCount; i++)
+            _polyIndices[i] = _polyScratchIndices[i];
+
+        fixed (SDL_Vertex* vPtr = _polyVerts)
+        fixed (int* iPtr = _polyIndices)
+        {
+            SDL3.SDL_RenderGeometry(_renderer, null, vPtr, n, iPtr, idxCount);
+        }
     }
 
     // ── Reusable vertex pool for rounded-rect geometry ─────────────────────────

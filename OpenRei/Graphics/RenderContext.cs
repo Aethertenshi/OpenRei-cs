@@ -9,7 +9,7 @@ namespace OpenRei.Graphics;
 /// </summary>
 public readonly struct FifoCommand
 {
-    public readonly byte Type; // 0=Quad, 1=Image, 2=Text, 3=ClipPush, 4=ClipPop, 5=BlurRegion, 6=Stroke
+    public readonly byte Type; // 0=Quad, 1=Image, 2=Text, 3=ClipPush, 4=ClipPop, 5=BlurRegion, 6=Stroke, 7=Polygon
     public readonly Rect Bounds;
     public readonly Color Color;
     public readonly CornerRadius CornerRadius;
@@ -21,14 +21,16 @@ public readonly struct FifoCommand
     public readonly float FontSize;
     public readonly string? TextString;
     public readonly StrokeInfo Stroke;
+    public readonly List<Vector2D>? Points;
 
     private FifoCommand(byte type, Rect bounds, Color color, CornerRadius cornerRadius, float zIndex,
         Texture? texture = null, Rect? sourceRect = null, BlurFilter? blurFilter = null,
-        Font? font = null, float fontSize = 16.0f, string? text = null, StrokeInfo stroke = default)
+        Font? font = null, float fontSize = 16.0f, string? text = null, StrokeInfo stroke = default,
+        List<Vector2D>? points = null)
     {
         Type = type; Bounds = bounds; Color = color; CornerRadius = cornerRadius; ZIndex = zIndex;
         Texture = texture; SourceRect = sourceRect; BlurFilter = blurFilter;
-        Font = font; FontSize = fontSize; TextString = text; Stroke = stroke;
+        Font = font; FontSize = fontSize; TextString = text; Stroke = stroke; Points = points;
     }
 
     internal static FifoCommand Quad(Rect b, Color c, CornerRadius r, float z) => new(0, b, c, r, z);
@@ -40,6 +42,7 @@ public readonly struct FifoCommand
     internal static FifoCommand ClipPop() => new(4, default, default, CornerRadius.Zero, 0);
     internal static FifoCommand BlurRegion(Rect b, Color c, CornerRadius r, BlurFilter f) => new(5, b, c, r, 0, blurFilter: f);
     internal static FifoCommand StrokeCmd(Rect b, StrokeInfo s, CornerRadius r, float z) => new(6, b, s.Color, r, z, stroke: s);
+    internal static FifoCommand Polygon(List<Vector2D> pts, Color c, float z) => new(7, default, c, CornerRadius.Zero, z, points: pts);
 }
 
 /// <summary>
@@ -95,6 +98,16 @@ public class RenderContext
     public void DrawQuad(Rect bounds, Color color, CornerRadius cornerRadius = default, float zIndex = 1.0f)
     {
         _commands.Add(FifoCommand.Quad(bounds, color, cornerRadius, zIndex));
+    }
+
+    /// <summary>
+    /// Fills a closed polygon defined by <paramref name="points"/> (in boundary order).
+    /// Concave shapes are supported via ear-clipping; degenerate shapes render nothing.
+    /// </summary>
+    public void DrawPolygon(List<Vector2D> points, Color color, float zIndex = 1.0f)
+    {
+        if (points == null || points.Count < 3) return;
+        _commands.Add(FifoCommand.Polygon(points, color, zIndex));
     }
 
     public void DrawText(Font? font, float fontSize, string text, Rect bounds, Color color, float zIndex = 1f)

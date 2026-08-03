@@ -15,6 +15,10 @@ public class SplineElement : Element
     public Color StrokeColor { get; set; } = Color.White;
     public int SegmentResolution { get; set; } = 32;
 
+    /// <summary>When true, fills the closed outline (ear-clipped). Enabled by default.</summary>
+    public bool Filled { get; set; } = true;
+    public Color FillColor { get; set; } = Color.White;
+
     public SplineElement()
     {
         Name = nameof(SplineElement);
@@ -32,7 +36,7 @@ public class SplineElement : Element
             );
         }
 
-        // Default linear polyline points
+        // Default linear polyline points (use SplineType.Linear for a pre-evaluated outline)
         return new List<Vector2D>(ControlPoints);
     }
 
@@ -40,7 +44,10 @@ public class SplineElement : Element
     {
         if (!Visible) return;
         var points = GenerateEvaluatedPoints();
-        context.DrawSpline(points, StrokeWidth, StrokeColor, ZIndex);
+        if (points.Count >= 3 && Filled)
+        {
+            context.DrawPolygon(points, FillColor, ZIndex);
+        }
         base.Render(context);
     }
 }
