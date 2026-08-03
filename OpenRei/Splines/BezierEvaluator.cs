@@ -34,4 +34,18 @@ public static class BezierEvaluator
         }
         return points;
     }
+
+    /// <summary>
+    /// Evaluates a cubic Bézier from <see cref="UDim2"/> control points, resolved against
+    /// <paramref name="parentSize"/>. Returns absolute pixel points.
+    /// </summary>
+    public static List<Vector2D> GenerateCubicPoints(UDim2 p0, UDim2 p1, UDim2 p2, UDim2 p3, Vector2D parentSize, int segments = 32)
+    {
+        return GenerateCubicPoints(
+            p0.GetAbsolute(parentSize),
+            p1.GetAbsolute(parentSize),
+            p2.GetAbsolute(parentSize),
+            p3.GetAbsolute(parentSize),
+            segments);
+    }
 }
