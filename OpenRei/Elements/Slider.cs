@@ -5,125 +5,244 @@ using OpenRei.Types;
 namespace OpenRei.Elements;
 
 /// <summary>
-/// A draggable slider bar (osu!-style) with a rounded track, a filled progress
-/// portion, and a pill-shaped knob. Value is normalized 0..1. Drag to scrub;
-/// optional value label mirrors osu!'s tooltip-style value display.
+/// A 1:1 osu!-style interactive settings slider with smooth drag scrubbing, rounded pill tracks,
+/// accent progress fills, hover/grab micro-animations, drop shadows, and step precision snapping.
 /// </summary>
 public class Slider : Element
 {
-    private float _value;
+    private float _value = 0.5f;
+    private float _min = 0f;
+    private float _max = 1f;
+    private float _step = 0f; // 0 = continuous
 
-    /// <summary>Current value, clamped to 0..1. Assigning fires <see cref="OnValueChanged"/>.</summary>
+    private bool _isDragging;
+    private bool _isHovered;
+    private float _knobScale = 1.0f;
+    private Tween.Tween? _knobTween;
+
+    // ── Properties ─────────────────────────────────────────────────────────────
+
+    /// <summary>Current slider value between <see cref="Min"/> and <see cref="Max"/>.</summary>
     public float Value
     {
         get => _value;
         set
         {
-            float clamped = Math.Clamp(value, 0f, 1f);
-            if (Math.Abs(clamped - _value) < 0.0001f) return;
+            float clamped = Math.Clamp(value, _min, _max);
+            if (_step > 0f)
+            {
+                clamped = MathF.Round((clamped - _min) / _step) * _step + _min;
+                clamped = Math.Clamp(clamped, _min, _max);
+            }
+
+            if (Math.Abs(clamped - _value) < 0.00001f) return;
             _value = clamped;
             OnValueChanged?.Invoke(_value);
-            if (ValueLabel != null)
-                ValueLabel.Text = _value.ToString("0.##");
+            UpdateValueLabel();
         }
     }
 
-    /// <summary>Fired whenever the value changes (including during drag scrubbing).</summary>
-    public event Action<float>? OnValueChanged;
+    /// <summary>Normalized value between 0.0 and 1.0.</summary>
+    public float NormalizedValue
+    {
+        get => (_max > _min) ? (_value - _min) / (_max - _min) : 0f;
+        set => Value = _min + Math.Clamp(value, 0f, 1f) * (_max - _min);
+    }
 
-    // ── Track ──────────────────────────────────────────────────────────────
-    public Color TrackColor { get; set; } = Color.FromRgba(40, 40, 48, 255);
-    public Color FillColor { get; set; } = Color.FromRgba(120, 160, 255, 255);
-    public float TrackCornerRadius { get; set; } = 7.5f;
+    public float Min
+    {
+        get => _min;
+        set
+        {
+            _min = value;
+            Value = _value;
+        }
+    }
 
-    // ── Knob (pill) ────────────────────────────────────────────────────────
+    public float Max
+    {
+        get => _max;
+        set
+        {
+            _max = value;
+            Value = _value;
+        }
+    }
+
+    public float Step
+    {
+        get => _step;
+        set => _step = MathF.Max(0f, value);
+    }
+
+    // ── Visual Styling ────────────────────────────────────────────────────────
+
+    public Color TrackColor { get; set; } = Color.FromRgba(25, 27, 34, 255);
+    public Color FillColor { get; set; } = Color.FromRgba(102, 204, 255, 255); // osu! Cyan Blue
     public Color KnobColor { get; set; } = Color.White;
-    public Color KnobBorderColor { get; set; } = Color.White;
-    public float KnobBorderThickness { get; set; } = 3f;
-    public float KnobWidth { get; set; } = 50f;
-    public float KnobHeight { get; set; } = 15f;
+    public Color KnobHoverColor { get; set; } = Color.FromRgba(240, 240, 255, 255);
+    public Color KnobBorderColor { get; set; } = Color.FromRgba(255, 255, 255, 200);
 
-    /// <summary>Optional label whose Text is updated with the current value (osu! tooltip-style).</summary>
+    public float TrackHeight { get; set; } = 12f; // Height of the track bar
+    public float KnobWidth { get; set; } = 22f;  // Width of the knob handle
+    public float KnobHeight { get; set; } = 22f; // Height of the knob handle
+    public float KnobBorderThickness { get; set; } = 2f;
+
+    /// <summary>Optional formatting string or callback (e.g. "{0:0.0}" or "{0:P0}").</summary>
+    public string FormatString { get; set; } = "{0:0.##}";
+    public Func<float, string>? CustomFormatter { get; set; }
+
+    /// <summary>Optional attached Label element to display the formatted value.</summary>
     public Label? ValueLabel { get; set; }
 
-    // ── Post-processing (default disabled) ──────────────────────────────────
-    /// <summary>TODO: enable a glow effect under the knob (drop-shadow post-processing). Disabled until implemented.</summary>
-    public bool KnobGlowEnabled { get; set; } = false;
+    public event Action<float>? OnValueChanged;
 
-    /// <summary>TODO: glow radius in pixels, used when <see cref="KnobGlowEnabled"/> is true.</summary>
-    public float KnobGlowRadius { get; set; } = 8f;
-
-    private bool _dragging;
-    private float _knobScale = 1f;
+    // ── Construction ───────────────────────────────────────────────────────────
 
     public Slider()
     {
         Name = nameof(Slider);
+        Color = Color.Transparent; // Track is rendered custom; background element is transparent
+        Size = new UDim2(1f, 0f, 0f, 32f); // Default responsive size
     }
 
     public override void HandleInput(Vector2D mousePos, bool mousePressed, bool mouseReleased)
     {
         bool contains = AbsoluteBounds.Contains(mousePos);
 
-        if (mousePressed && contains)
+        if (contains && !_isHovered)
         {
-            _dragging = true;
-            AnimateKnob(1.25f, Easing.Elastic);
+            _isHovered = true;
+            if (!_isDragging) AnimateKnob(1.12f);
+        }
+        else if (!contains && _isHovered)
+        {
+            _isHovered = false;
+            if (!_isDragging) AnimateKnob(1.0f);
         }
 
-        if (mouseReleased)
+        if (contains && mousePressed)
         {
-            _dragging = false;
-            AnimateKnob(1f, Easing.Quintic);
+            _isDragging = true;
+            AnimateKnob(1.28f);
+            UpdateValueFromMouse(mousePos.X);
         }
 
-        if (_dragging)
+        if (_isDragging)
         {
-            float t = (mousePos.X - AbsoluteBounds.X) / AbsoluteBounds.Width;
-            Value = t;
+            UpdateValueFromMouse(mousePos.X);
+            if (mouseReleased)
+            {
+                _isDragging = false;
+                AnimateKnob(_isHovered ? 1.12f : 1.0f);
+            }
         }
 
         base.HandleInput(mousePos, mousePressed, mouseReleased);
+    }
+
+    private void UpdateValueFromMouse(float mouseX)
+    {
+        var bounds = AbsoluteBounds;
+        if (bounds.Width <= 0f) return;
+
+        float padding = KnobWidth * 0.5f;
+        float usableWidth = bounds.Width - padding * 2f;
+
+        if (usableWidth <= 0f)
+        {
+            NormalizedValue = (mouseX - bounds.X) / bounds.Width;
+        }
+        else
+        {
+            float relativeX = mouseX - (bounds.X + padding);
+            NormalizedValue = relativeX / usableWidth;
+        }
+    }
+
+    private void UpdateValueLabel()
+    {
+        if (ValueLabel == null) return;
+
+        if (CustomFormatter != null)
+        {
+            ValueLabel.Text = CustomFormatter(_value);
+        }
+        else if (!string.IsNullOrEmpty(FormatString))
+        {
+            ValueLabel.Text = string.Format(FormatString, _value);
+        }
+        else
+        {
+            ValueLabel.Text = _value.ToString("0.##");
+        }
     }
 
     public override void Render(RenderContext context)
     {
         if (!Visible) return;
 
-        base.Render(context);
-
         var bounds = AbsoluteBounds;
+        if (bounds.Width <= 0f || bounds.Height <= 0f) return;
+
         float centerY = bounds.Y + bounds.Height * 0.5f;
-        float knobCenterX = bounds.X + Value * bounds.Width;
+        float actualTrackHeight = MathF.Min(TrackHeight, bounds.Height);
+        float trackY = centerY - actualTrackHeight * 0.5f;
+        float trackRadius = actualTrackHeight * 0.5f;
 
-        // Track
-        context.DrawQuad(bounds, TrackColor, TrackCornerRadius, ZIndex);
+        // 1. Draw Background Track Bar
+        var trackBounds = new Rect(bounds.X, trackY, bounds.Width, actualTrackHeight);
+        context.DrawQuad(trackBounds, TrackColor, trackRadius, ZIndex);
 
-        // Fill (from left edge up to the knob position)
+        // 2. Draw Progress Fill Bar
+        float norm = NormalizedValue;
+        float knobPadding = KnobWidth * 0.5f;
+        float usableWidth = bounds.Width - knobPadding * 2f;
+        float knobCenterX = (usableWidth > 0f)
+            ? bounds.X + knobPadding + norm * usableWidth
+            : bounds.X + norm * bounds.Width;
+
         float fillWidth = MathF.Max(0f, knobCenterX - bounds.X);
         if (fillWidth > 0f)
         {
-            var fillBounds = new Rect(bounds.X, bounds.Y, fillWidth, bounds.Height);
-            context.DrawQuad(fillBounds, FillColor, TrackCornerRadius, ZIndex + 0.1f);
+            var fillBounds = new Rect(bounds.X, trackY, fillWidth, actualTrackHeight);
+            context.DrawQuad(fillBounds, FillColor, trackRadius, ZIndex + 0.1f);
         }
 
-        // Knob (pill), scaled around its center while grabbed
-        float knobW = KnobWidth * _knobScale;
-        float knobH = KnobHeight * _knobScale;
-        var knobBounds = new Rect(knobCenterX - knobW * 0.5f, centerY - knobH * 0.5f, knobW, knobH);
-        float pillRadius = knobH * 0.5f;
+        // 3. Draw Knob Handle (Scaled on hover / grab)
+        float scaledKW = KnobWidth * _knobScale;
+        float scaledKH = KnobHeight * _knobScale;
+        var knobBounds = new Rect(
+            knobCenterX - scaledKW * 0.5f,
+            centerY - scaledKH * 0.5f,
+            scaledKW,
+            scaledKH
+        );
+        float knobRadius = MathF.Min(scaledKW, scaledKH) * 0.5f;
 
-        // TODO: if (KnobGlowEnabled) — add a DropShadowFilter glow under the knob here.
+        Color activeKnobColor = _isHovered ? KnobHoverColor : KnobColor;
 
-        context.DrawQuad(knobBounds, KnobColor, pillRadius, ZIndex + 0.2f);
+        // Draw Knob Drop Shadow
+        var shadowBounds = new Rect(knobBounds.X + 1f, knobBounds.Y + 3f, knobBounds.Width, knobBounds.Height);
+        context.DrawQuad(shadowBounds, Color.FromRgba(0, 0, 0, 80), knobRadius, ZIndex + 0.15f);
+
+        // Draw Knob Base Quad
+        context.DrawQuad(knobBounds, activeKnobColor, knobRadius, ZIndex + 0.2f);
+
+        // Draw Knob Border Outline
         if (KnobBorderThickness > 0f)
         {
-            context.DrawStroke(knobBounds, new StrokeInfo(KnobBorderThickness, KnobBorderColor), pillRadius, ZIndex + 0.3f);
+            context.DrawStroke(knobBounds, new StrokeInfo(KnobBorderThickness, KnobBorderColor), knobRadius, ZIndex + 0.3f);
         }
+
+        // Render any child elements
+        base.Render(context);
     }
 
-    private void AnimateKnob(float target, Easing easing)
+    private void AnimateKnob(float targetScale)
     {
-        new OpenRei.Tween.Tween(_knobScale, target, 0.25f, v => _knobScale = v, easing, EasingDirection.Out).Start();
+        _knobTween?.Stop();
+        _knobTween = new OpenRei.Tween.Tween(_knobScale, targetScale, 0.15f, v => _knobScale = v, Easing.Cubic, EasingDirection.Out);
+        _knobTween.Start();
     }
 }
