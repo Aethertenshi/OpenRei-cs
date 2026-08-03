@@ -51,7 +51,7 @@ public class UIListLayout : LayoutModifier
     }
 
     /// <summary>
-    /// Computes the total content size that would be occupied by children after layout.
+    /// Computes the total content size occupied by children in the list.
     /// </summary>
     public Vector2D GetContentSize(Element parent)
     {
@@ -101,6 +101,8 @@ public class UIListLayout : LayoutModifier
 
         var children = parent.GetSortedChildren();
         Vector2D parentSize = parent.AbsoluteSize;
+        if (parentSize.X <= 0f && parentSize.Y <= 0f) return;
+
         float betweenPx = FillDirection == FillDirection.Vertical
             ? PaddingBetween.GetAbsolute(parentSize.Y)
             : PaddingBetween.GetAbsolute(parentSize.X);
@@ -122,7 +124,6 @@ public class UIListLayout : LayoutModifier
             {
                 float userX = child.Position.X.Offset;
 
-                // Position X & Anchor derived from HorizontalAlignment
                 UDim posX;
                 float anchorX;
 
@@ -143,15 +144,14 @@ public class UIListLayout : LayoutModifier
                         break;
                 }
 
-                child.Anchor = new Anchor(anchorX, child.Anchor.Y);
+                child.Anchor = new Anchor(anchorX, 0.0f);
                 child.Position = new UDim2(posX, UDim.FromOffset(currentOffset));
                 currentOffset += childSize.Y + betweenPx;
             }
-            else // FillDirection == Horizontal
+            else // Horizontal
             {
                 float userY = child.Position.Y.Offset;
 
-                // Position Y & Anchor derived from VerticalAlignment
                 UDim posY;
                 float anchorY;
 
@@ -172,7 +172,7 @@ public class UIListLayout : LayoutModifier
                         break;
                 }
 
-                child.Anchor = new Anchor(child.Anchor.X, anchorY);
+                child.Anchor = new Anchor(0.0f, anchorY);
                 child.Position = new UDim2(UDim.FromOffset(currentOffset), posY);
                 currentOffset += childSize.X + betweenPx;
             }
