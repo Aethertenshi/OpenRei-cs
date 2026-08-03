@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using OpenRei.Elements;
 using OpenRei.Types;
 
@@ -48,6 +49,19 @@ public class UIListLayout : LayoutModifier
             PaddingRight = value;
             PaddingBetween = value;
         }
+    }
+
+    /// <summary>
+    /// Stable per-child manual offsets (cross-axis freedom). Captured on first layout so the
+    /// auto layout can override scale while preserving the user's offset without accumulating
+    /// feedback. Entries are garbage-collected automatically with their child.
+    /// </summary>
+    private readonly ConditionalWeakTable<Element, ManualOffset> _manualOffsets = new();
+
+    private sealed class ManualOffset
+    {
+        public float X;
+        public float Y;
     }
 
     /// <summary>
@@ -122,7 +136,9 @@ public class UIListLayout : LayoutModifier
 
             if (FillDirection == FillDirection.Vertical)
             {
-                float userX = child.Position.X.Offset;
+                // Stable manual X offset (captured once, not re-read from the overwritten Position)
+                float userX = _manualOffsets.GetValue(child, static c =>
+                    new ManualOffset { X = c.Position.X.Offset, Y = c.Position.Y.Offset }).X;
 
                 UDim posX;
                 float anchorX;
@@ -150,7 +166,9 @@ public class UIListLayout : LayoutModifier
             }
             else // Horizontal
             {
-                float userY = child.Position.Y.Offset;
+                // Stable manual Y offset (captured once, not re-read from the overwritten Position)
+                float userY = _manualOffsets.GetValue(child, static c =>
+                    new ManualOffset { X = c.Position.X.Offset, Y = c.Position.Y.Offset }).Y;
 
                 UDim posY;
                 float anchorY;
