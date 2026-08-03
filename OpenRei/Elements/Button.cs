@@ -1,10 +1,11 @@
+using OpenRei.Filters;
 using OpenRei.Graphics;
 using OpenRei.Types;
 
 namespace OpenRei.Elements;
 
 /// <summary>
-/// An interactive button element supporting hover, press, click events, and text display.
+/// An interactive button element supporting hover, press, click events, built-in state colors, and text display.
 /// </summary>
 public class Button : Element
 {
@@ -63,8 +64,42 @@ public class Button : Element
     {
         if (!Visible) return;
 
-        // Render button background quad
-        base.Render(context);
+        // Determine active background color based on interactive state
+        Color activeColor = (IsPressed && PressColor.A > 0f)
+            ? PressColor
+            : ((IsHovered && HoverColor.A > 0f) ? HoverColor : Color);
+
+        // Process filters (drop shadow, etc.) BEFORE drawing the button quad
+        foreach (var filter in Filters)
+        {
+            if (filter is DropShadowFilter dsf && dsf.Enabled && dsf.Color.A > 0.001f)
+            {
+                Rect shadowBounds = new Rect(
+                    AbsoluteBounds.X + dsf.Offset.X,
+                    AbsoluteBounds.Y + dsf.Offset.Y,
+                    AbsoluteBounds.Width, AbsoluteBounds.Height);
+
+                if (dsf.BlurRadius > 0.5f)
+                {
+                    var blurFilter = new BlurFilter(dsf.BlurRadius);
+                    context.ApplyBlur(shadowBounds, blurFilter, dsf.Color, CornerRadius);
+                }
+                else
+                {
+                    context.DrawQuad(shadowBounds, dsf.Color, CornerRadius, ZIndex - 0.5f);
+                }
+            }
+        }
+
+        // Draw button quad with active interactive state color
+        if (activeColor.A > 0f && AbsoluteSize.X > 0f && AbsoluteSize.Y > 0f)
+        {
+            context.DrawQuad(AbsoluteBounds, activeColor, CornerRadius, ZIndex);
+        }
+
+        // Draw stroke outline if active
+        if (Stroke.Thickness > 0f && Stroke.Color.A > 0f)
+            context.DrawStroke(AbsoluteBounds, Stroke, CornerRadius, ZIndex + 0.1f);
 
         // Submit button text command
         if (!string.IsNullOrEmpty(Text))
@@ -72,7 +107,17 @@ public class Button : Element
             Font? resolved = Font ?? FontEngine.DefaultFont;
             if (resolved != null)
             {
-                context.DrawText(resolved, FontSize, Text, AbsoluteBounds, TextColor, ZIndex);
+                context.DrawText(resolved, FontSize, Text, AbsoluteBounds, TextColor, ZIndex + 0.2f);
+            }
+        }
+
+        // Render child elements
+        var sortedChildren = GetSortedChildren();
+        foreach (var child in sortedChildren)
+        {
+            if (child.Visible)
+            {
+                child.Render(context);
             }
         }
     }
