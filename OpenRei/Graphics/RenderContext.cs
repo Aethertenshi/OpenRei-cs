@@ -22,22 +22,26 @@ public readonly struct FifoCommand
     public readonly string? TextString;
     public readonly StrokeInfo Stroke;
     public readonly List<Vector2D>? Points;
+    public readonly Color StrokeColor;
+    public readonly float StrokeThickness;
 
     private FifoCommand(byte type, Rect bounds, Color color, CornerRadius cornerRadius, float zIndex,
         Texture? texture = null, Rect? sourceRect = null, BlurFilter? blurFilter = null,
         Font? font = null, float fontSize = 16.0f, string? text = null, StrokeInfo stroke = default,
-        List<Vector2D>? points = null)
+        List<Vector2D>? points = null, Color strokeColor = default, float strokeThickness = 0)
     {
         Type = type; Bounds = bounds; Color = color; CornerRadius = cornerRadius; ZIndex = zIndex;
         Texture = texture; SourceRect = sourceRect; BlurFilter = blurFilter;
         Font = font; FontSize = fontSize; TextString = text; Stroke = stroke; Points = points;
+        StrokeColor = strokeColor; StrokeThickness = strokeThickness;
     }
 
     internal static FifoCommand Quad(Rect b, Color c, CornerRadius r, float z) => new(0, b, c, r, z);
     internal static FifoCommand Image(Texture t, Rect d, Rect? s, Color c, BlurFilter? b, float z, CornerRadius r = default) =>
         new(1, d, c, r, z, texture: t, sourceRect: s, blurFilter: b);
-    internal static FifoCommand MakeText(Font? f, float fontSize, string t, Rect b, Color c, float z) =>
-        new(2, b, c, CornerRadius.Zero, z, font: f, fontSize: fontSize, text: t);
+    internal static FifoCommand MakeText(Font? f, float fontSize, string t, Rect b, Color c, float z,
+        Color strokeColor = default, float strokeThickness = 0) =>
+        new(2, b, c, CornerRadius.Zero, z, font: f, fontSize: fontSize, text: t, strokeColor: strokeColor, strokeThickness: strokeThickness);
     internal static FifoCommand ClipPush(Rect b) => new(3, b, default, CornerRadius.Zero, 0);
     internal static FifoCommand ClipPop() => new(4, default, default, CornerRadius.Zero, 0);
     internal static FifoCommand BlurRegion(Rect b, Color c, CornerRadius r, BlurFilter f) => new(5, b, c, r, 0, blurFilter: f);
@@ -155,27 +159,17 @@ public class RenderContext
 
     /// <summary>
     /// Draws text with an outer outline stroke rendered behind the main text body.
+    /// Emits a single FIFO command; the renderer performs the stroke pass internally.
     /// </summary>
     public void DrawTextStroke(Font? font, float fontSize, string text, Rect bounds, Color textColor, Color strokeColor, float strokeThickness = 1.0f, float zIndex = 1f)
     {
         if (string.IsNullOrEmpty(text)) return;
 
-        if (strokeThickness > 0f && strokeColor.A > 0f)
-        {
-            float t = strokeThickness;
-            // 8-directional outline offsets
-            DrawText(font, fontSize, text, new Rect(bounds.X - t, bounds.Y, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
-            DrawText(font, fontSize, text, new Rect(bounds.X + t, bounds.Y, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
-            DrawText(font, fontSize, text, new Rect(bounds.X, bounds.Y - t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
-            DrawText(font, fontSize, text, new Rect(bounds.X, bounds.Y + t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+        Color finalText = textColor.WithAlpha(textColor.A * _currentAlphaMultiplier);
+        Color finalStroke = strokeColor.WithAlpha(strokeColor.A * _currentAlphaMultiplier);
+        if (finalText.A <= 0.001f) return;
 
-            DrawText(font, fontSize, text, new Rect(bounds.X - t, bounds.Y - t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
-            DrawText(font, fontSize, text, new Rect(bounds.X + t, bounds.Y - t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
-            DrawText(font, fontSize, text, new Rect(bounds.X - t, bounds.Y + t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
-            DrawText(font, fontSize, text, new Rect(bounds.X + t, bounds.Y + t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
-        }
-
-        DrawText(font, fontSize, text, bounds, textColor, zIndex);
+        _commands.Add(FifoCommand.MakeText(font, fontSize, text, bounds, finalText, zIndex, finalStroke, strokeThickness));
     }
 
     public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null, BlurFilter? blurFilter = null, float zIndex = 1f, CornerRadius cornerRadius = default)

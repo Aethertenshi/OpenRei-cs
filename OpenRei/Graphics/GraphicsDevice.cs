@@ -64,21 +64,35 @@ public unsafe class GraphicsDevice : IDisposable
 
     /// <summary>
     /// Renders text using SDL3_ttf renderer text engine (glyph atlas, zero per-frame texture alloc).
+    /// When a stroke is specified, renders an outlined pass behind the fill pass.
     /// </summary>
-    public void RenderText(Font? font, float fontSize, string text, Rect bounds, Color color)
+    public void RenderText(Font? font, float fontSize, string text, Rect bounds, Color color,
+        Color strokeColor = default, float strokeThickness = 0)
     {
         font ??= FontEngine.DefaultFont;
         if (!IsInitialized || _ttfEngine == null || font == null || string.IsNullOrEmpty(text) || color.A <= 0.001f) return;
 
+        // Stroke pass (behind): outlined font handle in the stroke color
+        if (strokeThickness > 0f && strokeColor.A > 0f)
+        {
+            TTF_Font* strokeHandle = font.GetHandle(fontSize, (int)MathF.Round(strokeThickness));
+            if (strokeHandle != null)
+                DrawTextPass(strokeHandle, text, bounds, strokeColor);
+        }
+
+        // Fill pass (front): normal font handle in the fill color
         TTF_Font* fontHandle = font.GetHandle(fontSize);
         if (fontHandle == null) return;
+        DrawTextPass(fontHandle, text, bounds, color);
+    }
 
+    private void DrawTextPass(TTF_Font* fontHandle, string text, Rect bounds, Color color)
+    {
         var ttfText = SDL3_ttf.TTF_CreateText(_ttfEngine, fontHandle, text, (nuint)text.Length);
         if (ttfText == null) return;
 
         try
         {
-            // Center text inside bounds
             int textW = 0, textH = 0;
             SDL3_ttf.TTF_GetTextSize(ttfText, &textW, &textH);
             float posX = MathF.Floor(bounds.X + (bounds.Width - textW) * 0.5f);
@@ -179,7 +193,7 @@ public unsafe class GraphicsDevice : IDisposable
                     {
                         FlushBatch();
                         if (cmd.TextString != null)
-                            RenderText(cmd.Font, cmd.FontSize, cmd.TextString, cmd.Bounds, cmd.Color);
+                            RenderText(cmd.Font, cmd.FontSize, cmd.TextString, cmd.Bounds, cmd.Color, cmd.StrokeColor, cmd.StrokeThickness);
                         break;
                     }
                 case 3: // ClipPush

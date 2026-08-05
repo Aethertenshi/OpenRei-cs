@@ -26,17 +26,20 @@ public unsafe class Font : IDisposable
     }
 
     /// <summary>
-    /// Gets or creates the native SDL3 TTF_Font handle for the requested point size.
-    /// Quantized to 0.5pt steps with LRU size limit (max 64 sizes) for 100% memory leak protection.
+    /// Gets or creates the native SDL3 TTF_Font handle for the requested point size and outline thickness.
+    /// Quantized to 0.5pt steps with LRU size limit (max 64 entries) for 100% memory leak protection.
+    /// Distinct (size, outline) combinations get their own handle so the text-engine atlas renders the
+    /// correct outline per pass without stale-glyph collisions.
     /// </summary>
-    public TTF_Font* GetHandle(float fontSize)
+    public TTF_Font* GetHandle(float fontSize, int outline = 0)
     {
         if (_isDisposed || string.IsNullOrEmpty(_filePath)) return null;
 
-        // Quantize size to 0.5pt steps (e.g. 15.2pt -> 15.0pt, 15.4pt -> 15.5pt) to prevent handle bloat during smooth size tweens
+        // Quantize size to 0.5pt steps; combine with outline into a single cache key
         int sizeKey = (int)MathF.Round(fontSize * 2f);
+        int key = (sizeKey << 8) | (outline & 0xFF);
 
-        if (_sizeHandles.TryGetValue(sizeKey, out var existingHandle))
+        if (_sizeHandles.TryGetValue(key, out var existingHandle))
         {
             return (TTF_Font*)existingHandle;
         }
@@ -47,7 +50,7 @@ public unsafe class Font : IDisposable
             return null;
         }
 
-        // LRU Eviction: if more than 64 distinct sizes are cached, close the oldest unneeded handle
+        // LRU Eviction: if more than MaxCachedSizes distinct (size, outline) combos are cached, close the oldest
         if (_sizeHandles.Count >= MaxCachedSizes && _evictionQueue.TryDequeue(out int oldestKey))
         {
             if (_sizeHandles.Remove(oldestKey, out var handleToClose) && handleToClose != IntPtr.Zero)
@@ -60,8 +63,10 @@ public unsafe class Font : IDisposable
         TTF_Font* handle = SDL3_ttf.TTF_OpenFont(_filePath, actualSize);
         if (handle != null)
         {
-            _sizeHandles[sizeKey] = (IntPtr)handle;
-            _evictionQueue.Enqueue(sizeKey);
+            if (outline > 0)
+                SDL3_ttf.TTF_SetFontOutline(handle, outline);
+            _sizeHandles[key] = (IntPtr)handle;
+            _evictionQueue.Enqueue(key);
         }
         else
         {
