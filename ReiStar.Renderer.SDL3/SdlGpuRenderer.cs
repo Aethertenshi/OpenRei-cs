@@ -30,18 +30,16 @@ public unsafe class SdlGpuRenderer : IRenderer, IDisposable
     {
         _window = window;
 
+        // Initialize GPU Device enforcing SPIR-V as universal cross-platform format
         _device = SDL3.SDL_CreateGPUDevice(
-            SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV |
-            SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_MSL |
-            SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_DXBC |
-            SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_DXIL,
+            SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV,
             true,
             (byte*)null
         );
 
         if (_device == null)
         {
-            throw new InvalidOperationException($"Failed to create SDL_GPU device: {SDL3.SDL_GetError()}");
+            throw new InvalidOperationException($"Failed to create SDL_GPU device with SPIR-V support: {SDL3.SDL_GetError()}");
         }
 
         if (!SDL3.SDL_ClaimWindowForGPUDevice(_device, window.Handle))
