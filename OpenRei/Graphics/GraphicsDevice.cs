@@ -64,7 +64,7 @@ public unsafe class GraphicsDevice : IDisposable
 
     /// <summary>
     /// Renders text using SDL3_ttf renderer text engine (glyph atlas, zero per-frame texture alloc).
-    /// When a stroke is specified, renders an outlined pass behind the fill pass.
+    /// When a stroke is specified, renders an outlined pass behind the fill pass at the same position.
     /// </summary>
     public void RenderText(Font? font, float fontSize, string text, Rect bounds, Color color,
         Color strokeColor = default, float strokeThickness = 0)
@@ -72,32 +72,40 @@ public unsafe class GraphicsDevice : IDisposable
         font ??= FontEngine.DefaultFont;
         if (!IsInitialized || _ttfEngine == null || font == null || string.IsNullOrEmpty(text) || color.A <= 0.001f) return;
 
-        // Stroke pass (behind): outlined font handle in the stroke color
+        // Compute the fill size + centered position ONCE (both passes share this origin)
+        TTF_Font* fontHandle = font.GetHandle(fontSize);
+        if (fontHandle == null) return;
+
+        float posX, posY;
+        {
+            var fillText = SDL3_ttf.TTF_CreateText(_ttfEngine, fontHandle, text, (nuint)text.Length);
+            if (fillText == null) return;
+            int textW = 0, textH = 0;
+            SDL3_ttf.TTF_GetTextSize(fillText, &textW, &textH);
+            posX = MathF.Floor(bounds.X + (bounds.Width - textW) * 0.5f);
+            posY = MathF.Floor(bounds.Y + (bounds.Height - textH) * 0.5f);
+            SDL3_ttf.TTF_DestroyText(fillText);
+        }
+
+        // Stroke pass (behind): outlined font handle in the stroke color, same origin as fill
         if (strokeThickness > 0f && strokeColor.A > 0f)
         {
             TTF_Font* strokeHandle = font.GetHandle(fontSize, (int)MathF.Round(strokeThickness));
             if (strokeHandle != null)
-                DrawTextPass(strokeHandle, text, bounds, strokeColor);
+                DrawTextAt(strokeHandle, text, posX, posY, strokeColor);
         }
 
-        // Fill pass (front): normal font handle in the fill color
-        TTF_Font* fontHandle = font.GetHandle(fontSize);
-        if (fontHandle == null) return;
-        DrawTextPass(fontHandle, text, bounds, color);
+        // Fill pass (front): normal font handle in the fill color, same origin as stroke
+        DrawTextAt(fontHandle, text, posX, posY, color);
     }
 
-    private void DrawTextPass(TTF_Font* fontHandle, string text, Rect bounds, Color color)
+    private void DrawTextAt(TTF_Font* fontHandle, string text, float posX, float posY, Color color)
     {
         var ttfText = SDL3_ttf.TTF_CreateText(_ttfEngine, fontHandle, text, (nuint)text.Length);
         if (ttfText == null) return;
 
         try
         {
-            int textW = 0, textH = 0;
-            SDL3_ttf.TTF_GetTextSize(ttfText, &textW, &textH);
-            float posX = MathF.Floor(bounds.X + (bounds.Width - textW) * 0.5f);
-            float posY = MathF.Floor(bounds.Y + (bounds.Height - textH) * 0.5f);
-
             SDL3_ttf.TTF_SetTextColorFloat(ttfText, color.R, color.G, color.B, color.A);
             SDL3_ttf.TTF_DrawRendererText(ttfText, posX, posY);
         }
