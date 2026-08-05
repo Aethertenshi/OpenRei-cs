@@ -87,12 +87,14 @@ public unsafe class GraphicsDevice : IDisposable
             SDL3_ttf.TTF_DestroyText(fillText);
         }
 
-        // Stroke pass (behind): outlined font handle in the stroke color, same origin as fill
+        // Stroke pass (behind): outlined font handle in the stroke color.
+        // FreeType's stroke shifts the glyph bitmaps down-right by the thickness,
+        // so nudge the stroke up-left by `t` to keep it symmetric around the fill.
         if (strokeThickness > 0f && strokeColor.A > 0f)
         {
             TTF_Font* strokeHandle = font.GetHandle(fontSize, (int)MathF.Round(strokeThickness));
             if (strokeHandle != null)
-                DrawTextAt(strokeHandle, text, posX, posY, strokeColor);
+                DrawTextAt(strokeHandle, text, posX - strokeThickness, posY - strokeThickness, strokeColor);
         }
 
         // Fill pass (front): normal font handle in the fill color, same origin as stroke
