@@ -20,6 +20,8 @@ public class Label : Element
     public float FontSize { get; set; } = 16.0f;
     public TextAlignment Alignment { get; set; } = TextAlignment.Left;
     public Font? Font { get; set; }
+    public Color TextStrokeColor { get; set; } = Color.Transparent;
+    public float TextStrokeThickness { get; set; } = 0.0f;
 
     public Label()
     {
@@ -64,7 +66,24 @@ public class Label : Element
         Font? resolved = Font ?? FontEngine.DefaultFont;
         if (resolved != null)
         {
-            context.DrawText(resolved, FontSize, Text, AbsoluteBounds, TextColor, ZIndex);
+            Color strokeColor = TextStrokeColor;
+            float strokeThickness = TextStrokeThickness;
+
+            // Fallback to UIStroke modifier or element Stroke if assigned
+            if (strokeThickness <= 0f && Stroke.Thickness > 0f && Stroke.Color.A > 0f)
+            {
+                strokeColor = Stroke.Color;
+                strokeThickness = Stroke.Thickness;
+            }
+
+            if (strokeThickness > 0f && strokeColor.A > 0f)
+            {
+                context.DrawTextStroke(resolved, FontSize, Text, AbsoluteBounds, TextColor, strokeColor, strokeThickness, ZIndex);
+            }
+            else
+            {
+                context.DrawText(resolved, FontSize, Text, AbsoluteBounds, TextColor, ZIndex);
+            }
         }
     }
 }

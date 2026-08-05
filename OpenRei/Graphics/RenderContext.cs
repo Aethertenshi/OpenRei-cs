@@ -53,11 +53,35 @@ public class RenderContext
 {
     private readonly List<FifoCommand> _commands = new();
     private readonly Stack<Rect> _visibleStack = new();
+    private readonly Stack<float> _alphaStack = new();
+    private float _currentAlphaMultiplier = 1.0f;
     private Rect _visibleBounds;
 
     internal unsafe SDL_Renderer* RendererHandle { get; set; }
 
     public IReadOnlyList<FifoCommand> Commands => _commands;
+
+    /// <summary>The current effective alpha multiplier applied to all draw calls (1.0 = opaque, 0.0 = transparent).</summary>
+    public float CurrentAlphaMultiplier => _currentAlphaMultiplier;
+
+    /// <summary>
+    /// Pushes a group transparency value (0 = fully opaque, 1 = fully transparent).
+    /// Cascades by multiplying with the current parent group alpha.
+    /// </summary>
+    public void PushGroupTransparency(float groupTransparency)
+    {
+        float opacity = Math.Clamp(1.0f - groupTransparency, 0.0f, 1.0f);
+        _alphaStack.Push(_currentAlphaMultiplier);
+        _currentAlphaMultiplier *= opacity;
+    }
+
+    /// <summary>
+    /// Restores the previous group transparency state.
+    /// </summary>
+    public void PopGroupTransparency()
+    {
+        _currentAlphaMultiplier = _alphaStack.Count > 0 ? _alphaStack.Pop() : 1.0f;
+    }
 
     /// <summary>Must be set each frame to the full window rect before traversal.</summary>
     public Rect VisibleBounds
@@ -97,7 +121,9 @@ public class RenderContext
 
     public void DrawQuad(Rect bounds, Color color, CornerRadius cornerRadius = default, float zIndex = 1.0f)
     {
-        _commands.Add(FifoCommand.Quad(bounds, color, cornerRadius, zIndex));
+        Color finalColor = color.WithAlpha(color.A * _currentAlphaMultiplier);
+        if (finalColor.A <= 0.001f) return;
+        _commands.Add(FifoCommand.Quad(bounds, finalColor, cornerRadius, zIndex));
     }
 
     /// <summary>
@@ -107,14 +133,18 @@ public class RenderContext
     public void DrawPolygon(List<Vector2D> points, Color color, float zIndex = 1.0f)
     {
         if (points == null || points.Count < 3) return;
-        _commands.Add(FifoCommand.Polygon(points, color, zIndex));
+        Color finalColor = color.WithAlpha(color.A * _currentAlphaMultiplier);
+        if (finalColor.A <= 0.001f) return;
+        _commands.Add(FifoCommand.Polygon(points, finalColor, zIndex));
     }
 
     public void DrawText(Font? font, float fontSize, string text, Rect bounds, Color color, float zIndex = 1f)
     {
         if (!string.IsNullOrEmpty(text))
         {
-            _commands.Add(FifoCommand.MakeText(font, fontSize, text, bounds, color, zIndex));
+            Color finalColor = color.WithAlpha(color.A * _currentAlphaMultiplier);
+            if (finalColor.A <= 0.001f) return;
+            _commands.Add(FifoCommand.MakeText(font, fontSize, text, bounds, finalColor, zIndex));
         }
     }
 
@@ -123,11 +153,39 @@ public class RenderContext
         DrawText(font, font?.DefaultSize ?? 16.0f, text, bounds, color, zIndex);
     }
 
+    /// <summary>
+    /// Draws text with an outer outline stroke rendered behind the main text body.
+    /// </summary>
+    public void DrawTextStroke(Font? font, float fontSize, string text, Rect bounds, Color textColor, Color strokeColor, float strokeThickness = 1.0f, float zIndex = 1f)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+
+        if (strokeThickness > 0f && strokeColor.A > 0f)
+        {
+            float t = strokeThickness;
+            // 8-directional outline offsets
+            DrawText(font, fontSize, text, new Rect(bounds.X - t, bounds.Y, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+            DrawText(font, fontSize, text, new Rect(bounds.X + t, bounds.Y, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+            DrawText(font, fontSize, text, new Rect(bounds.X, bounds.Y - t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+            DrawText(font, fontSize, text, new Rect(bounds.X, bounds.Y + t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+
+            DrawText(font, fontSize, text, new Rect(bounds.X - t, bounds.Y - t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+            DrawText(font, fontSize, text, new Rect(bounds.X + t, bounds.Y - t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+            DrawText(font, fontSize, text, new Rect(bounds.X - t, bounds.Y + t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+            DrawText(font, fontSize, text, new Rect(bounds.X + t, bounds.Y + t, bounds.Width, bounds.Height), strokeColor, zIndex - 0.01f);
+        }
+
+        DrawText(font, fontSize, text, bounds, textColor, zIndex);
+    }
+
     public void DrawImage(Texture? texture, Rect destBounds, Rect? sourceRect = null, Color? color = null, BlurFilter? blurFilter = null, float zIndex = 1f, CornerRadius cornerRadius = default)
     {
         if (texture != null && texture.IsValid)
         {
-            _commands.Add(FifoCommand.Image(texture, destBounds, sourceRect, color ?? Color.White, blurFilter, zIndex, cornerRadius));
+            Color baseColor = color ?? Color.White;
+            Color finalColor = baseColor.WithAlpha(baseColor.A * _currentAlphaMultiplier);
+            if (finalColor.A <= 0.001f) return;
+            _commands.Add(FifoCommand.Image(texture, destBounds, sourceRect, finalColor, blurFilter, zIndex, cornerRadius));
         }
     }
 
@@ -135,18 +193,29 @@ public class RenderContext
     public void ApplyBlur(Rect bounds, BlurFilter filter, Color? tint = null, CornerRadius cornerRadius = default)
     {
         if (filter?.Enabled == true && filter.Radius > 0.05f)
-            _commands.Add(FifoCommand.BlurRegion(bounds, tint ?? Color.White, cornerRadius, filter));
+        {
+            Color baseColor = tint ?? Color.White;
+            Color finalColor = baseColor.WithAlpha(baseColor.A * _currentAlphaMultiplier);
+            if (finalColor.A <= 0.001f) return;
+            _commands.Add(FifoCommand.BlurRegion(bounds, finalColor, cornerRadius, filter));
+        }
     }
 
     public void DrawStroke(Rect bounds, StrokeInfo stroke, CornerRadius cornerRadius = default, float zIndex = 1f)
     {
         if (stroke.Thickness <= 0f || stroke.Color.A <= 0f) return;
-        _commands.Add(FifoCommand.StrokeCmd(bounds, stroke, cornerRadius, zIndex));
+        Color finalColor = stroke.Color.WithAlpha(stroke.Color.A * _currentAlphaMultiplier);
+        if (finalColor.A <= 0.001f) return;
+        StrokeInfo finalStroke = new StrokeInfo(stroke.Thickness, finalColor, stroke.Alignment);
+        _commands.Add(FifoCommand.StrokeCmd(bounds, finalStroke, cornerRadius, zIndex));
     }
 
     public void DrawSpline(List<Vector2D> points, float strokeWidth, Color color, float zIndex = 1.0f)
     {
         if (points.Count < 2) return;
+
+        Color finalColor = color.WithAlpha(color.A * _currentAlphaMultiplier);
+        if (finalColor.A <= 0.001f) return;
 
         for (int i = 0; i < points.Count - 1; i++)
         {
@@ -158,7 +227,7 @@ public class RenderContext
             if (len <= 0.0001f) continue;
 
             Rect bounds = new Rect(p0.X, p0.Y - strokeWidth * 0.5f, len, strokeWidth);
-            _commands.Add(FifoCommand.Quad(bounds, color, CornerRadius.Zero, zIndex));
+            _commands.Add(FifoCommand.Quad(bounds, finalColor, CornerRadius.Zero, zIndex));
         }
     }
 }

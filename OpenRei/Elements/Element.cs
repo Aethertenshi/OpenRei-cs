@@ -35,6 +35,11 @@ public class Element
     public Color Color { get; set; } = Color.White;
     public CornerRadius CornerRadius { get; set; } = CornerRadius.Zero;
     public bool Visible { get; set; } = true;
+
+    /// <summary>
+    /// Group transparency applied to this element and all descendant children (0 = fully opaque, 1 = fully transparent).
+    /// </summary>
+    public float GroupTransparency { get; set; } = 0.0f;
     public bool ClipsToBounds { get; set; } = false;
     public StrokeInfo Stroke { get; set; } = StrokeInfo.None;
 
@@ -234,52 +239,62 @@ public class Element
 
     public virtual void Render(RenderContext context)
     {
-        if (!Visible) return;
+        if (!Visible || GroupTransparency >= 0.999f) return;
 
-        // Skip elements outside the visible viewport (culling)
-        if (!context.IsVisible(AbsoluteBounds)) return;
+        bool hasGroupTrans = GroupTransparency > 0.0001f;
+        if (hasGroupTrans) context.PushGroupTransparency(GroupTransparency);
 
-        // Process filters BEFORE drawing the element's own content
-        foreach (var filter in Filters)
+        try
         {
-            if (filter is DropShadowFilter dsf && dsf.Enabled && dsf.Color.A > 0.001f)
-            {
-                Rect shadowBounds = new Rect(
-                    AbsoluteBounds.X + dsf.Offset.X,
-                    AbsoluteBounds.Y + dsf.Offset.Y,
-                    AbsoluteBounds.Width, AbsoluteBounds.Height);
+            // Skip elements outside the visible viewport (culling)
+            if (!context.IsVisible(AbsoluteBounds)) return;
 
-                if (dsf.BlurRadius > 0.5f)
+            // Process filters BEFORE drawing the element's own content
+            foreach (var filter in Filters)
+            {
+                if (filter is DropShadowFilter dsf && dsf.Enabled && dsf.Color.A > 0.001f)
                 {
-                    context.ApplyBlur(shadowBounds, dsf.GetBlurFilter(), dsf.Color, CornerRadius);
+                    Rect shadowBounds = new Rect(
+                        AbsoluteBounds.X + dsf.Offset.X,
+                        AbsoluteBounds.Y + dsf.Offset.Y,
+                        AbsoluteBounds.Width, AbsoluteBounds.Height);
+
+                    if (dsf.BlurRadius > 0.5f)
+                    {
+                        context.ApplyBlur(shadowBounds, dsf.GetBlurFilter(), dsf.Color, CornerRadius);
+                    }
+                    else
+                    {
+                        context.DrawQuad(shadowBounds, dsf.Color, CornerRadius, ZIndex - 0.5f);
+                    }
                 }
-                else
+            }
+
+            // Draw element quad if non-transparent
+            if (Color.A > 0f && AbsoluteSize.X > 0f && AbsoluteSize.Y > 0f)
+            {
+                context.DrawQuad(AbsoluteBounds, Color, CornerRadius, ZIndex);
+            }
+
+            // Draw stroke outline if active
+            if (Stroke.Thickness > 0f && Stroke.Color.A > 0f)
+            {
+                context.DrawStroke(AbsoluteBounds, Stroke, CornerRadius, ZIndex + 0.1f);
+            }
+
+            // Render children according to local ZIndex stacking order
+            var sortedChildren = GetSortedChildren();
+            foreach (var child in sortedChildren)
+            {
+                if (child.Visible)
                 {
-                    context.DrawQuad(shadowBounds, dsf.Color, CornerRadius, ZIndex - 0.5f);
+                    child.Render(context);
                 }
             }
         }
-
-        // Draw element quad if non-transparent
-        if (Color.A > 0f && AbsoluteSize.X > 0f && AbsoluteSize.Y > 0f)
+        finally
         {
-            context.DrawQuad(AbsoluteBounds, Color, CornerRadius, ZIndex);
-        }
-
-        // Draw stroke outline if active
-        if (Stroke.Thickness > 0f && Stroke.Color.A > 0f)
-        {
-            context.DrawStroke(AbsoluteBounds, Stroke, CornerRadius, ZIndex + 0.1f);
-        }
-
-        // Render children according to local ZIndex stacking order
-        var sortedChildren = GetSortedChildren();
-        foreach (var child in sortedChildren)
-        {
-            if (child.Visible)
-            {
-                child.Render(context);
-            }
+            if (hasGroupTrans) context.PopGroupTransparency();
         }
     }
 }

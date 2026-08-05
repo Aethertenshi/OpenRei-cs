@@ -14,6 +14,8 @@ public class Button : Element
     public Color? HoverColor { get; set; } = null;
     public Color? PressColor { get; set; } = null;
     public Font? Font { get; set; }
+    public Color TextStrokeColor { get; set; } = Color.Transparent;
+    public float TextStrokeThickness { get; set; } = 0.0f;
 
     public bool IsHovered { get; private set; }
     public bool IsPressed { get; private set; }
@@ -87,7 +89,14 @@ public class Button : Element
             Font? resolved = Font ?? FontEngine.DefaultFont;
             if (resolved != null)
             {
-                context.DrawText(resolved, FontSize, Text, AbsoluteBounds, TextColor, ZIndex + 0.2f);
+                if (TextStrokeThickness > 0f && TextStrokeColor.A > 0f)
+                {
+                    context.DrawTextStroke(resolved, FontSize, Text, AbsoluteBounds, TextColor, TextStrokeColor, TextStrokeThickness, ZIndex + 0.2f);
+                }
+                else
+                {
+                    context.DrawText(resolved, FontSize, Text, AbsoluteBounds, TextColor, ZIndex + 0.2f);
+                }
             }
         }
     }

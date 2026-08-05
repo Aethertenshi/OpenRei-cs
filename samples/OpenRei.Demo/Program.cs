@@ -73,19 +73,19 @@ var helloButton = new Button
 
 helloButton.OnClick += () =>
 {
-    Console.WriteLine("[Event] Hello Button Clicked! Starting elastic scale tween...");
-    var scaleTween = new Tween(1.0f, 1.2f, 0.4f, (val) =>
+    Console.WriteLine("[Event] Hello Button Clicked! Starting GroupTransparency fade out & in tween...");
+    var fadeOut = new Tween(0.0f, 0.8f, 0.4f, (val) =>
     {
-        helloButton.Size = UDim2.FromOffset(240 * val, 48 * val);
-    }, Easing.Elastic, EasingDirection.Out, onComplete: () =>
+        mainCard.GroupTransparency = val;
+    }, Easing.Cubic, EasingDirection.Out, onComplete: () =>
     {
-        var returnTween = new Tween(1.2f, 1.0f, 0.3f, (val) =>
+        var fadeIn = new Tween(0.8f, 0.0f, 0.4f, (val) =>
         {
-            helloButton.Size = UDim2.FromOffset(240 * val, 48 * val);
-        }, Easing.Cubic, EasingDirection.Out);
-        returnTween.Start();
+            mainCard.GroupTransparency = val;
+        }, Easing.Cubic, EasingDirection.In);
+        fadeIn.Start();
     });
-    scaleTween.Start();
+    fadeOut.Start();
 };
 mainCard.AddChild(helloButton);
 
