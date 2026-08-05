@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Engine/">
+    <Project Path="ReiStar.Core/ReiStar.Core.csproj" />
+    <Project Path="ReiStar.Maths/ReiStar.Maths.csproj" />
+    <Project Path="ReiStar.Graphics/ReiStar.Graphics.csproj" />
+    <Project Path="ReiStar.Shapes/ReiStar.Shapes.csproj" />
+    <Project Path="ReiStar.Audios/ReiStar.Audios.csproj" />
+    <Project Path="ReiStar.Input/ReiStar.Input.csproj" />
+    <Project Path="ReiStar.Renderer.SDL3/ReiStar.Renderer.SDL3.csproj" />
+  </Folder>
+  <Project Path="ReiStar.SampleGame/ReiStar.SampleGame.csproj" />
+</Solution>

@@ -1,0 +1,17 @@
+# .NET / C# build & IDE outputs
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.userosscache
+*.sln.docstates
+.vscode/
+
+# Build log artifacts
+*.log
+
+# Windows temp
+Thumbs.db
+ehthumbs.db
+Desktop.ini
