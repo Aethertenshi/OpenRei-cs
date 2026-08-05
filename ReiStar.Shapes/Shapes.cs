@@ -20,7 +20,6 @@ public static class Shapes
         Vect2D resolvedSize = size.Resolve(canvasSize);
         Vect2D rawPos = position.Resolve(canvasSize);
 
-        // Apply anchor point offset
         Vect2D topLeftPos = new Vect2D(
             rawPos.X - (resolvedSize.X * anchor.X),
             rawPos.Y - (resolvedSize.Y * anchor.Y)
@@ -46,5 +45,52 @@ public static class Shapes
         );
 
         renderer.DrawRect(topLeftPos, size, color, zIndex);
+    }
+
+    /// <summary>
+    /// Draws MSDF text using responsive UVect position, Anchor alignment, and Z-Index sorting.
+    /// </summary>
+    public static void DrawText(
+        IRenderer renderer,
+        Font font,
+        string text,
+        UVect position,
+        float fontSize,
+        Color color,
+        Anchor anchor = default,
+        int zIndex = 0)
+    {
+        Vect2D canvasSize = renderer.CanvasSize;
+        Vect2D rawPos = position.Resolve(canvasSize);
+
+        Vect2D textSize = font.MeasureString(text, fontSize);
+        Vect2D topLeftPos = new Vect2D(
+            rawPos.X - (textSize.X * anchor.X),
+            rawPos.Y - (textSize.Y * anchor.Y)
+        );
+
+        renderer.DrawText(font, text, topLeftPos, fontSize, color, zIndex);
+    }
+
+    /// <summary>
+    /// Draws MSDF text using absolute pixel coordinates, Anchor alignment, and Z-Index sorting.
+    /// </summary>
+    public static void DrawText(
+        IRenderer renderer,
+        Font font,
+        string text,
+        Vect2D position,
+        float fontSize,
+        Color color,
+        Anchor anchor = default,
+        int zIndex = 0)
+    {
+        Vect2D textSize = font.MeasureString(text, fontSize);
+        Vect2D topLeftPos = new Vect2D(
+            position.X - (textSize.X * anchor.X),
+            position.Y - (textSize.Y * anchor.Y)
+        );
+
+        renderer.DrawText(font, text, topLeftPos, fontSize, color, zIndex);
     }
 }

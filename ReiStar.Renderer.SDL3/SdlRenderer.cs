@@ -72,6 +72,56 @@ public unsafe class SdlRenderer : IRenderer, IDisposable
     public void DrawLine(Vect2D start, Vect2D end, float thickness, Color color, int zIndex = 0) { }
     public void DrawTexture(ITexture texture, Vect2D position, Vect2D size, Color tint, int zIndex = 0) { }
 
+    public void DrawTexturedQuad(ITexture texture, Vect2D position, Vect2D size, float u0, float v0, float u1, float v1, Color tint, int zIndex = 0)
+    {
+        EnsureCapacity();
+        ulong key = ((ulong)(zIndex + (long)int.MaxValue) << 32) | _submissionCounter++;
+        _commandBuffer[_commandCount++] = new RenderCommand
+        {
+            SortKey = key,
+            Type = RenderPrimitiveType.TexturedQuad,
+            Position = position,
+            Size = size,
+            Color = tint,
+            U0 = u0,
+            V0 = v0,
+            U1 = u1,
+            V1 = v1
+        };
+    }
+
+    public void DrawText(Font font, string text, Vect2D position, float fontSize, Color color, int zIndex = 0)
+    {
+        if (font == null || string.IsNullOrEmpty(text)) return;
+
+        float scale = fontSize / (font.PixelSize <= 0 ? 32f : font.PixelSize);
+        float currentX = position.X;
+        float currentY = position.Y;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (font.TryGetGlyph(c, out var glyph))
+            {
+                float x = currentX + (glyph.BearingX * scale);
+                float y = currentY + ((font.PixelSize - glyph.BearingY) * scale);
+                float w = glyph.Width * scale;
+                float h = glyph.Height * scale;
+
+                if (font.AtlasTexture != null && w > 0 && h > 0)
+                {
+                    DrawTexturedQuad(font.AtlasTexture, new Vect2D(x, y), new Vect2D(w, h), glyph.U0, glyph.V0, glyph.U1, glyph.V1, color, zIndex);
+                }
+
+                currentX += glyph.Advance * scale;
+            }
+            else if (c == ' ')
+            {
+                currentX += (fontSize * 0.33f);
+            }
+        }
+    }
+
     public void EndFrame()
     {
         SDL3.SDL_SetRenderDrawColor(_renderer, 25, 25, 45, 255);

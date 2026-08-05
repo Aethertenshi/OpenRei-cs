@@ -25,7 +25,6 @@ public class MyGame : Game
             Size = UVect.FromOffset(320, 420),
             Anchor = Anchor.Center,
             BackgroundColor = new Color(30, 30, 45, 230),
-            Layout = LayoutMode.VerticalStack,
             Padding = 20f,
             Spacing = 15f
         };
@@ -35,7 +34,7 @@ public class MyGame : Game
         {
             Id = "RedContainer",
             Size = UVect.FromScale(1f, 0f) + UVect.FromOffset(0, 60),
-            BackgroundColor = new Color(220, 50, 50, 255)
+            BackgroundColor = new Color(220, 50, 50, 255),
         });
 
         panel.AddChild(new Container

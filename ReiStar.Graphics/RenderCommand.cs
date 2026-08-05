@@ -9,7 +9,8 @@ public enum RenderPrimitiveType : byte
     RectangleOutline,
     Circle,
     Line,
-    Texture
+    Texture,
+    TexturedQuad
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -22,4 +23,8 @@ public struct RenderCommand
     public Color Color;
     public float Thickness;
     public ushort TextureId;
+    public float U0;
+    public float V0;
+    public float U1;
+    public float V1;
 }
