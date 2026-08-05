@@ -18,6 +18,20 @@ public struct UVect
     public static UVect FromOffset(float offsetX, float offsetY) => new(0f, offsetX, 0f, offsetY);
     public static UVect FromScale(float scaleX, float scaleY) => new(scaleX, 0f, scaleY, 0f);
 
+    public static UVect operator +(UVect a, UVect b) => new(
+        a.ScaleX + b.ScaleX,
+        a.OffsetX + b.OffsetX,
+        a.ScaleY + b.ScaleY,
+        a.OffsetY + b.OffsetY
+    );
+
+    public static UVect operator -(UVect a, UVect b) => new(
+        a.ScaleX - b.ScaleX,
+        a.OffsetX - b.OffsetX,
+        a.ScaleY - b.ScaleY,
+        a.OffsetY - b.OffsetY
+    );
+
     /// <summary>
     /// Calculates resolved pixel coordinates: (parentSize * Scale) + Offset
     /// </summary>

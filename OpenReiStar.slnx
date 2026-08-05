@@ -8,5 +8,8 @@
     <Project Path="ReiStar.Input/ReiStar.Input.csproj" />
     <Project Path="ReiStar.Renderer.SDL3/ReiStar.Renderer.SDL3.csproj" />
   </Folder>
+  <Folder Name="/Points/">
+    <Project Path="ReiStar.Points/ReiStar.Points.csproj" />
+  </Folder>
   <Project Path="ReiStar.SampleGame/ReiStar.SampleGame.csproj" />
 </Solution>
