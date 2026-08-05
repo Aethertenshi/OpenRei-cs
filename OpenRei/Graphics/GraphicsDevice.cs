@@ -94,7 +94,7 @@ public unsafe class GraphicsDevice : IDisposable
         {
             TTF_Font* strokeHandle = font.GetHandle(fontSize, (int)MathF.Round(strokeThickness));
             if (strokeHandle != null)
-                DrawTextAt(strokeHandle, text, posX - strokeThickness, posY - strokeThickness, strokeColor);
+                DrawTextAt(strokeHandle, text, posX - (strokeThickness * 2f), posY - (strokeThickness * 2f), strokeColor);
         }
 
         // Fill pass (front): normal font handle in the fill color, same origin as stroke
