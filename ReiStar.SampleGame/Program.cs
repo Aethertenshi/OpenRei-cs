@@ -3,6 +3,7 @@ using reistar.Maths;
 using reistar.Shapes;
 using reistar.Renderer.SDL3;
 using reistar.Points.UI;
+using reistar.Graphics;
 
 // 1. Launch the engine
 new MyGame().Run();
@@ -12,6 +13,7 @@ public class MyGame : Game
 {
     public MyGame() : base(new SdlRenderer("OpenReiStar - Container UI Demo", 1280, 720)) { }
 
+    private Font myFont = new Font();
     protected override void OnInitialize()
     {
         // Attach Layer 3 UI Point module
@@ -62,6 +64,16 @@ public class MyGame : Game
             size: UVect.FromScale(1f, 1f),
             color: new Color(15, 15, 25, 255),
             zIndex: 0
+        );
+        Shapes.DrawText(
+            Renderer,
+            font: myFont,
+            text: "OPEN REISTAR ENGINE",
+            position: UVect.FromScale(0.5f, 0.1f),
+            fontSize: 36f,
+            color: Color.White,
+            anchor: Anchor.Center, // Centered alignment
+            zIndex: 100
         );
     }
 }
