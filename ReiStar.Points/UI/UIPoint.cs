@@ -9,7 +9,7 @@ public class UIPoint : IPoint
     public string Name => "ReiStar.UI";
     public bool Enabled { get; set; } = true;
 
-    public UIElement Root { get; } = new UIElement
+    public Container Root { get; } = new Container
     {
         Id = "Root",
         Position = UVect.FromScale(0f, 0f),

@@ -10,15 +10,15 @@ new MyGame().Run();
 // 2. Clean, code-only Game class
 public class MyGame : Game
 {
-    public MyGame() : base(new SdlRenderer("OpenReiStar - Layer 3 UI Point Demo", 1280, 720)) { }
+    public MyGame() : base(new SdlRenderer("OpenReiStar - Container UI Demo", 1280, 720)) { }
 
     protected override void OnInitialize()
     {
         // Attach Layer 3 UI Point module
         var ui = Points.AttachPoint(new UIPoint());
 
-        // Create an Auto-Layout Vertical Panel centered on screen
-        var panel = new UIElement
+        // Create an approachable Container component
+        var panel = new Container
         {
             Id = "MainPanel",
             Position = UVect.FromScale(0.5f, 0.5f),
@@ -30,24 +30,24 @@ public class MyGame : Game
             Spacing = 15f
         };
 
-        // Add auto-layout nested children (Red, Green, Blue UI boxes)
-        panel.AddChild(new UIElement
+        // Add child Container elements
+        panel.AddChild(new Container
         {
-            Id = "RedItem",
+            Id = "RedContainer",
             Size = UVect.FromScale(1f, 0f) + UVect.FromOffset(0, 60),
             BackgroundColor = new Color(220, 50, 50, 255)
         });
 
-        panel.AddChild(new UIElement
+        panel.AddChild(new Container
         {
-            Id = "GreenItem",
+            Id = "GreenContainer",
             Size = UVect.FromScale(1f, 0f) + UVect.FromOffset(0, 60),
             BackgroundColor = new Color(50, 180, 50, 255)
         });
 
-        panel.AddChild(new UIElement
+        panel.AddChild(new Container
         {
-            Id = "BlueItem",
+            Id = "BlueContainer",
             Size = UVect.FromScale(1f, 0f) + UVect.FromOffset(0, 60),
             BackgroundColor = new Color(50, 100, 220, 255)
         });
@@ -57,7 +57,6 @@ public class MyGame : Game
 
     protected override void OnRender()
     {
-        // Draw raw background shape (Layer 2)
         Shapes.DrawRect(
             Renderer,
             position: UVect.FromScale(0f, 0f),
@@ -65,7 +64,5 @@ public class MyGame : Game
             color: new Color(15, 15, 25, 255),
             zIndex: 0
         );
-
-        // Note: Points.RenderPoints() automatically draws the Layer 3 UI tree!
     }
 }

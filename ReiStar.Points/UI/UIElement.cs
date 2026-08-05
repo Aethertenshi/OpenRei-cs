@@ -6,7 +6,7 @@ using reistar.Maths;
 using reistar.Graphics;
 using reistar.Shapes;
 
-public class UIElement
+public abstract class UIElement
 {
     public string Id { get; set; } = string.Empty;
     public UVect Position { get; set; } = UVect.FromOffset(0, 0);
@@ -45,7 +45,7 @@ public class UIElement
         }
     }
 
-    public void CalculateLayout(Vect2D containerSize, Vect2D containerTopLeft = default, int depth = 0)
+    public virtual void CalculateLayout(Vect2D containerSize, Vect2D containerTopLeft = default, int depth = 0)
     {
         CalculatedDepth = depth;
         ResolvedSize = Size.Resolve(containerSize);
@@ -117,7 +117,7 @@ public class UIElement
         }
     }
 
-    public void Draw(IRenderer renderer)
+    public virtual void Draw(IRenderer renderer)
     {
         int effectiveZIndex = (CalculatedDepth * 10) + ZIndex;
 
