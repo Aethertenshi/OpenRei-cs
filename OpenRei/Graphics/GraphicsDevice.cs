@@ -238,6 +238,13 @@ public unsafe class GraphicsDevice : IDisposable
                             RenderPolygon(cmd.Points, cmd.Color);
                         break;
                     }
+                case 8: // Mesh (prebuilt vertex/index batch)
+                    {
+                        FlushBatch();
+                        if (cmd.Mesh != null)
+                            RenderMesh(cmd.Mesh);
+                        break;
+                    }
             }
         }
 
@@ -343,6 +350,20 @@ public unsafe class GraphicsDevice : IDisposable
         fixed (int* iPtr = _polyIndices)
         {
             SDL3.SDL_RenderGeometry(_renderer, null, vPtr, n, iPtr, idxCount);
+        }
+    }
+
+    /// <summary>Draws a prebuilt mesh in a single SDL_RenderGeometry call.</summary>
+    private void RenderMesh(MeshBuilder mesh)
+    {
+        if (_renderer == null || mesh == null || mesh.VertexCount < 3 || mesh.IndexCount < 3) return;
+
+        var verts = mesh.GetVertices();
+        var indices = mesh.GetIndices();
+        fixed (SDL_Vertex* vPtr = verts)
+        fixed (int* iPtr = indices)
+        {
+            SDL3.SDL_RenderGeometry(_renderer, null, vPtr, mesh.VertexCount, iPtr, mesh.IndexCount);
         }
     }
 

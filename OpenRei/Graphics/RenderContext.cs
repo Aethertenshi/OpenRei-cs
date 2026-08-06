@@ -24,16 +24,18 @@ public readonly struct FifoCommand
     public readonly List<Vector2D>? Points;
     public readonly Color StrokeColor;
     public readonly float StrokeThickness;
+    public readonly MeshBuilder? Mesh;
 
     private FifoCommand(byte type, Rect bounds, Color color, CornerRadius cornerRadius, float zIndex,
         Texture? texture = null, Rect? sourceRect = null, BlurFilter? blurFilter = null,
         Font? font = null, float fontSize = 16.0f, string? text = null, StrokeInfo stroke = default,
-        List<Vector2D>? points = null, Color strokeColor = default, float strokeThickness = 0)
+        List<Vector2D>? points = null, Color strokeColor = default, float strokeThickness = 0,
+        MeshBuilder? mesh = null)
     {
         Type = type; Bounds = bounds; Color = color; CornerRadius = cornerRadius; ZIndex = zIndex;
         Texture = texture; SourceRect = sourceRect; BlurFilter = blurFilter;
         Font = font; FontSize = fontSize; TextString = text; Stroke = stroke; Points = points;
-        StrokeColor = strokeColor; StrokeThickness = strokeThickness;
+        StrokeColor = strokeColor; StrokeThickness = strokeThickness; Mesh = mesh;
     }
 
     internal static FifoCommand Quad(Rect b, Color c, CornerRadius r, float z) => new(0, b, c, r, z);
@@ -47,6 +49,7 @@ public readonly struct FifoCommand
     internal static FifoCommand BlurRegion(Rect b, Color c, CornerRadius r, BlurFilter f) => new(5, b, c, r, 0, blurFilter: f);
     internal static FifoCommand StrokeCmd(Rect b, StrokeInfo s, CornerRadius r, float z) => new(6, b, s.Color, r, z, stroke: s);
     internal static FifoCommand Polygon(List<Vector2D> pts, Color c, float z) => new(7, default, c, CornerRadius.Zero, z, points: pts);
+    internal static FifoCommand MeshCmd(MeshBuilder m, float z) => new(8, default, default, CornerRadius.Zero, z, mesh: m);
 }
 
 /// <summary>
@@ -140,6 +143,36 @@ public class RenderContext
         Color finalColor = color.WithAlpha(color.A * _currentAlphaMultiplier);
         if (finalColor.A <= 0.001f) return;
         _commands.Add(FifoCommand.Polygon(points, finalColor, zIndex));
+    }
+
+    /// <summary>
+    /// Submits a pre-built <see cref="MeshBuilder"/> as a single draw call.
+    /// Reuse one builder across primitives (e.g. a whole map) for one batched draw.
+    /// </summary>
+    public void DrawMesh(MeshBuilder mesh, float zIndex = 1.0f)
+    {
+        if (mesh == null || mesh.VertexCount < 3 || mesh.IndexCount < 3) return;
+        _commands.Add(FifoCommand.MeshCmd(mesh, zIndex));
+    }
+
+    /// <summary>Convenience for a single thick line. For many lines, prefer a reused <see cref="MeshBuilder"/> + <see cref="DrawMesh"/>.</summary>
+    public void DrawLine(Vector2D start, Vector2D end, Color color, float thickness = 1.0f, float zIndex = 1.0f)
+    {
+        if (thickness <= 0f || color.A <= 0.001f) return;
+        Color finalColor = color.WithAlpha(color.A * _currentAlphaMultiplier);
+        var mesh = new MeshBuilder();
+        mesh.AddLine(start, end, thickness, finalColor);
+        DrawMesh(mesh, zIndex);
+    }
+
+    /// <summary>Convenience for a polyline of thick lines (square joins). For many polylines, prefer a reused <see cref="MeshBuilder"/>.</summary>
+    public void DrawPolyline(List<Vector2D> points, Color color, float thickness = 1.0f, float zIndex = 1.0f)
+    {
+        if (points == null || points.Count < 2 || thickness <= 0f || color.A <= 0.001f) return;
+        Color finalColor = color.WithAlpha(color.A * _currentAlphaMultiplier);
+        var mesh = new MeshBuilder();
+        mesh.AddPolyline(points, thickness, finalColor);
+        DrawMesh(mesh, zIndex);
     }
 
     public void DrawText(Font? font, float fontSize, string text, Rect bounds, Color color, float zIndex = 1f)
