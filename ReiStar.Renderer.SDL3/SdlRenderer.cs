@@ -134,33 +134,14 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
     {
         if (font == null || string.IsNullOrEmpty(text) || color.A == 0) return;
 
-        float currentX = position.X;
-        float currentY = position.Y;
-        float baselineY = currentY + (fontSize * 0.75f);
-
-        for (int i = 0; i < text.Length; i++)
+        ITexture? stringTex = font.GetRenderedStringTexture(this, text, fontSize, color);
+        if (stringTex != null)
         {
-            char c = text[i];
-            if (font.TryGetGlyph(c, fontSize, this, out var glyph))
-            {
-                if (glyph.Width > 0 && glyph.Height > 0 && font.AtlasTexture != null)
-                {
-                    float x = currentX + glyph.BearingX;
-                    float y = baselineY - glyph.BearingY;
-                    float w = glyph.Width;
-                    float h = glyph.Height;
-
-                    DrawTexturedQuad(font.AtlasTexture, new Vect2D(x, y), new Vect2D(w, h), glyph.U0, glyph.V0, glyph.U1, glyph.V1, color, zIndex);
-                }
-
-                currentX += glyph.Advance;
-            }
-            else if (c == ' ')
-            {
-                currentX += (fontSize * 0.33f);
-            }
+            DrawTexture(stringTex, position, new Vect2D(stringTex.Width, stringTex.Height), Color.White, zIndex);
         }
     }
+
+
 
 
     public ITexture? CreateTexture(int width, int height, byte[] rgbaPixels)
