@@ -4,9 +4,9 @@ using reistar.Core;
 using reistar.Graphics;
 using reistar.Maths;
 
-public class UIPoint : IPoint
+public class UIFeaturePoint : IPoint
 {
-    public string Name => "ReiStar.UI";
+    public string Name => "ReiStar.UIFeaturePoint";
     public bool Enabled { get; set; } = true;
 
     public Container Root { get; } = new Container

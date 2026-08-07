@@ -6,6 +6,7 @@ using reistar.Maths;
 
 public unsafe class SdlWindow : IWindow
 {
+    private static int _activeWindowCount = 0;
     private SDL_Window* _window;
     private string _title;
     private bool _isRunning;
@@ -33,14 +34,23 @@ public unsafe class SdlWindow : IWindow
         _title = title;
         _size = new Vect2D(width, height);
 
-        if (!SDL3.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO))
+        if (_activeWindowCount == 0)
         {
-            throw new InvalidOperationException($"Failed to initialize SDL3: {SDL3.SDL_GetError()}");
+            if (!SDL3.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO))
+            {
+                throw new InvalidOperationException($"Failed to initialize SDL3: {SDL3.SDL_GetError()}");
+            }
+            if (!SDL3_ttf.TTF_Init())
+            {
+                throw new InvalidOperationException($"Failed to initialize SDL3_ttf: {SDL3.SDL_GetError()}");
+            }
         }
+        _activeWindowCount++;
 
         _window = SDL3.SDL_CreateWindow(title, width, height, flags);
         if (_window == null)
         {
+            _activeWindowCount--;
             throw new InvalidOperationException($"Failed to create SDL3 Window: {SDL3.SDL_GetError()}");
         }
 
@@ -69,7 +79,15 @@ public unsafe class SdlWindow : IWindow
         {
             SDL3.SDL_DestroyWindow(_window);
             _window = null;
+            _activeWindowCount--;
+
+            if (_activeWindowCount <= 0)
+            {
+                _activeWindowCount = 0;
+                SDL3_ttf.TTF_Quit();
+                SDL3.SDL_Quit();
+            }
         }
-        SDL3.SDL_Quit();
     }
 }
+

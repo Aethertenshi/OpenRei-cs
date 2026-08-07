@@ -1,9 +1,11 @@
+using System;
+using System.IO;
 using reistar.Core;
 using reistar.Maths;
 using reistar.Shapes;
+using reistar.Graphics;
 using reistar.Renderer.SDL3;
 using reistar.Points.UI;
-using reistar.Graphics;
 
 // 1. Launch the engine
 new MyGame().Run();
@@ -11,47 +13,33 @@ new MyGame().Run();
 // 2. Clean, code-only Game class
 public class MyGame : Game
 {
-    public MyGame() : base(new SdlRenderer("OpenReiStar - Container UI Demo", 1280, 720)) { }
+    private Font _myFont = null!;
 
-    private Font myFont = new Font();
+    public MyGame() : base(new SdlRenderer("OpenReiStar - Text & UI Demo", 1280, 720)) { }
+
     protected override void OnInitialize()
     {
-        // Attach Layer 3 UI Point module
-        var ui = Points.AttachPoint(new UIPoint());
+        var ui = Points.AttachPoint(new UIFeaturePoint());
 
-        // Create an approachable Container component
+        string fontPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GoogleSans-Regular.ttf");
+        _myFont = new Font(fontPath, 32);
+
         var panel = new Container
         {
             Id = "MainPanel",
             Position = UVect.FromScale(0.5f, 0.5f),
-            Size = UVect.FromOffset(320, 420),
+            Size = UVect.FromOffset(360, 440),
             Anchor = Anchor.Center,
             BackgroundColor = new Color(30, 30, 45, 230),
-            Padding = 20f,
-            Spacing = 15f
+            Layout = LayoutMode.VerticalStack,
+            Padding = 1f,
+            Spacing = 1f
         };
 
-        // Add child Container elements
-        panel.AddChild(new Container
-        {
-            Id = "RedContainer",
-            Size = UVect.FromScale(1f, 0f) + UVect.FromOffset(0, 60),
-            BackgroundColor = new Color(220, 50, 50, 255),
-        });
-
-        panel.AddChild(new Container
-        {
-            Id = "GreenContainer",
-            Size = UVect.FromScale(1f, 0f) + UVect.FromOffset(0, 60),
-            BackgroundColor = new Color(50, 180, 50, 255)
-        });
-
-        panel.AddChild(new Container
-        {
-            Id = "BlueContainer",
-            Size = UVect.FromScale(1f, 0f) + UVect.FromOffset(0, 60),
-            BackgroundColor = new Color(50, 100, 220, 255)
-        });
+        panel.AddChild(new Label("REISTAR ENGINE", _myFont, fontSize: 14f, textColor: Color.Yellow));
+        panel.AddChild(new Label("1. START GAME", _myFont, fontSize: 20f, textColor: Color.Green));
+        panel.AddChild(new Label("2. SETTINGS", _myFont, fontSize: 20f, textColor: Color.White));
+        panel.AddChild(new Label("3. EXIT GAME", _myFont, fontSize: 20f, textColor: Color.Red));
 
         ui.Root.AddChild(panel);
     }
@@ -65,14 +53,15 @@ public class MyGame : Game
             color: new Color(15, 15, 25, 255),
             zIndex: 0
         );
+
         Shapes.DrawText(
             Renderer,
-            font: myFont,
-            text: "OPEN REISTAR ENGINE",
-            position: UVect.FromScale(0.5f, 0.1f),
-            fontSize: 36f,
+            _myFont,
+            "GoogleSans Font Loaded Successfully!",
+            position: UVect.FromScale(0.5f, 0.08f),
+            fontSize: 28f,
             color: Color.White,
-            anchor: Anchor.Center, // Centered alignment
+            anchor: Anchor.Center,
             zIndex: 100
         );
     }

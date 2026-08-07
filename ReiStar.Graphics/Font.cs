@@ -3,90 +3,113 @@ namespace reistar.Graphics;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using SDL;
 using reistar.Maths;
 
-public class Font
+/// <summary>
+/// Represents a loaded TrueType/OpenType font family/file with per-size handle caching,
+/// size-quantizing protection, LRU eviction, and text measurement using native SDL3_ttf.
+/// </summary>
+public unsafe class Font : IDisposable
 {
-    public ITexture? AtlasTexture { get; set; }
-    public float PixelSize { get; set; } = 32f;
-    public string FontFilePath { get; set; } = string.Empty;
-    public Dictionary<char, FontGlyph> Glyphs { get; } = new();
+    private const int MaxCachedSizes = 64;
+    private readonly string? _filePath;
+    private readonly Dictionary<int, IntPtr> _sizeHandles = new();
+    private readonly Queue<int> _evictionQueue = new();
+    private bool _isDisposed;
+
+    public string? FilePath => _filePath;
+    public float DefaultSize { get; set; } = 32.0f;
+    public float PixelSize => DefaultSize;
 
     public Font() { }
 
-    public Font(ITexture atlasTexture, float pixelSize = 32f)
+    public Font(string path, float defaultSize = 32.0f)
     {
-        AtlasTexture = atlasTexture;
-        PixelSize = pixelSize;
+        _filePath = path;
+        DefaultSize = defaultSize;
     }
 
     /// <summary>
-    /// Loads a TrueType (.ttf) or OpenType (.otf) font file and initializes glyph metrics.
+    /// Gets or creates the native SDL3 TTF_Font handle for the requested point size and outline thickness.
+    /// Quantized to 0.5pt steps with LRU size limit (max 64 entries) for memory leak protection.
     /// </summary>
-    public Font(string fontFilePath, float pixelSize = 32f)
+    public TTF_Font* GetHandle(float fontSize, int outline = 0)
     {
-        FontFilePath = fontFilePath;
-        PixelSize = pixelSize;
+        if (_isDisposed || string.IsNullOrEmpty(_filePath)) return null;
 
-        if (File.Exists(fontFilePath))
+        int sizeKey = (int)MathF.Round(fontSize * 2f);
+        int key = (sizeKey << 8) | (outline & 0xFF);
+
+        if (_sizeHandles.TryGetValue(key, out var existingHandle))
         {
-            LoadFontFile(fontFilePath, pixelSize);
+            return (TTF_Font*)existingHandle;
         }
-    }
 
-    private void LoadFontFile(string fontFilePath, float pixelSize)
-    {
-        // Populate default ASCII glyph metric stubs (A-Z, a-z, 0-9, space, symbols)
-        string defaultChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?-+*/_()[]{}#@$%&:";
-        float charWidth = pixelSize * 0.6f;
-        float charAdvance = pixelSize * 0.65f;
-
-        for (int i = 0; i < defaultChars.Length; i++)
+        if (!File.Exists(_filePath))
         {
-            char c = defaultChars[i];
-            Glyphs[c] = new FontGlyph(
-                character: c,
-                u0: 0f, v0: 0f, u1: 1f, v1: 1f,
-                width: charWidth,
-                height: pixelSize,
-                bearingX: 0f,
-                bearingY: pixelSize * 0.8f,
-                advance: charAdvance
-            );
+            return null;
         }
+
+        if (_sizeHandles.Count >= MaxCachedSizes && _evictionQueue.TryDequeue(out int oldestKey))
+        {
+            if (_sizeHandles.Remove(oldestKey, out var handleToClose) && handleToClose != IntPtr.Zero)
+            {
+                SDL3_ttf.TTF_CloseFont((TTF_Font*)handleToClose);
+            }
+        }
+
+        float actualSize = sizeKey / 2.0f;
+        TTF_Font* handle = SDL3_ttf.TTF_OpenFont(_filePath, actualSize);
+        if (handle != null)
+        {
+            if (outline > 0)
+            {
+                SDL3_ttf.TTF_SetFontOutline(handle, outline);
+            }
+            _sizeHandles[key] = (IntPtr)handle;
+            _evictionQueue.Enqueue(key);
+        }
+
+        return handle;
     }
 
-    public void AddGlyph(FontGlyph glyph)
-    {
-        Glyphs[glyph.Character] = glyph;
-    }
-
-    public bool TryGetGlyph(char c, out FontGlyph glyph)
-    {
-        return Glyphs.TryGetValue(c, out glyph);
-    }
-
+    /// <summary>
+    /// Measures the pixel dimensions of a string rendered at a specific point size.
+    /// </summary>
     public Vect2D MeasureString(string text, float fontSize)
     {
         if (string.IsNullOrEmpty(text)) return Vect2D.Zero;
 
-        float scale = fontSize / (PixelSize <= 0 ? 32f : PixelSize);
-        float width = 0f;
-        float height = fontSize;
+        TTF_Font* handle = GetHandle(fontSize);
+        if (handle == null) return Vect2D.Zero;
 
-        for (int i = 0; i < text.Length; i++)
+        int width = 0, height = 0;
+        if (SDL3_ttf.TTF_GetStringSize(handle, text, (nuint)text.Length, &width, &height))
         {
-            char c = text[i];
-            if (Glyphs.TryGetValue(c, out var glyph))
-            {
-                width += glyph.Advance * scale;
-            }
-            else if (c == ' ')
-            {
-                width += (fontSize * 0.33f);
-            }
+            return new Vect2D(width, height);
         }
 
-        return new Vect2D(width, height);
+        return Vect2D.Zero;
+    }
+
+    public Vect2D MeasureString(string text) => MeasureString(text, DefaultSize);
+
+    public void Dispose()
+    {
+        if (!_isDisposed)
+        {
+            foreach (var handlePtr in _sizeHandles.Values)
+            {
+                if (handlePtr != IntPtr.Zero)
+                {
+                    SDL3_ttf.TTF_CloseFont((TTF_Font*)handlePtr);
+                }
+            }
+            _sizeHandles.Clear();
+            _evictionQueue.Clear();
+            _isDisposed = true;
+        }
+        GC.SuppressFinalize(this);
     }
 }

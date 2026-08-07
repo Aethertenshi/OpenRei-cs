@@ -1,5 +1,6 @@
 namespace reistar.Core;
 
+using System;
 using System.Diagnostics;
 using reistar.Graphics;
 using reistar.Maths;
@@ -32,26 +33,25 @@ public abstract class Game : IDisposable
 
     private static IWindow ExtractWindow(IRenderer renderer)
     {
-        // Reflection-free window extraction if renderer provides a Window property
-        var windowProp = renderer.GetType().GetProperty("Window");
-        if (windowProp?.GetValue(renderer) is IWindow window)
+        if (renderer is IWindowProvider windowProvider)
         {
-            return window;
+            return windowProvider.Window;
         }
-        throw new ArgumentException("The provided IRenderer does not expose a Window property. Use Game(IWindow, IRenderer) constructor instead.");
+        throw new ArgumentException("The provided IRenderer does not implement IWindowProvider. Use Game(IWindow, IRenderer) constructor instead.");
     }
+
 
     public void Run()
     {
         OnInitialize();
 
         Stopwatch stopwatch = Stopwatch.StartNew();
-        float lastTime = 0f;
+        float lastTime = (float)stopwatch.Elapsed.TotalSeconds;
 
         while (Window.IsRunning)
         {
             float currentTime = (float)stopwatch.Elapsed.TotalSeconds;
-            float deltaTime = currentTime - lastTime;
+            float deltaTime = Math.Min(currentTime - lastTime, 0.1f);
             lastTime = currentTime;
 
             Window.PollEvents();
@@ -76,9 +76,6 @@ public abstract class Game : IDisposable
     public virtual void Dispose()
     {
         Renderer.Dispose();
-        if (Renderer is not IDisposable)
-        {
-            Window.Dispose();
-        }
     }
 }
+

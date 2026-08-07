@@ -23,9 +23,9 @@ public abstract class UIElement
     public UIElement? Parent { get; private set; }
     public List<UIElement> Children { get; } = new();
 
-    public Vect2D ResolvedTopLeft { get; private set; }
-    public Vect2D ResolvedSize { get; private set; }
-    public int CalculatedDepth { get; private set; }
+    public Vect2D ResolvedTopLeft { get; protected set; }
+    public Vect2D ResolvedSize { get; protected set; }
+    public int CalculatedDepth { get; protected set; }
 
     public void AddChild(UIElement child)
     {
@@ -70,11 +70,9 @@ public abstract class UIElement
             for (int i = 0; i < Children.Count; i++)
             {
                 var child = Children[i];
-                Vect2D childSize = child.Size.Resolve(contentAreaSize);
-                Vect2D childPos = new Vect2D(contentAreaTopLeft.X, currentY);
-
-                child.CalculateLayoutForStack(contentAreaSize, childPos, childSize, depth + 1);
-                currentY += childSize.Y + Spacing;
+                child.Position = UVect.FromOffset(0f, currentY - contentAreaTopLeft.Y);
+                child.CalculateLayout(contentAreaSize, contentAreaTopLeft, depth + 1);
+                currentY += child.ResolvedSize.Y + Spacing;
             }
         }
         else if (Layout == LayoutMode.HorizontalStack)
@@ -83,11 +81,9 @@ public abstract class UIElement
             for (int i = 0; i < Children.Count; i++)
             {
                 var child = Children[i];
-                Vect2D childSize = child.Size.Resolve(contentAreaSize);
-                Vect2D childPos = new Vect2D(currentX, contentAreaTopLeft.Y);
-
-                child.CalculateLayoutForStack(contentAreaSize, childPos, childSize, depth + 1);
-                currentX += childSize.X + Spacing;
+                child.Position = UVect.FromOffset(currentX - contentAreaTopLeft.X, 0f);
+                child.CalculateLayout(contentAreaSize, contentAreaTopLeft, depth + 1);
+                currentX += child.ResolvedSize.X + Spacing;
             }
         }
         else
@@ -96,24 +92,6 @@ public abstract class UIElement
             {
                 Children[i].CalculateLayout(contentAreaSize, contentAreaTopLeft, depth + 1);
             }
-        }
-    }
-
-    private void CalculateLayoutForStack(Vect2D contentAreaSize, Vect2D stackedTopLeft, Vect2D childSize, int depth)
-    {
-        CalculatedDepth = depth;
-        ResolvedSize = childSize;
-        ResolvedTopLeft = stackedTopLeft;
-
-        Vect2D stackContentTopLeft = new Vect2D(ResolvedTopLeft.X + Padding, ResolvedTopLeft.Y + Padding);
-        Vect2D stackContentAreaSize = new Vect2D(
-            Math.Max(0, ResolvedSize.X - (Padding * 2f)),
-            Math.Max(0, ResolvedSize.Y - (Padding * 2f))
-        );
-
-        for (int i = 0; i < Children.Count; i++)
-        {
-            Children[i].CalculateLayout(stackContentAreaSize, stackContentTopLeft, depth + 1);
         }
     }
 

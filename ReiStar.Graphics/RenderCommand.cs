@@ -23,8 +23,10 @@ public struct RenderCommand
     public Color Color;
     public float Thickness;
     public ushort TextureId;
+    public ITexture? Texture;
     public float U0;
     public float V0;
     public float U1;
     public float V1;
 }
+

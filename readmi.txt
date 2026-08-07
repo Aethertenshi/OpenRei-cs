@@ -1,0 +1,5 @@
+for more context, my framework is divided to 3 layers, layer 1 is the engine,
+  is it a dummy api-only file, on its own it doesnt do anything as its only abstracting asl specific commands to simplified api bindings. layer 2 is the
+  first module called "features" it is another abstraction from the immideate mode like DrawLine() DrawShape() like that abstracting from simplified sdl
+  bindings to actually be usefull, and finnaly layer 3, its a interchangeable, one and only layer that the user/dev could change without modifying the
+  framework much, using the already defined DrawLine() DrawShape() etc to more usabe Buttons, Containers with auto layouting, etc
