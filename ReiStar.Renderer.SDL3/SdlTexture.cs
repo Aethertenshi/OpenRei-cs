@@ -21,6 +21,17 @@ public unsafe class SdlTexture : ITexture
         TextureId = id;
     }
 
+    public void UpdateTexture(byte[] rgbaPixels)
+    {
+        if (_handle != null && rgbaPixels != null && rgbaPixels.Length >= Width * Height * 4)
+        {
+            fixed (byte* pixelPtr = rgbaPixels)
+            {
+                SDL3.SDL_UpdateTexture(_handle, null, (nint)pixelPtr, Width * 4);
+            }
+        }
+    }
+
     public void Dispose()
     {
         if (_handle != null)

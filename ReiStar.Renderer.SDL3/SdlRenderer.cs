@@ -134,36 +134,34 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
     {
         if (font == null || string.IsNullOrEmpty(text) || color.A == 0) return;
 
-        TTF_Font* handle = font.GetHandle(fontSize);
-        if (handle == null) return;
+        float currentX = position.X;
+        float currentY = position.Y;
+        float baselineY = currentY + (fontSize * 0.75f);
 
-        SDL_Color sdlColor = new SDL_Color
+        for (int i = 0; i < text.Length; i++)
         {
-            r = color.R,
-            g = color.G,
-            b = color.B,
-            a = color.A
-        };
+            char c = text[i];
+            if (font.TryGetGlyph(c, fontSize, this, out var glyph))
+            {
+                if (glyph.Width > 0 && glyph.Height > 0 && font.AtlasTexture != null)
+                {
+                    float x = currentX + glyph.BearingX;
+                    float y = baselineY - glyph.BearingY;
+                    float w = glyph.Width;
+                    float h = glyph.Height;
 
-        SDL_Surface* surface = SDL3_ttf.TTF_RenderText_Blended(handle, text, (nuint)text.Length, sdlColor);
-        if (surface == null) return;
+                    DrawTexturedQuad(font.AtlasTexture, new Vect2D(x, y), new Vect2D(w, h), glyph.U0, glyph.V0, glyph.U1, glyph.V1, color, zIndex);
+                }
 
-        SDL_Texture* tex = SDL3.SDL_CreateTextureFromSurface(_renderer, surface);
-        int surfW = surface->w;
-        int surfH = surface->h;
-        SDL3.SDL_DestroySurface(surface);
-
-        if (tex == null) return;
-
-        Vect2D measured = font.MeasureString(text, fontSize);
-        Vect2D size = new Vect2D(
-            measured.X > 0 ? measured.X : surfW,
-            measured.Y > 0 ? measured.Y : surfH
-        );
-
-        ITexture tempTex = new SdlTexture(tex, (int)size.X, (int)size.Y);
-        DrawTexture(tempTex, position, size, Color.White, zIndex);
+                currentX += glyph.Advance;
+            }
+            else if (c == ' ')
+            {
+                currentX += (fontSize * 0.33f);
+            }
+        }
     }
+
 
     public ITexture? CreateTexture(int width, int height, byte[] rgbaPixels)
     {
