@@ -10,7 +10,8 @@ public enum RenderPrimitiveType : byte
     Circle,
     Line,
     Texture,
-    TexturedQuad
+    TexturedQuad,
+    CustomPass
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -28,5 +29,6 @@ public struct RenderCommand
     public float V0;
     public float U1;
     public float V1;
+    public bool RequiresPostProcessing;
 }
 

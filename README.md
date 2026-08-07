@@ -56,7 +56,7 @@ graph TD
 * **Purpose:** Abstract native SDL3 platform APIs into clean, pure C# interfaces.
 * **Key Responsibilities:**
   * **[`IRenderer`](file:///E:/ProjectTemp-Server/OpenReiStar-cs/ReiStar.Graphics/IRenderer.cs):** Backend-agnostic drawing contract for rectangles, outlines, lines, circles, textures, and text.
-  * **[`SdlRenderer`](file:///E:/ProjectTemp-Server/OpenReiStar-cs/ReiStar.Renderer.SDL3/SdlRenderer.cs):** Native SDL3 2D batching renderer leveraging `SDL_RenderGeometry` for texture quads.
+  * **[`SdlRenderer`](file:///E:/ProjectTemp-Server/OpenReiStar-cs/ReiStar.Renderer.SDL3/SdlRenderer.cs):** High-performance state-based 2D Geometry Batcher leveraging `SDL_RenderGeometry`. Collapses thousands of primitive shapes and text quads into 1–3 GPU draw calls with post-processing barrier detachment support.
   * **[`SdlWindow`](file:///E:/ProjectTemp-Server/OpenReiStar-cs/ReiStar.Renderer.SDL3/SdlWindow.cs):** Window creation, event polling, and lifecycle management with instance reference counting.
   * **[`Font`](file:///E:/ProjectTemp-Server/OpenReiStar-cs/ReiStar.Graphics/Font.cs):** Native `SDL3_ttf` TrueType font management with point-size quantizing (0.5pt) and LRU handle caching.
 

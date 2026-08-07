@@ -15,10 +15,16 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
     private int _commandCount = 0;
     private uint _submissionCounter = 0;
 
+    // Geometry Batching Buffers
+    private SDL_Vertex[] _batchVertices = new SDL_Vertex[4096];
+    private int[] _batchIndices = new int[6144];
+    private int _batchVertexCount = 0;
+    private int _batchIndexCount = 0;
+    private SDL_Texture* _currentBatchTexture = null;
+
     public IWindow Window => _window;
     public SdlWindow SdlWindowHandle => _window;
     public Vect2D CanvasSize => _window.Size;
-
 
     public SdlRenderer(string title = "ReiStar Game", int width = 1280, int height = 720)
         : this(new SdlWindow(title, width, height))
@@ -51,7 +57,8 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
             Type = RenderPrimitiveType.Rectangle,
             Position = position,
             Size = size,
-            Color = color
+            Color = color,
+            U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f
         };
     }
 
@@ -65,7 +72,7 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
             Type = RenderPrimitiveType.RectangleOutline,
             Position = position,
             Size = size,
-            Thickness = thickness,
+            Thickness = thickness > 0 ? thickness : 1f,
             Color = color
         };
     }
@@ -94,7 +101,7 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
             Type = RenderPrimitiveType.Line,
             Position = start,
             Size = end,
-            Thickness = thickness,
+            Thickness = thickness > 0 ? thickness : 1f,
             Color = color
         };
     }
@@ -158,9 +165,6 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
         DrawTexture(tempTex, position, size, Color.White, zIndex);
     }
 
-
-
-
     public ITexture? CreateTexture(int width, int height, byte[] rgbaPixels)
     {
         if (_renderer == null || width <= 0 || height <= 0) return null;
@@ -189,107 +193,192 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
         {
             Array.Sort(_commandBuffer, 0, _commandCount, CommandComparer.Instance);
 
+            _batchVertexCount = 0;
+            _batchIndexCount = 0;
+            _currentBatchTexture = null;
+
             for (int i = 0; i < _commandCount; i++)
             {
                 ref readonly var cmd = ref _commandBuffer[i];
-                SDL3.SDL_SetRenderDrawColor(_renderer, cmd.Color.R, cmd.Color.G, cmd.Color.B, cmd.Color.A);
+                SDL_Texture* cmdTexHandle = (cmd.Texture is SdlTexture texWrapper) ? texWrapper.Handle : null;
+
+                PrepareBatchForCommand(cmd, cmdTexHandle);
 
                 switch (cmd.Type)
                 {
                     case RenderPrimitiveType.Rectangle:
-                        SDL_FRect fillRect = new SDL_FRect
-                        {
-                            x = cmd.Position.X,
-                            y = cmd.Position.Y,
-                            w = cmd.Size.X,
-                            h = cmd.Size.Y
-                        };
-                        SDL3.SDL_RenderFillRect(_renderer, &fillRect);
+                        AppendRectangleQuad(cmd.Position, cmd.Size, cmd.Color, 0f, 0f, 1f, 1f);
                         break;
 
                     case RenderPrimitiveType.RectangleOutline:
-                        SDL_FRect outlineRect = new SDL_FRect
-                        {
-                            x = cmd.Position.X,
-                            y = cmd.Position.Y,
-                            w = cmd.Size.X,
-                            h = cmd.Size.Y
-                        };
-                        SDL3.SDL_RenderRect(_renderer, &outlineRect);
+                        AppendRectangleOutlineQuads(cmd.Position, cmd.Size, cmd.Thickness, cmd.Color);
                         break;
 
                     case RenderPrimitiveType.Line:
-                        SDL3.SDL_RenderLine(_renderer, cmd.Position.X, cmd.Position.Y, cmd.Size.X, cmd.Size.Y);
+                        AppendLineQuad(cmd.Position, cmd.Size, cmd.Thickness, cmd.Color);
                         break;
 
                     case RenderPrimitiveType.Circle:
-                        DrawCircleOutlineInternal(cmd.Position, cmd.Size.X);
+                        AppendCircleFan(cmd.Position, cmd.Size.X, cmd.Color);
                         break;
 
                     case RenderPrimitiveType.TexturedQuad:
-                        RenderTexturedQuadInternal(cmd);
+                    case RenderPrimitiveType.Texture:
+                        AppendRectangleQuad(cmd.Position, cmd.Size, cmd.Color, cmd.U0, cmd.V0, cmd.U1, cmd.V1);
+                        break;
+
+                    case RenderPrimitiveType.CustomPass:
+                        if (cmd.RequiresPostProcessing)
+                        {
+                            ExecutePostProcessingPass(cmd);
+                        }
                         break;
                 }
             }
+
+            FlushBatch();
         }
 
         SDL3.SDL_RenderPresent(_renderer);
     }
 
-    private void DrawCircleOutlineInternal(Vect2D center, float radius)
+    private void PrepareBatchForCommand(in RenderCommand cmd, SDL_Texture* cmdTexHandle)
     {
-        int segments = Math.Max(16, (int)(radius * 0.5f));
-        float angleStep = (MathF.PI * 2f) / segments;
+        bool textureChanged = (cmdTexHandle != _currentBatchTexture);
+        bool overflow = (_batchVertexCount + 64 >= _batchVertices.Length) || (_batchIndexCount + 96 >= _batchIndices.Length);
 
-        for (int i = 0; i < segments; i++)
+        if (cmd.RequiresPostProcessing || textureChanged || overflow)
         {
-            float a1 = i * angleStep;
-            float a2 = (i + 1) * angleStep;
-
-            float x1 = center.X + MathF.Cos(a1) * radius;
-            float y1 = center.Y + MathF.Sin(a1) * radius;
-            float x2 = center.X + MathF.Cos(a2) * radius;
-            float y2 = center.Y + MathF.Sin(a2) * radius;
-
-            SDL3.SDL_RenderLine(_renderer, x1, y1, x2, y2);
+            FlushBatch();
+            _currentBatchTexture = cmdTexHandle;
         }
     }
 
-    private void RenderTexturedQuadInternal(in RenderCommand cmd)
+    private void FlushBatch()
     {
-        SDL_Texture* sdlTex = (cmd.Texture is SdlTexture texWrapper) ? texWrapper.Handle : null;
+        if (_batchVertexCount == 0 || _batchIndexCount == 0) return;
 
-        SDL_FColor color = new SDL_FColor
+        fixed (SDL_Vertex* vPtr = _batchVertices)
+        fixed (int* iPtr = _batchIndices)
         {
-            r = cmd.Color.R / 255f,
-            g = cmd.Color.G / 255f,
-            b = cmd.Color.B / 255f,
-            a = cmd.Color.A / 255f
+            SDL3.SDL_RenderGeometry(_renderer, _currentBatchTexture, vPtr, _batchVertexCount, iPtr, _batchIndexCount);
+        }
+
+        _batchVertexCount = 0;
+        _batchIndexCount = 0;
+    }
+
+    private void ExecutePostProcessingPass(in RenderCommand cmd)
+    {
+        // Detached Post-Processing Barrier Pass (e.g., Backdrop Blur, Custom Shaders, Screen Capture)
+    }
+
+    private void AppendRectangleQuad(Vect2D pos, Vect2D size, Color color, float u0, float v0, float u1, float v1)
+    {
+        EnsureBatchCapacity(4, 6);
+
+        SDL_FColor sdlColor = new SDL_FColor
+        {
+            r = color.R / 255f,
+            g = color.G / 255f,
+            b = color.B / 255f,
+            a = color.A / 255f
         };
 
-        SDL_Vertex* verts = stackalloc SDL_Vertex[4];
-        verts[0] = new SDL_Vertex { position = new SDL_FPoint { x = cmd.Position.X, y = cmd.Position.Y }, color = color, tex_coord = new SDL_FPoint { x = cmd.U0, y = cmd.V0 } };
-        verts[1] = new SDL_Vertex { position = new SDL_FPoint { x = cmd.Position.X + cmd.Size.X, y = cmd.Position.Y }, color = color, tex_coord = new SDL_FPoint { x = cmd.U1, y = cmd.V0 } };
-        verts[2] = new SDL_Vertex { position = new SDL_FPoint { x = cmd.Position.X + cmd.Size.X, y = cmd.Position.Y + cmd.Size.Y }, color = color, tex_coord = new SDL_FPoint { x = cmd.U1, y = cmd.V1 } };
-        verts[3] = new SDL_Vertex { position = new SDL_FPoint { x = cmd.Position.X, y = cmd.Position.Y + cmd.Size.Y }, color = color, tex_coord = new SDL_FPoint { x = cmd.U0, y = cmd.V1 } };
+        int baseIdx = _batchVertexCount;
 
-        int* indices = stackalloc int[6] { 0, 1, 2, 2, 3, 0 };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = pos.X, y = pos.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u0, y = v0 } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = pos.X + size.X, y = pos.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u1, y = v0 } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = pos.X + size.X, y = pos.Y + size.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u1, y = v1 } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = pos.X, y = pos.Y + size.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u0, y = v1 } };
 
-        if (sdlTex == null)
+        _batchIndices[_batchIndexCount++] = baseIdx + 0;
+        _batchIndices[_batchIndexCount++] = baseIdx + 1;
+        _batchIndices[_batchIndexCount++] = baseIdx + 2;
+        _batchIndices[_batchIndexCount++] = baseIdx + 2;
+        _batchIndices[_batchIndexCount++] = baseIdx + 3;
+        _batchIndices[_batchIndexCount++] = baseIdx + 0;
+    }
+
+    private void AppendRectangleOutlineQuads(Vect2D pos, Vect2D size, float thickness, Color color)
+    {
+        float t = MathF.Max(1f, thickness);
+
+        // Top line
+        AppendRectangleQuad(new Vect2D(pos.X, pos.Y), new Vect2D(size.X, t), color, 0f, 0f, 1f, 1f);
+        // Bottom line
+        AppendRectangleQuad(new Vect2D(pos.X, pos.Y + size.Y - t), new Vect2D(size.X, t), color, 0f, 0f, 1f, 1f);
+        // Left line
+        AppendRectangleQuad(new Vect2D(pos.X, pos.Y + t), new Vect2D(t, MathF.Max(0f, size.Y - (t * 2f))), color, 0f, 0f, 1f, 1f);
+        // Right line
+        AppendRectangleQuad(new Vect2D(pos.X + size.X - t, pos.Y + t), new Vect2D(t, MathF.Max(0f, size.Y - (t * 2f))), color, 0f, 0f, 1f, 1f);
+    }
+
+    private void AppendLineQuad(Vect2D start, Vect2D end, float thickness, Color color)
+    {
+        EnsureBatchCapacity(4, 6);
+
+        Vect2D dir = new Vect2D(end.X - start.X, end.Y - start.Y);
+        float len = MathF.Sqrt(dir.X * dir.X + dir.Y * dir.Y);
+        if (len <= 0.0001f) return;
+
+        Vect2D perp = new Vect2D(-dir.Y / len, dir.X / len) * (thickness * 0.5f);
+
+        SDL_FColor sdlColor = new SDL_FColor
         {
-            // Fallback fill rect if texture is null
-            SDL_FRect fillRect = new SDL_FRect
-            {
-                x = cmd.Position.X,
-                y = cmd.Position.Y,
-                w = cmd.Size.X,
-                h = cmd.Size.Y
-            };
-            SDL3.SDL_RenderFillRect(_renderer, &fillRect);
+            r = color.R / 255f,
+            g = color.G / 255f,
+            b = color.B / 255f,
+            a = color.A / 255f
+        };
+
+        int baseIdx = _batchVertexCount;
+
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = start.X + perp.X, y = start.Y + perp.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = 0f, y = 0f } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = end.X + perp.X, y = end.Y + perp.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = 1f, y = 0f } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = end.X - perp.X, y = end.Y - perp.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = 1f, y = 1f } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = start.X - perp.X, y = start.Y - perp.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = 0f, y = 1f } };
+
+        _batchIndices[_batchIndexCount++] = baseIdx + 0;
+        _batchIndices[_batchIndexCount++] = baseIdx + 1;
+        _batchIndices[_batchIndexCount++] = baseIdx + 2;
+        _batchIndices[_batchIndexCount++] = baseIdx + 2;
+        _batchIndices[_batchIndexCount++] = baseIdx + 3;
+        _batchIndices[_batchIndexCount++] = baseIdx + 0;
+    }
+
+    private void AppendCircleFan(Vect2D center, float radius, Color color)
+    {
+        int segments = Math.Max(16, (int)(radius * 0.5f));
+        EnsureBatchCapacity(segments + 1, segments * 3);
+
+        SDL_FColor sdlColor = new SDL_FColor
+        {
+            r = color.R / 255f,
+            g = color.G / 255f,
+            b = color.B / 255f,
+            a = color.A / 255f
+        };
+
+        int centerIdx = _batchVertexCount;
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = center.X, y = center.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = 0.5f, y = 0.5f } };
+
+        float angleStep = (MathF.PI * 2f) / segments;
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * angleStep;
+            float x = center.X + MathF.Cos(angle) * radius;
+            float y = center.Y + MathF.Sin(angle) * radius;
+            _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = x, y = y }, color = sdlColor, tex_coord = new SDL_FPoint { x = 0.5f, y = 0.5f } };
         }
-        else
+
+        for (int i = 0; i < segments; i++)
         {
-            SDL3.SDL_RenderGeometry(_renderer, sdlTex, verts, 4, indices, 6);
+            int p1 = centerIdx + 1 + i;
+            int p2 = centerIdx + 1 + ((i + 1) % segments);
+            _batchIndices[_batchIndexCount++] = centerIdx;
+            _batchIndices[_batchIndexCount++] = p1;
+            _batchIndices[_batchIndexCount++] = p2;
         }
     }
 
@@ -298,6 +387,18 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
         if (_commandCount >= _commandBuffer.Length)
         {
             Array.Resize(ref _commandBuffer, _commandBuffer.Length * 2);
+        }
+    }
+
+    private void EnsureBatchCapacity(int addedVerts, int addedIndices)
+    {
+        if (_batchVertexCount + addedVerts >= _batchVertices.Length)
+        {
+            Array.Resize(ref _batchVertices, Math.Max(_batchVertexCount + addedVerts, _batchVertices.Length * 2));
+        }
+        if (_batchIndexCount + addedIndices >= _batchIndices.Length)
+        {
+            Array.Resize(ref _batchIndices, Math.Max(_batchIndexCount + addedIndices, _batchIndices.Length * 2));
         }
     }
 
