@@ -9,4 +9,6 @@ public interface IWindow : IDisposable
     bool IsRunning { get; }
 
     void PollEvents();
+    ulong GetPerformanceCounter();
+    ulong GetPerformanceFrequency();
 }

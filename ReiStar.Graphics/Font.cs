@@ -13,10 +13,14 @@ using reistar.Maths;
 public unsafe class Font : IDisposable
 {
     private const int MaxCachedSizes = 64;
+    private const int MaxCachedStrings = 128;
     private readonly string? _filePath;
+
     private readonly Dictionary<int, IntPtr> _sizeHandles = new();
-    private readonly Queue<int> _evictionQueue = new();
+    private readonly Queue<int> _sizeEvictionQueue = new();
+
     private readonly Dictionary<string, ITexture> _stringTextureCache = new();
+    private readonly Queue<string> _stringEvictionQueue = new();
     private bool _isDisposed;
 
     public string? FilePath => _filePath;
@@ -52,7 +56,7 @@ public unsafe class Font : IDisposable
             return null;
         }
 
-        if (_sizeHandles.Count >= MaxCachedSizes && _evictionQueue.TryDequeue(out int oldestKey))
+        if (_sizeHandles.Count >= MaxCachedSizes && _sizeEvictionQueue.TryDequeue(out int oldestKey))
         {
             if (_sizeHandles.Remove(oldestKey, out var handleToClose) && handleToClose != IntPtr.Zero)
             {
@@ -69,14 +73,15 @@ public unsafe class Font : IDisposable
                 SDL3_ttf.TTF_SetFontOutline(handle, outline);
             }
             _sizeHandles[key] = (IntPtr)handle;
-            _evictionQueue.Enqueue(key);
+            _sizeEvictionQueue.Enqueue(key);
         }
 
         return handle;
     }
 
     /// <summary>
-    /// Gets or creates a cached rendered string texture with transparent background and blend support.
+    /// Gets or creates a cached rendered string texture using native SDL3_ttf blended string rendering.
+    /// Manages an LRU string texture cache (max 128 entries) to prevent texture allocation churn.
     /// </summary>
     public ITexture? GetRenderedStringTexture(IRenderer renderer, string text, float fontSize, Color color)
     {
@@ -95,7 +100,7 @@ public unsafe class Font : IDisposable
         SDL_Surface* surface = SDL3_ttf.TTF_RenderText_Blended(fontHandle, text, (nuint)text.Length, sdlColor);
         if (surface == null) return null;
 
-        // Convert to RGBA8888 for guaranteed channel layout & transparent background
+        // Convert surface to explicit RGBA8888 for guaranteed platform channel layout & transparent background
         SDL_Surface* rgbaSurf = SDL3.SDL_ConvertSurface(surface, SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888);
         SDL3.SDL_DestroySurface(surface);
         if (rgbaSurf == null) return null;
@@ -112,7 +117,17 @@ public unsafe class Font : IDisposable
         ITexture? texture = renderer.CreateTexture(width, height, pixels);
         if (texture != null)
         {
+            // LRU eviction if cache exceeds capacity
+            if (_stringTextureCache.Count >= MaxCachedStrings && _stringEvictionQueue.TryDequeue(out var oldestKey))
+            {
+                if (_stringTextureCache.Remove(oldestKey, out var texToEvict))
+                {
+                    texToEvict.Dispose();
+                }
+            }
+
             _stringTextureCache[cacheKey] = texture;
+            _stringEvictionQueue.Enqueue(cacheKey);
         }
 
         return texture;
@@ -151,13 +166,14 @@ public unsafe class Font : IDisposable
                 }
             }
             _sizeHandles.Clear();
-            _evictionQueue.Clear();
+            _sizeEvictionQueue.Clear();
 
             foreach (var tex in _stringTextureCache.Values)
             {
                 tex.Dispose();
             }
             _stringTextureCache.Clear();
+            _stringEvictionQueue.Clear();
 
             _isDisposed = true;
         }

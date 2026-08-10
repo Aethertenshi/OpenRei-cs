@@ -41,28 +41,45 @@ public abstract class Game : IDisposable
     }
 
 
+    public int TargetFPS
+    {
+        get => Time.TargetFPS;
+        set => Time.TargetFPS = value;
+    }
+
+    public bool VSync
+    {
+        get => Renderer.VSync;
+        set => Renderer.VSync = value;
+    }
+
     public void Run()
     {
         OnInitialize();
 
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        float lastTime = (float)stopwatch.Elapsed.TotalSeconds;
+        ulong lastCounter = Window.GetPerformanceCounter();
 
         while (Window.IsRunning)
         {
-            float currentTime = (float)stopwatch.Elapsed.TotalSeconds;
-            float deltaTime = Math.Min(currentTime - lastTime, 0.1f);
-            lastTime = currentTime;
+            ulong frameStartCounter = Window.GetPerformanceCounter();
+            ulong frequency = Window.GetPerformanceFrequency();
+            ulong deltaTicks = frameStartCounter - lastCounter;
+            lastCounter = frameStartCounter;
+
+            Time.Update(deltaTicks, frequency > 0 ? frequency : 10000000);
 
             Window.PollEvents();
 
-            OnUpdate(deltaTime);
-            Points.UpdatePoints(deltaTime);
+            OnUpdate(Time.DeltaTime);
+            Points.UpdatePoints(Time.DeltaTime);
 
             Renderer.BeginFrame();
             OnRender();
             Points.RenderPoints();
             Renderer.EndFrame();
+
+            ulong frameEndCounter = Window.GetPerformanceCounter();
+            Time.ThrottleFrame(frameStartCounter, frameEndCounter, frequency > 0 ? frequency : 10000000);
         }
 
         OnShutdown();

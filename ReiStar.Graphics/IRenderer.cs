@@ -6,6 +6,7 @@ using reistar.Maths;
 public interface IRenderer : IDisposable
 {
     Vect2D CanvasSize { get; }
+    bool VSync { get; set; }
     void BeginFrame();
     void DrawRect(Vect2D position, Vect2D size, Color color, int zIndex = 0);
     void DrawRectOutline(Vect2D position, Vect2D size, float thickness, Color color, int zIndex = 0);

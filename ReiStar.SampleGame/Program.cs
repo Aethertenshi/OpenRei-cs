@@ -14,6 +14,8 @@ new MyGame().Run();
 public class MyGame : Game
 {
     private Font _myFont = null!;
+    private Label _fpsLabel = null!;
+    private float _fpsTimer = 0f;
 
     public MyGame() : base(new SdlRenderer("OpenReiStar - Text & UI Demo", 1280, 720)) { }
 
@@ -36,12 +38,25 @@ public class MyGame : Game
             Spacing = 1f
         };
 
+        _fpsLabel = new Label("FPS: 0", _myFont, fontSize: 16f, textColor: Color.Green);
+
         panel.AddChild(new Label("REISTAR ENGINE", _myFont, fontSize: 14f, textColor: Color.Yellow));
+        panel.AddChild(_fpsLabel);
         panel.AddChild(new Label("1. START GAME", _myFont, fontSize: 20f, textColor: Color.Green));
         panel.AddChild(new Label("2. SETTINGS", _myFont, fontSize: 20f, textColor: Color.White));
         panel.AddChild(new Label("3. EXIT GAME", _myFont, fontSize: 20f, textColor: Color.Red));
 
         ui.Root.AddChild(panel);
+    }
+
+    protected override void OnUpdate(float deltaTime)
+    {
+        _fpsTimer += deltaTime;
+        if (_fpsTimer >= 1.0f)
+        {
+            _fpsTimer = 0f;
+            _fpsLabel.Text = $"FPS: {Time.GetFPS():F0}";
+        }
     }
 
     protected override void OnRender()

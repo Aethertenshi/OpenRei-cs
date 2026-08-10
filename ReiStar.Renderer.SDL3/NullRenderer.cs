@@ -8,7 +8,8 @@ using reistar.Maths;
 public class NullRenderer : IRenderer
 {
     public IWindow Window { get; } = null!;
-    public Vect2D CanvasSize { get; set; } = new Vect2D(1280, 720);
+    public Vect2D CanvasSize => new Vect2D(1280, 720);
+    public bool VSync { get; set; }
 
     public void BeginFrame() { }
     public void DrawRect(Vect2D position, Vect2D size, Color color, int zIndex = 0) { }

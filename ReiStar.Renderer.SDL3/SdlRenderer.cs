@@ -26,6 +26,24 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
     public SdlWindow SdlWindowHandle => _window;
     public Vect2D CanvasSize => _window.Size;
 
+    public bool VSync
+    {
+        get
+        {
+            if (_renderer == null) return false;
+            int vsync = 0;
+            SDL3.SDL_GetRenderVSync(_renderer, &vsync);
+            return vsync != 0;
+        }
+        set
+        {
+            if (_renderer != null)
+            {
+                SDL3.SDL_SetRenderVSync(_renderer, value ? 1 : 0);
+            }
+        }
+    }
+
     public SdlRenderer(string title = "ReiStar Game", int width = 1280, int height = 720)
         : this(new SdlWindow(title, width, height))
     {

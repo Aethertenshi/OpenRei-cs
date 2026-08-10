@@ -73,6 +73,9 @@ public unsafe class SdlWindow : IWindow
         }
     }
 
+    public ulong GetPerformanceCounter() => SDL3.SDL_GetPerformanceCounter();
+    public ulong GetPerformanceFrequency() => SDL3.SDL_GetPerformanceFrequency();
+
     public void Dispose()
     {
         if (_window != null)
