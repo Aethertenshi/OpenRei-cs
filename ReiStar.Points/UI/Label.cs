@@ -27,16 +27,29 @@ public class Label : UIElement
         Layout = LayoutMode.None;
     }
 
+    private string? _cachedText;
+    private float _cachedFontSize;
+    private Font? _cachedFont;
+    private Vect2D _cachedMeasuredSize;
+
     public override void CalculateLayout(Vect2D containerSize, Vect2D containerTopLeft = default, int depth = 0)
     {
         CalculatedDepth = depth;
 
         Vect2D resolved = Size.Resolve(containerSize);
 
-        // Auto-fit label size to text bounds if not explicitly sized
+        // Auto-fit label size to text bounds if not explicitly sized (cached to eliminate per-frame P/Invoke)
         if (Font != null && !string.IsNullOrEmpty(Text))
         {
-            Vect2D measured = Font.MeasureString(Text, FontSize);
+            if (_cachedText != Text || _cachedFontSize != FontSize || _cachedFont != Font)
+            {
+                _cachedMeasuredSize = Font.MeasureString(Text, FontSize);
+                _cachedText = Text;
+                _cachedFontSize = FontSize;
+                _cachedFont = Font;
+            }
+
+            Vect2D measured = _cachedMeasuredSize;
             float w = (Size.ScaleX == 0f && Size.OffsetX == 0f) ? measured.X : resolved.X;
             float h = (Size.ScaleY == 0f && Size.OffsetY == 0f) ? (measured.Y > 0 ? measured.Y : FontSize) : resolved.Y;
             resolved = new Vect2D(w, h);

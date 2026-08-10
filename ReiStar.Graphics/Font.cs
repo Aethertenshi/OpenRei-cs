@@ -133,6 +133,8 @@ public unsafe class Font : IDisposable
         return texture;
     }
 
+    private readonly Dictionary<string, Vect2D> _measuredStringCache = new();
+
     /// <summary>
     /// Measures the pixel dimensions of a string rendered at a specific point size.
     /// </summary>
@@ -140,13 +142,24 @@ public unsafe class Font : IDisposable
     {
         if (string.IsNullOrEmpty(text)) return Vect2D.Zero;
 
+        string cacheKey = $"{text}_{fontSize:F1}";
+        if (_measuredStringCache.TryGetValue(cacheKey, out var cachedSize))
+        {
+            return cachedSize;
+        }
+
         TTF_Font* handle = GetHandle(fontSize);
         if (handle == null) return Vect2D.Zero;
 
         int width = 0, height = 0;
         if (SDL3_ttf.TTF_GetStringSize(handle, text, (nuint)text.Length, &width, &height))
         {
-            return new Vect2D(width, height);
+            var size = new Vect2D(width, height);
+            if (_measuredStringCache.Count < 512)
+            {
+                _measuredStringCache[cacheKey] = size;
+            }
+            return size;
         }
 
         return Vect2D.Zero;

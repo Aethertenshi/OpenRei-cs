@@ -202,7 +202,8 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
 
         if (_commandCount > 0)
         {
-            Array.Sort(_commandBuffer, 0, _commandCount, CommandComparer.Instance);
+            // Zero-allocation inlined Span sort
+            _commandBuffer.AsSpan(0, _commandCount).Sort();
 
             _batchVertexCount = 0;
             _batchIndexCount = 0;
@@ -284,18 +285,24 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
         // Detached Post-Processing Barrier Pass (e.g., Backdrop Blur, Custom Shaders, Screen Capture)
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static SDL_FColor ToSdlFColor(Color color)
+    {
+        const float inv255 = 1.0f / 255.0f;
+        return new SDL_FColor
+        {
+            r = color.R * inv255,
+            g = color.G * inv255,
+            b = color.B * inv255,
+            a = color.A * inv255
+        };
+    }
+
     private void AppendRectangleQuad(Vect2D pos, Vect2D size, Color color, float u0, float v0, float u1, float v1)
     {
         EnsureBatchCapacity(4, 6);
 
-        SDL_FColor sdlColor = new SDL_FColor
-        {
-            r = color.R / 255f,
-            g = color.G / 255f,
-            b = color.B / 255f,
-            a = color.A / 255f
-        };
-
+        SDL_FColor sdlColor = ToSdlFColor(color);
         int baseIdx = _batchVertexCount;
 
         _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = pos.X, y = pos.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u0, y = v0 } };
@@ -334,15 +341,7 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
         if (len <= 0.0001f) return;
 
         Vect2D perp = new Vect2D(-dir.Y / len, dir.X / len) * (thickness * 0.5f);
-
-        SDL_FColor sdlColor = new SDL_FColor
-        {
-            r = color.R / 255f,
-            g = color.G / 255f,
-            b = color.B / 255f,
-            a = color.A / 255f
-        };
-
+        SDL_FColor sdlColor = ToSdlFColor(color);
         int baseIdx = _batchVertexCount;
 
         _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = start.X + perp.X, y = start.Y + perp.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = 0f, y = 0f } };
@@ -363,14 +362,7 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
         int segments = Math.Max(16, (int)(radius * 0.5f));
         EnsureBatchCapacity(segments + 1, segments * 3);
 
-        SDL_FColor sdlColor = new SDL_FColor
-        {
-            r = color.R / 255f,
-            g = color.G / 255f,
-            b = color.B / 255f,
-            a = color.A / 255f
-        };
-
+        SDL_FColor sdlColor = ToSdlFColor(color);
         int centerIdx = _batchVertexCount;
         _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = center.X, y = center.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = 0.5f, y = 0.5f } };
 
@@ -421,11 +413,5 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
             _renderer = null;
         }
         _window.Dispose();
-    }
-
-    private sealed class CommandComparer : IComparer<RenderCommand>
-    {
-        public static readonly CommandComparer Instance = new();
-        public int Compare(RenderCommand x, RenderCommand y) => x.SortKey.CompareTo(y.SortKey);
     }
 }

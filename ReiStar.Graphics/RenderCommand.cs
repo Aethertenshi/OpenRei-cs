@@ -15,7 +15,7 @@ public enum RenderPrimitiveType : byte
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct RenderCommand
+public struct RenderCommand : System.IComparable<RenderCommand>
 {
     public ulong SortKey; // (ZIndex << 32) | SubmissionID
     public RenderPrimitiveType Type;
@@ -30,5 +30,7 @@ public struct RenderCommand
     public float U1;
     public float V1;
     public bool RequiresPostProcessing;
+
+    public int CompareTo(RenderCommand other) => SortKey.CompareTo(other.SortKey);
 }
 
