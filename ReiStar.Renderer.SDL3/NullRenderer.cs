@@ -19,6 +19,7 @@ public class NullRenderer : IRenderer
     public void DrawTexturedQuad(ITexture? texture, Vect2D position, Vect2D size, float u0, float v0, float u1, float v1, Color tint, int zIndex = 0) { }
     public void DrawText(Font font, string text, Vect2D position, float fontSize, Color color, int zIndex = 0) { }
     public ITexture? CreateTexture(int width, int height, byte[] rgbaPixels) => null;
+    public ITexture? LoadTexture(string filePath) => null;
     public void EndFrame() { }
 
     public void Dispose() { }

@@ -163,6 +163,20 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
         return new SdlTexture(tex, width, height);
     }
 
+    public ITexture? LoadTexture(string filePath)
+    {
+        if (_renderer == null || string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return null;
+
+        SDL_Texture* tex = SDL3_image.IMG_LoadTexture(_renderer, filePath);
+        if (tex == null) return null;
+
+        float w = 0, h = 0;
+        SDL3.SDL_GetTextureSize(tex, &w, &h);
+        SDL3.SDL_SetTextureBlendMode(tex, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+
+        return new SdlTexture(tex, (int)w, (int)h);
+    }
+
     public void EndFrame()
     {
         SDL3.SDL_SetRenderDrawColor(_renderer, 25, 25, 45, 255);
