@@ -6,10 +6,55 @@ using reistar.Shapes;
 
 public class Label : UIElement
 {
-    public string Text { get; set; } = string.Empty;
-    public Font? Font { get; set; }
-    public float FontSize { get; set; } = 20f;
-    public Color TextColor { get; set; } = Color.White;
+    private string _text = string.Empty;
+    private Font? _font;
+    private float _fontSize = 20f;
+    private Color _textColor = Color.White;
+
+    public string Text
+    {
+        get => _text;
+        set
+        {
+            if (_text != value)
+            {
+                _text = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public Font? Font
+    {
+        get => _font;
+        set
+        {
+            if (_font != value)
+            {
+                _font = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public float FontSize
+    {
+        get => _fontSize;
+        set
+        {
+            if (_fontSize != value)
+            {
+                _fontSize = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public Color TextColor
+    {
+        get => _textColor;
+        set => _textColor = value;
+    }
 
     public Label()
     {
@@ -19,18 +64,13 @@ public class Label : UIElement
 
     public Label(string text, Font? font = null, float fontSize = 20f, Color textColor = default)
     {
-        Text = text;
-        Font = font;
-        FontSize = fontSize;
-        TextColor = textColor.A == 0 ? Color.White : textColor;
+        _text = text;
+        _font = font;
+        _fontSize = fontSize;
+        _textColor = textColor.A == 0 ? Color.White : textColor;
         Size = UVect.FromOffset(0, 0);
         Layout = LayoutMode.None;
     }
-
-    private string? _cachedText;
-    private float _cachedFontSize;
-    private Font? _cachedFont;
-    private Vect2D _cachedMeasuredSize;
 
     public override void CalculateLayout(Vect2D containerSize, Vect2D containerTopLeft = default, int depth = 0)
     {
@@ -38,18 +78,10 @@ public class Label : UIElement
 
         Vect2D resolved = Size.Resolve(containerSize);
 
-        // Auto-fit label size to text bounds if not explicitly sized (cached to eliminate per-frame P/Invoke)
+        // Auto-fit label size to text bounds if not explicitly sized
         if (Font != null && !string.IsNullOrEmpty(Text))
         {
-            if (_cachedText != Text || _cachedFontSize != FontSize || _cachedFont != Font)
-            {
-                _cachedMeasuredSize = Font.MeasureString(Text, FontSize);
-                _cachedText = Text;
-                _cachedFontSize = FontSize;
-                _cachedFont = Font;
-            }
-
-            Vect2D measured = _cachedMeasuredSize;
+            Vect2D measured = Font.MeasureString(Text, FontSize);
             float w = (Size.ScaleX == 0f && Size.OffsetX == 0f) ? measured.X : resolved.X;
             float h = (Size.ScaleY == 0f && Size.OffsetY == 0f) ? (measured.Y > 0 ? measured.Y : FontSize) : resolved.Y;
             resolved = new Vect2D(w, h);
@@ -88,7 +120,7 @@ public class Label : UIElement
 
         if (!string.IsNullOrEmpty(Text) && Font != null)
         {
-            int effectiveZIndex = (CalculatedDepth * 10) + ZIndex + 1;
+            int effectiveZIndex = (CalculatedDepth * 10) + ZIndex + 2;
             Shapes.DrawText(renderer, Font, Text, ResolvedTopLeft, FontSize, TextColor, Anchor.TopLeft, effectiveZIndex);
         }
     }

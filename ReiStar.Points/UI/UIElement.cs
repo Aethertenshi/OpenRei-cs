@@ -8,17 +8,98 @@ using reistar.Shapes;
 
 public abstract class UIElement
 {
-    public string Id { get; set; } = string.Empty;
-    public UVect Position { get; set; } = UVect.FromOffset(0, 0);
-    public UVect Size { get; set; } = UVect.FromScale(1f, 1f);
-    public Anchor Anchor { get; set; } = Anchor.TopLeft;
-    public Color BackgroundColor { get; set; } = Color.Transparent;
-    public Color BorderColor { get; set; } = Color.Transparent;
-    public int ZIndex { get; set; } = 0;
+    private UVect _position = UVect.FromOffset(0, 0);
+    private UVect _size = UVect.FromScale(1f, 1f);
+    private Anchor _anchor = Anchor.TopLeft;
+    private Color _backgroundColor = Color.Transparent;
+    private Color _borderColor = Color.Transparent;
+    private int _zIndex = 0;
+    private LayoutMode _layout = LayoutMode.None;
+    private float _padding = 0f;
+    private float _spacing = 0f;
+    private bool _isDirty = true;
 
-    public LayoutMode Layout { get; set; } = LayoutMode.None;
-    public float Padding { get; set; } = 0f;
-    public float Spacing { get; set; } = 0f;
+    public string Id { get; set; } = string.Empty;
+
+    public UVect Position
+    {
+        get => _position;
+        set
+        {
+            _position = value;
+            MarkDirty();
+        }
+    }
+
+    public UVect Size
+    {
+        get => _size;
+        set
+        {
+            _size = value;
+            MarkDirty();
+        }
+    }
+
+    public Anchor Anchor
+    {
+        get => _anchor;
+        set
+        {
+            _anchor = value;
+            MarkDirty();
+        }
+    }
+
+    public Color BackgroundColor
+    {
+        get => _backgroundColor;
+        set => _backgroundColor = value;
+    }
+
+    public Color BorderColor
+    {
+        get => _borderColor;
+        set => _borderColor = value;
+    }
+
+    public int ZIndex
+    {
+        get => _zIndex;
+        set => _zIndex = value;
+    }
+
+    public LayoutMode Layout
+    {
+        get => _layout;
+        set
+        {
+            _layout = value;
+            MarkDirty();
+        }
+    }
+
+    public float Padding
+    {
+        get => _padding;
+        set
+        {
+            _padding = value;
+            MarkDirty();
+        }
+    }
+
+    public float Spacing
+    {
+        get => _spacing;
+        set
+        {
+            _spacing = value;
+            MarkDirty();
+        }
+    }
+
+    public bool IsDirty => _isDirty;
 
     public UIElement? Parent { get; private set; }
     public List<UIElement> Children { get; } = new();
@@ -26,6 +107,21 @@ public abstract class UIElement
     public Vect2D ResolvedTopLeft { get; protected set; }
     public Vect2D ResolvedSize { get; protected set; }
     public int CalculatedDepth { get; protected set; }
+
+    public void MarkDirty()
+    {
+        _isDirty = true;
+        Parent?.MarkDirty();
+    }
+
+    public void ClearDirty()
+    {
+        _isDirty = false;
+        for (int i = 0; i < Children.Count; i++)
+        {
+            Children[i].ClearDirty();
+        }
+    }
 
     public void AddChild(UIElement child)
     {
@@ -35,6 +131,7 @@ public abstract class UIElement
         }
         child.Parent = this;
         Children.Add(child);
+        MarkDirty();
     }
 
     public void RemoveChild(UIElement child)
@@ -42,6 +139,7 @@ public abstract class UIElement
         if (Children.Remove(child))
         {
             child.Parent = null;
+            MarkDirty();
         }
     }
 
@@ -70,8 +168,9 @@ public abstract class UIElement
             for (int i = 0; i < Children.Count; i++)
             {
                 var child = Children[i];
-                child.Position = UVect.FromOffset(0f, currentY - contentAreaTopLeft.Y);
-                child.CalculateLayout(contentAreaSize, contentAreaTopLeft, depth + 1);
+                // Non-destructive: calculate layout passing stack cursor as containerTopLeft
+                Vect2D childTopLeft = new Vect2D(contentAreaTopLeft.X, currentY);
+                child.CalculateLayout(contentAreaSize, childTopLeft, depth + 1);
                 currentY += child.ResolvedSize.Y + Spacing;
             }
         }
@@ -81,8 +180,9 @@ public abstract class UIElement
             for (int i = 0; i < Children.Count; i++)
             {
                 var child = Children[i];
-                child.Position = UVect.FromOffset(currentX - contentAreaTopLeft.X, 0f);
-                child.CalculateLayout(contentAreaSize, contentAreaTopLeft, depth + 1);
+                // Non-destructive: calculate layout passing stack cursor as containerTopLeft
+                Vect2D childTopLeft = new Vect2D(currentX, contentAreaTopLeft.Y);
+                child.CalculateLayout(contentAreaSize, childTopLeft, depth + 1);
                 currentX += child.ResolvedSize.X + Spacing;
             }
         }
@@ -102,6 +202,11 @@ public abstract class UIElement
         if (BackgroundColor.A > 0)
         {
             Shapes.DrawRect(renderer, ResolvedTopLeft, ResolvedSize, BackgroundColor, Anchor.TopLeft, effectiveZIndex);
+        }
+
+        if (BorderColor.A > 0)
+        {
+            Shapes.DrawRectOutline(renderer, ResolvedTopLeft, ResolvedSize, 1f, BorderColor, Anchor.TopLeft, effectiveZIndex + 1);
         }
 
         for (int i = 0; i < Children.Count; i++)

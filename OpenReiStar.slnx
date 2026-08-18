@@ -12,4 +12,5 @@
     <Project Path="ReiStar.Points/ReiStar.Points.csproj" />
   </Folder>
   <Project Path="ReiStar.SampleGame/ReiStar.SampleGame.csproj" />
+  <Project Path="ReiStar.VisualEditor/ReiStar.VisualEditor.csproj" />
 </Solution>

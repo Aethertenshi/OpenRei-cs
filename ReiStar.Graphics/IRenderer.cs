@@ -16,8 +16,11 @@ public interface IRenderer : IDisposable
     void DrawTexturedQuad(ITexture? texture, Vect2D position, Vect2D size, float u0, float v0, float u1, float v1, Color tint, int zIndex = 0);
     void DrawText(Font font, string text, Vect2D position, float fontSize, Color color, int zIndex = 0);
     ITexture? CreateTexture(int width, int height, byte[] rgbaPixels);
+    ITexture? CreateRenderTarget(int width, int height);
+    void SetRenderTarget(ITexture? target);
     ITexture? LoadTexture(string filePath);
     void EndFrame();
 }
+
 
 

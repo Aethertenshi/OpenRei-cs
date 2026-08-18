@@ -7,6 +7,8 @@ using reistar.Maths;
 public unsafe class SdlWindow : IWindow
 {
     private static int _activeWindowCount = 0;
+    public static bool IsInitialized => _activeWindowCount > 0;
+    public static bool IsTtfInitialized => _activeWindowCount > 0;
     private SDL_Window* _window;
     private string _title;
     private bool _isRunning;

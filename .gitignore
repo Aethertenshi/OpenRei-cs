@@ -10,8 +10,11 @@ obj/
 
 # Build log artifacts
 *.log
+imgui.ini
+*.ini
 
 # Windows temp
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+

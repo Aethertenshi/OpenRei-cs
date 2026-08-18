@@ -53,9 +53,40 @@ public abstract class Game : IDisposable
         set => Renderer.VSync = value;
     }
 
+    private bool _isInitialized;
+
+    public void Initialize()
+    {
+        if (!_isInitialized)
+        {
+            OnInitialize();
+            _isInitialized = true;
+        }
+    }
+
+    /// <summary>
+    /// Executes a single frame tick (Update + Points Update + Render + Points Render).
+    /// Used by Visual Editors and external host runners.
+    /// </summary>
+    public void Step(float deltaTime)
+    {
+        if (!_isInitialized)
+        {
+            Initialize();
+        }
+
+        OnUpdate(deltaTime);
+        Points.UpdatePoints(deltaTime);
+
+        Renderer.BeginFrame();
+        OnRender();
+        Points.RenderPoints();
+        Renderer.EndFrame();
+    }
+
     public void Run()
     {
-        OnInitialize();
+        Initialize();
 
         ulong lastCounter = Window.GetPerformanceCounter();
 
@@ -70,13 +101,7 @@ public abstract class Game : IDisposable
 
             Window.PollEvents();
 
-            OnUpdate(Time.DeltaTime);
-            Points.UpdatePoints(Time.DeltaTime);
-
-            Renderer.BeginFrame();
-            OnRender();
-            Points.RenderPoints();
-            Renderer.EndFrame();
+            Step(Time.DeltaTime);
 
             ulong frameEndCounter = Window.GetPerformanceCounter();
             Time.ThrottleFrame(frameStartCounter, frameEndCounter, frequency > 0 ? frequency : 10000000);

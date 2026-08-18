@@ -65,6 +65,23 @@ public static class Shapes
         renderer.DrawRectOutline(topLeftPos, resolvedSize, thickness, color, zIndex);
     }
 
+    public static void DrawRectOutline(
+        IRenderer renderer,
+        Vect2D position,
+        Vect2D size,
+        float thickness,
+        Color color,
+        Anchor anchor = default,
+        int zIndex = 0)
+    {
+        Vect2D topLeftPos = new Vect2D(
+            position.X - (size.X * anchor.X),
+            position.Y - (size.Y * anchor.Y)
+        );
+
+        renderer.DrawRectOutline(topLeftPos, size, thickness, color, zIndex);
+    }
+
     public static void DrawLine(
         IRenderer renderer,
         Vect2D start,

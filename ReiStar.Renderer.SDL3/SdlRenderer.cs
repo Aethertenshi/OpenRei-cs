@@ -21,10 +21,14 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
     private int _batchVertexCount = 0;
     private int _batchIndexCount = 0;
     private SDL_Texture* _currentBatchTexture = null;
+    private ITexture? _currentTarget = null;
 
+    public SDL_Renderer* Handle => _renderer;
+    public ITexture? CurrentRenderTarget => _currentTarget;
     public IWindow Window => _window;
     public SdlWindow SdlWindowHandle => _window;
-    public Vect2D CanvasSize => _window.Size;
+    public Vect2D CanvasSize => _currentTarget != null ? new Vect2D(_currentTarget.Width, _currentTarget.Height) : _window.Size;
+
 
     public bool VSync
     {
@@ -152,10 +156,54 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
     {
         if (font == null || string.IsNullOrEmpty(text) || color.A == 0) return;
 
-        ITexture? stringTex = font.GetRenderedStringTexture(this, text, fontSize, color);
-        if (stringTex != null)
+        ITexture? atlas = font.GetOrGenerateAtlas(this);
+        if (atlas == null) return;
+
+        float scale = (font.DefaultSize > 0f) ? (fontSize / font.DefaultSize) : 1.0f;
+        float scaledLineHeight = (font.LineHeight > 0f ? font.LineHeight : (font.Ascent - font.Descent)) * scale;
+        if (scaledLineHeight <= 0f) scaledLineHeight = fontSize;
+
+        float currentLineY = position.Y;
+        float penX = position.X;
+
+        for (int i = 0; i < text.Length; i++)
         {
-            DrawTexture(stringTex, position, new Vect2D(stringTex.Width, stringTex.Height), Color.White, zIndex);
+            char c = text[i];
+            if (c == '\r') continue;
+            if (c == '\n')
+            {
+                penX = position.X;
+                currentLineY += scaledLineHeight;
+                continue;
+            }
+
+            if (!font.TryGetGlyph(c, out var glyph))
+            {
+                if (c == ' ')
+                {
+                    penX += (fontSize * 0.28f);
+                }
+                continue;
+            }
+
+            if (glyph.Width > 0 && glyph.Height > 0)
+            {
+                float screenX = penX;
+                float screenY = currentLineY;
+                float screenW = glyph.Width * scale;
+                float screenH = glyph.Height * scale;
+
+                DrawTexturedQuad(
+                    atlas,
+                    new Vect2D(screenX, screenY),
+                    new Vect2D(screenW, screenH),
+                    glyph.U0, glyph.V0, glyph.U1, glyph.V1,
+                    color,
+                    zIndex
+                );
+            }
+
+            penX += glyph.Advance * scale;
         }
     }
 
@@ -179,6 +227,27 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
 
         SDL3.SDL_SetTextureBlendMode(tex, SDL_BlendMode.SDL_BLENDMODE_BLEND);
         return new SdlTexture(tex, width, height);
+    }
+
+    public ITexture? CreateRenderTarget(int width, int height)
+    {
+        if (_renderer == null || width <= 0 || height <= 0) return null;
+
+        SDL_Texture* tex = SDL3.SDL_CreateTexture(_renderer, SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888, SDL_TextureAccess.SDL_TEXTUREACCESS_TARGET, width, height);
+        if (tex == null) return null;
+
+        SDL3.SDL_SetTextureBlendMode(tex, SDL_BlendMode.SDL_BLENDMODE_BLEND);
+        return new SdlTexture(tex, width, height);
+    }
+
+    public void SetRenderTarget(ITexture? target)
+    {
+        _currentTarget = target;
+        if (_renderer != null)
+        {
+            SDL_Texture* texHandle = (target is SdlTexture sdlTex) ? sdlTex.Handle : null;
+            SDL3.SDL_SetRenderTarget(_renderer, texHandle);
+        }
     }
 
     public ITexture? LoadTexture(string filePath)
@@ -251,7 +320,10 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
             FlushBatch();
         }
 
-        SDL3.SDL_RenderPresent(_renderer);
+        if (_currentTarget == null)
+        {
+            SDL3.SDL_RenderPresent(_renderer);
+        }
     }
 
     private void PrepareBatchForCommand(in RenderCommand cmd, SDL_Texture* cmdTexHandle)

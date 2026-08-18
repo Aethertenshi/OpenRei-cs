@@ -6,14 +6,97 @@ using reistar.Graphics;
 
 public class Image : UIElement
 {
-    public ITexture? Texture { get; set; }
-    public Color Tint { get; set; } = Color.White;
-    public ImageSizeMode SizeMode { get; set; } = ImageSizeMode.Fill;
+    private ITexture? _texture;
+    private Color _tint = Color.White;
+    private ImageSizeMode _sizeMode = ImageSizeMode.Fill;
+    private float _u0 = 0f;
+    private float _v0 = 0f;
+    private float _u1 = 1f;
+    private float _v1 = 1f;
 
-    public float U0 { get; set; } = 0f;
-    public float V0 { get; set; } = 0f;
-    public float U1 { get; set; } = 1f;
-    public float V1 { get; set; } = 1f;
+    public ITexture? Texture
+    {
+        get => _texture;
+        set
+        {
+            if (_texture != value)
+            {
+                _texture = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public Color Tint
+    {
+        get => _tint;
+        set => _tint = value;
+    }
+
+    public ImageSizeMode SizeMode
+    {
+        get => _sizeMode;
+        set
+        {
+            if (_sizeMode != value)
+            {
+                _sizeMode = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public float U0
+    {
+        get => _u0;
+        set
+        {
+            if (_u0 != value)
+            {
+                _u0 = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public float V0
+    {
+        get => _v0;
+        set
+        {
+            if (_v0 != value)
+            {
+                _v0 = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public float U1
+    {
+        get => _u1;
+        set
+        {
+            if (_u1 != value)
+            {
+                _u1 = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public float V1
+    {
+        get => _v1;
+        set
+        {
+            if (_v1 != value)
+            {
+                _v1 = value;
+                MarkDirty();
+            }
+        }
+    }
 
     public Image()
     {
@@ -23,11 +106,11 @@ public class Image : UIElement
 
     public Image(ITexture texture, UVect? position = null, UVect? size = null, ImageSizeMode sizeMode = ImageSizeMode.Fill, Color tint = default)
     {
-        Texture = texture;
+        _texture = texture;
         Position = position ?? UVect.FromOffset(0, 0);
         Size = size ?? UVect.FromOffset(texture.Width, texture.Height);
-        SizeMode = sizeMode;
-        Tint = tint.A == 0 ? Color.White : tint;
+        _sizeMode = sizeMode;
+        _tint = tint.A == 0 ? Color.White : tint;
         Layout = LayoutMode.None;
     }
 
@@ -58,7 +141,7 @@ public class Image : UIElement
 
         if (Texture == null || Texture.Width <= 0 || Texture.Height <= 0) return;
 
-        int effectiveZIndex = (CalculatedDepth * 10) + ZIndex + 1;
+        int effectiveZIndex = (CalculatedDepth * 10) + ZIndex + 2;
         float texW = Texture.Width * MathF.Abs(U1 - U0);
         float texH = Texture.Height * MathF.Abs(V1 - V0);
 

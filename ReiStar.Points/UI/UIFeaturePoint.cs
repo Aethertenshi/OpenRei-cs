@@ -6,6 +6,8 @@ using reistar.Maths;
 
 public class UIFeaturePoint : IPoint
 {
+    private Vect2D _lastCanvasSize = Vect2D.Zero;
+
     public string Name => "ReiStar.UIFeaturePoint";
     public bool Enabled { get; set; } = true;
 
@@ -25,7 +27,13 @@ public class UIFeaturePoint : IPoint
     public void OnRender(IRenderer renderer)
     {
         Vect2D canvasSize = renderer.CanvasSize;
-        Root.CalculateLayout(canvasSize, Vect2D.Zero, depth: 0);
+        if (canvasSize.X != _lastCanvasSize.X || canvasSize.Y != _lastCanvasSize.Y || Root.IsDirty)
+        {
+            Root.CalculateLayout(canvasSize, Vect2D.Zero, depth: 0);
+            Root.ClearDirty();
+            _lastCanvasSize = canvasSize;
+        }
+
         Root.Draw(renderer);
     }
 

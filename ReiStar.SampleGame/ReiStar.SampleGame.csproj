@@ -9,6 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Update="GoogleSans-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ReiStar.Core\ReiStar.Core.csproj" />
     <ProjectReference Include="..\ReiStar.Graphics\ReiStar.Graphics.csproj" />
     <ProjectReference Include="..\ReiStar.Renderer.SDL3\ReiStar.Renderer.SDL3.csproj" />
