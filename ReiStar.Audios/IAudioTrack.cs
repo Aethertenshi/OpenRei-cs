@@ -20,4 +20,14 @@ public interface IAudioTrack : IDisposable
     void Pause();
     void Stop();
     void Seek(double positionMs);
+
+    /// <summary>
+    /// Fills the buffer with real-time frequency magnitude spectrum bins (e.g. 256 or 512 bins).
+    /// </summary>
+    void GetFftData(Span<float> fftBuffer);
+
+    /// <summary>
+    /// Returns the current peak audio level (0.0 to 1.0).
+    /// </summary>
+    float GetLevel();
 }

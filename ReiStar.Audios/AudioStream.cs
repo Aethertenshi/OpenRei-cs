@@ -11,6 +11,8 @@ public class AudioStream : IAudioTrack
     private uint _sourceId;
     private uint _bufferId;
     private int _sampleRate = 44100;
+    private int _channels = 2;
+    private byte[] _pcmData = Array.Empty<byte>();
     private double _durationSeconds;
     private float _volume = 1.0f;
     private float _pitch = 1.0f;
@@ -113,6 +115,8 @@ public class AudioStream : IAudioTrack
         if (!AudioEngine.IsInitialized || data.PcmData.Length == 0) return;
 
         _sampleRate = data.SampleRate;
+        _channels = data.Channels;
+        _pcmData = data.PcmData;
         _durationSeconds = data.DurationSeconds;
 
         var al = AudioEngine.AL;
@@ -161,6 +165,64 @@ public class AudioStream : IAudioTrack
         if (!AudioEngine.IsInitialized || _sourceId == 0) return;
         float secOffset = (float)Math.Clamp(positionMs / 1000.0, 0.0, _durationSeconds);
         AudioEngine.AL.SetSourceProperty(_sourceId, SourceFloat.SecOffset, secOffset);
+    }
+
+    public void GetFftData(Span<float> fftBuffer)
+    {
+        if (!IsPlaying || _disposed || _pcmData.Length == 0)
+        {
+            fftBuffer.Clear();
+            return;
+        }
+
+        int fftSize = fftBuffer.Length * 2;
+        Span<short> samples = stackalloc short[fftSize];
+
+        double currentSec = Position;
+        int currentSampleIdx = (int)(currentSec * _sampleRate) * _channels;
+        int totalSamples = _pcmData.Length / 2;
+
+        for (int i = 0; i < fftSize; i++)
+        {
+            int idx = currentSampleIdx + (i * _channels);
+            if (idx >= 0 && idx + 1 < totalSamples)
+            {
+                int byteIdx = idx * 2;
+                samples[i] = (short)(_pcmData[byteIdx] | (_pcmData[byteIdx + 1] << 8));
+            }
+            else
+            {
+                samples[i] = 0;
+            }
+        }
+
+        FftProvider.ComputeSpectrum(samples, fftBuffer);
+    }
+
+    public float GetLevel()
+    {
+        if (!IsPlaying || _disposed || _pcmData.Length == 0) return 0f;
+
+        Span<short> samples = stackalloc short[512];
+        double currentSec = Position;
+        int currentSampleIdx = (int)(currentSec * _sampleRate) * _channels;
+        int totalSamples = _pcmData.Length / 2;
+
+        for (int i = 0; i < 512; i++)
+        {
+            int idx = currentSampleIdx + (i * _channels);
+            if (idx >= 0 && idx + 1 < totalSamples)
+            {
+                int byteIdx = idx * 2;
+                samples[i] = (short)(_pcmData[byteIdx] | (_pcmData[byteIdx + 1] << 8));
+            }
+            else
+            {
+                samples[i] = 0;
+            }
+        }
+
+        return FftProvider.ComputeLevel(samples).Peak;
     }
 
     public void Dispose()

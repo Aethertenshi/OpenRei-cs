@@ -30,6 +30,10 @@ public sealed unsafe class MusicTrack : IAudioTrack
     private double _pausedPositionMs;
     private long _totalBytesPlayed;
 
+    private readonly short[] _ringBuffer = new short[32768];
+    private int _ringWritePos;
+    private readonly object _ringLock = new();
+
     public float Volume
     {
         get => _volume;
@@ -133,6 +137,20 @@ public sealed unsafe class MusicTrack : IAudioTrack
         PreloadBuffers();
     }
 
+    private void PushPcmToRing(byte[] pcmBytes, int byteCount)
+    {
+        int sampleCount = byteCount / 2;
+        lock (_ringLock)
+        {
+            for (int i = 0; i < sampleCount; i++)
+            {
+                short sample = (short)(pcmBytes[i * 2] | (pcmBytes[i * 2 + 1] << 8));
+                _ringBuffer[_ringWritePos] = sample;
+                _ringWritePos = (_ringWritePos + 1) % _ringBuffer.Length;
+            }
+        }
+    }
+
     private void PreloadBuffers()
     {
         var al = AudioEngine.AL;
@@ -145,6 +163,7 @@ public sealed unsafe class MusicTrack : IAudioTrack
             int read = _decoder.ReadPcm16(tempBuf, 0, tempBuf.Length);
             if (read > 0)
             {
+                PushPcmToRing(tempBuf, read);
                 fixed (byte* ptr = tempBuf)
                 {
                     al.BufferData(_bufferIds[i], format, ptr, read, _decoder.SampleRate);
@@ -264,6 +283,7 @@ public sealed unsafe class MusicTrack : IAudioTrack
 
                 if (read > 0)
                 {
+                    PushPcmToRing(tempBuf, read);
                     fixed (byte* ptr = tempBuf)
                     {
                         al.BufferData(buffer, format, ptr, read, _decoder.SampleRate);
@@ -288,6 +308,46 @@ public sealed unsafe class MusicTrack : IAudioTrack
 
             Thread.Sleep(15);
         }
+    }
+
+    public void GetFftData(Span<float> fftBuffer)
+    {
+        if (!IsPlaying || _disposed)
+        {
+            fftBuffer.Clear();
+            return;
+        }
+
+        int fftSize = fftBuffer.Length * 2;
+        Span<short> samples = stackalloc short[fftSize];
+
+        lock (_ringLock)
+        {
+            int start = (_ringWritePos - fftSize + _ringBuffer.Length) % _ringBuffer.Length;
+            for (int i = 0; i < fftSize; i++)
+            {
+                samples[i] = _ringBuffer[(start + i) % _ringBuffer.Length];
+            }
+        }
+
+        FftProvider.ComputeSpectrum(samples, fftBuffer);
+    }
+
+    public float GetLevel()
+    {
+        if (!IsPlaying || _disposed) return 0f;
+
+        Span<short> samples = stackalloc short[512];
+        lock (_ringLock)
+        {
+            int start = (_ringWritePos - 512 + _ringBuffer.Length) % _ringBuffer.Length;
+            for (int i = 0; i < 512; i++)
+            {
+                samples[i] = _ringBuffer[(start + i) % _ringBuffer.Length];
+            }
+        }
+
+        return FftProvider.ComputeLevel(samples).Peak;
     }
 
     public void Dispose()
