@@ -14,7 +14,7 @@ internal abstract class StreamingDecoder : IDisposable
     public abstract bool CanSeek { get; }
 
     /// <summary>
-    /// Reads up to maxBytes of PCM16 data. Returns bytes written (always aligned to full audio frame boundaries). Returns 0 at EOF.
+    /// Reads up to maxBytes of 16-bit PCM data. Returns bytes written. Returns 0 at EOF.
     /// </summary>
     public abstract int ReadPcm16(byte[] buffer, int offset, int maxBytes);
     public abstract void SeekSeconds(double seconds);
@@ -47,23 +47,27 @@ internal sealed class Mp3StreamingDecoder : StreamingDecoder
     public Mp3StreamingDecoder(string path)
     {
         _mpeg = new MpegFile(path);
-        _floatBuf = new float[8192];
+        _floatBuf = new float[16384];
     }
 
     public override int ReadPcm16(byte[] buffer, int offset, int maxBytes)
     {
-        int samplesNeeded = maxBytes / sizeof(short);
-        int samplesToRead = Math.Min(samplesNeeded, _floatBuf.Length);
-
-        int read = _mpeg.ReadSamples(_floatBuf, 0, samplesToRead);
-        if (read <= 0) return 0;
-
         int bytesWritten = 0;
-        for (int i = 0; i < read; i++)
+        while (bytesWritten < maxBytes)
         {
-            short sample = (short)Math.Clamp(_floatBuf[i] * 32767f, -32768f, 32767f);
-            buffer[offset + bytesWritten++] = (byte)(sample & 0xFF);
-            buffer[offset + bytesWritten++] = (byte)((sample >> 8) & 0xFF);
+            int samplesNeeded = (maxBytes - bytesWritten) / sizeof(short);
+            int samplesToRead = Math.Min(samplesNeeded, _floatBuf.Length);
+            if (samplesToRead <= 0) break;
+
+            int read = _mpeg.ReadSamples(_floatBuf, 0, samplesToRead);
+            if (read <= 0) break;
+
+            for (int i = 0; i < read; i++)
+            {
+                short sample = (short)Math.Clamp(_floatBuf[i] * 32767f, -32768f, 32767f);
+                buffer[offset + bytesWritten++] = (byte)(sample & 0xFF);
+                buffer[offset + bytesWritten++] = (byte)((sample >> 8) & 0xFF);
+            }
         }
 
         return bytesWritten;
@@ -94,23 +98,27 @@ internal sealed class OggStreamingDecoder : StreamingDecoder
     public OggStreamingDecoder(string path)
     {
         _vorbis = new VorbisReader(path);
-        _floatBuf = new float[8192];
+        _floatBuf = new float[16384];
     }
 
     public override int ReadPcm16(byte[] buffer, int offset, int maxBytes)
     {
-        int samplesNeeded = maxBytes / sizeof(short);
-        int samplesToRead = Math.Min(samplesNeeded, _floatBuf.Length);
-
-        int read = _vorbis.ReadSamples(_floatBuf, 0, samplesToRead);
-        if (read <= 0) return 0;
-
         int bytesWritten = 0;
-        for (int i = 0; i < read; i++)
+        while (bytesWritten < maxBytes)
         {
-            short sample = (short)Math.Clamp(_floatBuf[i] * 32767f, -32768f, 32767f);
-            buffer[offset + bytesWritten++] = (byte)(sample & 0xFF);
-            buffer[offset + bytesWritten++] = (byte)((sample >> 8) & 0xFF);
+            int samplesNeeded = (maxBytes - bytesWritten) / sizeof(short);
+            int samplesToRead = Math.Min(samplesNeeded, _floatBuf.Length);
+            if (samplesToRead <= 0) break;
+
+            int read = _vorbis.ReadSamples(_floatBuf, 0, samplesToRead);
+            if (read <= 0) break;
+
+            for (int i = 0; i < read; i++)
+            {
+                short sample = (short)Math.Clamp(_floatBuf[i] * 32767f, -32768f, 32767f);
+                buffer[offset + bytesWritten++] = (byte)(sample & 0xFF);
+                buffer[offset + bytesWritten++] = (byte)((sample >> 8) & 0xFF);
+            }
         }
 
         return bytesWritten;
@@ -129,74 +137,44 @@ internal sealed class OggStreamingDecoder : StreamingDecoder
 
 internal sealed class WavStreamingDecoder : StreamingDecoder
 {
-    private readonly FileStream _fs;
+    private readonly byte[] _pcm16;
     private readonly int _sampleRate;
     private readonly int _channels;
-    private readonly long _dataStartPos;
-    private readonly long _dataLength;
+    private int _readOffset;
 
     public override int SampleRate => _sampleRate;
     public override int Channels => _channels;
-    public override double LengthSeconds => (double)_dataLength / (_sampleRate * _channels * 2);
-    public override double PositionSeconds => (double)(_fs.Position - _dataStartPos) / (_sampleRate * _channels * 2);
+    public override double LengthSeconds => (double)_pcm16.Length / (_sampleRate * _channels * 2);
+    public override double PositionSeconds => (double)_readOffset / (_sampleRate * _channels * 2);
     public override bool CanSeek => true;
 
     public WavStreamingDecoder(string path)
     {
-        _fs = File.OpenRead(path);
-        using var reader = new BinaryReader(_fs, System.Text.Encoding.ASCII, leaveOpen: true);
-
-        reader.ReadChars(4); // RIFF
-        reader.ReadInt32();
-        reader.ReadChars(4); // WAVE
-
-        _channels = 2;
-        _sampleRate = 44100;
-
-        while (_fs.Position < _fs.Length)
-        {
-            string chunkId = new string(reader.ReadChars(4));
-            int chunkSize = reader.ReadInt32();
-
-            if (chunkId == "fmt ")
-            {
-                reader.ReadInt16(); // format
-                _channels = reader.ReadInt16();
-                _sampleRate = reader.ReadInt32();
-                reader.ReadInt32();
-                reader.ReadInt16();
-                reader.ReadInt16(); // bits
-                int extra = chunkSize - 16;
-                if (extra > 0) reader.ReadBytes(extra);
-            }
-            else if (chunkId == "data")
-            {
-                _dataStartPos = _fs.Position;
-                _dataLength = chunkSize;
-                break;
-            }
-            else
-            {
-                _fs.Seek(chunkSize, SeekOrigin.Current);
-            }
-        }
+        var decoded = AudioDecoder.DecodeFile(path);
+        _pcm16 = decoded.PcmData;
+        _sampleRate = decoded.SampleRate;
+        _channels = decoded.Channels;
+        _readOffset = 0;
     }
 
     public override int ReadPcm16(byte[] buffer, int offset, int maxBytes)
     {
-        long remaining = _dataStartPos + _dataLength - _fs.Position;
+        int remaining = _pcm16.Length - _readOffset;
         if (remaining <= 0) return 0;
 
-        int toRead = (int)Math.Min(maxBytes, remaining);
-        return _fs.Read(buffer, offset, toRead);
+        int toCopy = Math.Min(maxBytes, remaining);
+        Buffer.BlockCopy(_pcm16, _readOffset, buffer, offset, toCopy);
+        _readOffset += toCopy;
+        return toCopy;
     }
 
     public override void SeekSeconds(double seconds)
     {
-        long targetByte = _dataStartPos + (long)(seconds * _sampleRate * _channels * 2);
-        long alignedTarget = _dataStartPos + ((targetByte - _dataStartPos) / (_channels * 2)) * (_channels * 2);
-        _fs.Position = Math.Clamp(alignedTarget, _dataStartPos, _dataStartPos + _dataLength);
+        int targetByte = (int)(seconds * _sampleRate * _channels * 2);
+        int frameSize = _channels * 2;
+        int aligned = (targetByte / frameSize) * frameSize;
+        _readOffset = Math.Clamp(aligned, 0, _pcm16.Length);
     }
 
-    public override void Dispose() => _fs.Dispose();
+    public override void Dispose() { }
 }

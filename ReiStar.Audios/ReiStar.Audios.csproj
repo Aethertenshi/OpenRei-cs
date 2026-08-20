@@ -19,4 +19,14 @@
     <ProjectReference Include="..\ReiStar.Maths\ReiStar.Maths.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="soft_oal.dll" Condition="Exists('soft_oal.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="soft_oal.dll" Condition="Exists('soft_oal.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>OpenAL32.dll</Link>
+    </None>
+  </ItemGroup>
+
 </Project>

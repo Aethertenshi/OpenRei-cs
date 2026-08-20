@@ -72,6 +72,7 @@ public static unsafe class AudioEngine
             _al.SetListenerProperty(ListenerFloat.Gain, _masterVolume);
             _isInitialized = true;
             Console.WriteLine("[ReiStar AudioEngine] OpenAL Soft audio device initialized successfully.");
+            AudioTester.RunDiagnostic();
         }
         catch (Exception ex)
         {

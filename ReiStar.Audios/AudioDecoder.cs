@@ -28,12 +28,10 @@ public class DecodedAudioData
 
 /// <summary>
 /// Cross-platform audio decoder abstraction supporting MP3, OGG, and WAV decoding.
+/// Converts all input formats into clean 16-bit signed PCM for OpenAL Soft.
 /// </summary>
 public static class AudioDecoder
 {
-    /// <summary>
-    /// Decodes an audio file (.mp3, .ogg, .wav) into uncompressed 16-bit PCM byte buffers for OpenAL Soft.
-    /// </summary>
     public static DecodedAudioData DecodeFile(string filePath)
     {
         if (!File.Exists(filePath))
@@ -66,7 +64,7 @@ public static class AudioDecoder
         int channels = mpeg.Channels;
         float duration = (float)mpeg.Duration.TotalSeconds;
 
-        var floatBuffer = new float[8192];
+        var floatBuffer = new float[16384];
         using var ms = new MemoryStream();
         using var bw = new BinaryWriter(ms);
 
@@ -90,7 +88,7 @@ public static class AudioDecoder
         int channels = vorbis.Channels;
         float duration = (float)vorbis.TotalTime.TotalSeconds;
 
-        var floatBuffer = new float[8192];
+        var floatBuffer = new float[16384];
         using var ms = new MemoryStream();
         using var bw = new BinaryWriter(ms);
 
@@ -119,14 +117,15 @@ public static class AudioDecoder
         string wave = new string(reader.ReadChars(4));
         if (wave != "WAVE") throw new InvalidDataException("Not a valid WAVE file.");
 
-        short audioFormat = 1;
+        short audioFormat = 1; // 1 = PCM, 3 = IEEE Float
         short channels = 2;
         int sampleRate = 44100;
         short bitsPerSample = 16;
-        byte[]? pcmData = null;
+        byte[]? rawPcmData = null;
 
         while (fs.Position < fs.Length)
         {
+            if (fs.Position + 8 > fs.Length) break;
             string chunkId = new string(reader.ReadChars(4));
             int chunkSize = reader.ReadInt32();
 
@@ -144,18 +143,70 @@ public static class AudioDecoder
             }
             else if (chunkId == "data")
             {
-                pcmData = reader.ReadBytes(chunkSize);
+                rawPcmData = reader.ReadBytes(chunkSize);
                 break;
             }
             else
             {
                 if (chunkSize > 0) fs.Seek(chunkSize, SeekOrigin.Current);
             }
+
+            // Word align
+            if (chunkSize % 2 != 0 && fs.Position < fs.Length)
+            {
+                fs.Seek(1, SeekOrigin.Current);
+            }
         }
 
-        if (pcmData == null) throw new InvalidDataException("No audio data chunk found in WAV.");
+        if (rawPcmData == null) throw new InvalidDataException("No audio data chunk found in WAV.");
 
-        float duration = (float)pcmData.Length / (sampleRate * channels * (bitsPerSample / 8));
-        return new DecodedAudioData(pcmData, sampleRate, channels, bitsPerSample, duration);
+        // Convert to standard 16-bit PCM
+        byte[] pcm16;
+        if (audioFormat == 3 || bitsPerSample == 32)
+        {
+            // 32-bit IEEE Float -> 16-bit PCM
+            int sampleCount = rawPcmData.Length / 4;
+            pcm16 = new byte[sampleCount * 2];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float fSample = BitConverter.ToSingle(rawPcmData, i * 4);
+                short s16 = (short)Math.Clamp(fSample * 32767f, -32768f, 32767f);
+                pcm16[i * 2] = (byte)(s16 & 0xFF);
+                pcm16[i * 2 + 1] = (byte)((s16 >> 8) & 0xFF);
+            }
+        }
+        else if (bitsPerSample == 24)
+        {
+            // 24-bit PCM -> 16-bit PCM
+            int sampleCount = rawPcmData.Length / 3;
+            pcm16 = new byte[sampleCount * 2];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                int s24 = (rawPcmData[i * 3 + 0] << 8) | (rawPcmData[i * 3 + 1] << 16) | ((sbyte)rawPcmData[i * 3 + 2] << 24);
+                short s16 = (short)(s24 >> 16);
+                pcm16[i * 2] = (byte)(s16 & 0xFF);
+                pcm16[i * 2 + 1] = (byte)((s16 >> 8) & 0xFF);
+            }
+        }
+        else if (bitsPerSample == 8)
+        {
+            // 8-bit unsigned PCM -> 16-bit signed PCM
+            int sampleCount = rawPcmData.Length;
+            pcm16 = new byte[sampleCount * 2];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                short s16 = (short)((rawPcmData[i] - 128) * 256);
+                pcm16[i * 2] = (byte)(s16 & 0xFF);
+                pcm16[i * 2 + 1] = (byte)((s16 >> 8) & 0xFF);
+            }
+        }
+        else
+        {
+            // Already 16-bit PCM
+            pcm16 = rawPcmData;
+        }
+
+        float duration = (float)pcm16.Length / (sampleRate * channels * 2);
+        return new DecodedAudioData(pcm16, sampleRate, channels, 16, duration);
     }
 }
