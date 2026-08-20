@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ReiStar.Maths\ReiStar.Maths.csproj" />
     <ProjectReference Include="..\ReiStar.Graphics\ReiStar.Graphics.csproj" />
+    <ProjectReference Include="..\ReiStar.Input\ReiStar.Input.csproj" />
   </ItemGroup>
 
 </Project>

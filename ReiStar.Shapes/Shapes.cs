@@ -1,5 +1,6 @@
 namespace reistar.Shapes;
 
+using System;
 using reistar.Maths;
 using reistar.Graphics;
 
@@ -82,6 +83,53 @@ public static class Shapes
         renderer.DrawRectOutline(topLeftPos, size, thickness, color, zIndex);
     }
 
+    public static void DrawRectRotated(
+        IRenderer renderer,
+        Vect2D position,
+        Vect2D size,
+        float angleDegrees,
+        Vect2D pivot = default,
+        Color color = default,
+        Anchor anchor = default,
+        int zIndex = 0)
+    {
+        Vect2D topLeftPos = new Vect2D(
+            position.X - (size.X * anchor.X),
+            position.Y - (size.Y * anchor.Y)
+        );
+
+        renderer.DrawRectRotated(topLeftPos, size, angleDegrees, pivot, color, zIndex);
+    }
+
+    public static void DrawTextureRotated(
+        IRenderer renderer,
+        ITexture texture,
+        Vect2D position,
+        Vect2D size,
+        float angleDegrees,
+        Vect2D pivot = default,
+        Color tint = default,
+        Anchor anchor = default,
+        int zIndex = 0)
+    {
+        Vect2D topLeftPos = new Vect2D(
+            position.X - (size.X * anchor.X),
+            position.Y - (size.Y * anchor.Y)
+        );
+
+        renderer.DrawTextureRotated(texture, topLeftPos, size, angleDegrees, pivot, tint.A == 0 ? Color.White : tint, zIndex);
+    }
+
+    public static void DrawGeometry(
+        IRenderer renderer,
+        ITexture? texture,
+        ReadOnlySpan<Vertex2D> vertices,
+        ReadOnlySpan<int> indices,
+        int zIndex = 0)
+    {
+        renderer.DrawGeometry(texture, vertices, indices, zIndex);
+    }
+
     public static void DrawLine(
         IRenderer renderer,
         Vect2D start,
@@ -91,6 +139,89 @@ public static class Shapes
         int zIndex = 0)
     {
         renderer.DrawLine(start, end, thickness, color, zIndex);
+    }
+
+    public static void DrawThickLine(
+        IRenderer renderer,
+        Vect2D start,
+        Vect2D end,
+        float thickness,
+        Color color,
+        int zIndex = 0)
+    {
+        renderer.DrawLine(start, end, thickness, color, zIndex);
+    }
+
+    public static void DrawArc(
+        IRenderer renderer,
+        Vect2D center,
+        float radius,
+        float startAngle,
+        float endAngle,
+        float thickness,
+        Color color,
+        int segments = 16,
+        int zIndex = 0)
+    {
+        float prevX = center.X + radius * MathF.Cos(startAngle);
+        float prevY = center.Y + radius * MathF.Sin(startAngle);
+
+        for (int i = 1; i <= segments; i++)
+        {
+            float t = (float)i / segments;
+            float angle = startAngle + (endAngle - startAngle) * t;
+            float nextX = center.X + radius * MathF.Cos(angle);
+            float nextY = center.Y + radius * MathF.Sin(angle);
+
+            renderer.DrawLine(new Vect2D(prevX, prevY), new Vect2D(nextX, nextY), thickness, color, zIndex);
+
+            prevX = nextX;
+            prevY = nextY;
+        }
+    }
+
+    public static void DrawPolygon(
+        IRenderer renderer,
+        ReadOnlySpan<Vect2D> points,
+        Color color,
+        int zIndex = 0)
+    {
+        if (points.Length < 3) return;
+
+        // Fan triangulation for convex polygons
+        Span<Vertex2D> vertices = stackalloc Vertex2D[points.Length];
+        for (int i = 0; i < points.Length; i++)
+        {
+            vertices[i] = new Vertex2D(points[i], color, Vect2D.Zero);
+        }
+
+        int indexCount = (points.Length - 2) * 3;
+        Span<int> indices = stackalloc int[indexCount];
+        int idx = 0;
+        for (int i = 1; i < points.Length - 1; i++)
+        {
+            indices[idx++] = 0;
+            indices[idx++] = i;
+            indices[idx++] = i + 1;
+        }
+
+        renderer.DrawGeometry(null, vertices, indices, zIndex);
+    }
+
+    public static void DrawBackdropBlur(
+        IRenderer renderer,
+        Vect2D position,
+        Vect2D size,
+        float blurAmount = 1.0f,
+        Anchor anchor = default,
+        int zIndex = 0)
+    {
+        Vect2D topLeftPos = new Vect2D(
+            position.X - (size.X * anchor.X),
+            position.Y - (size.Y * anchor.Y)
+        );
+
+        renderer.DrawBackdropBlur(topLeftPos, size, blurAmount, zIndex);
     }
 
     public static void DrawCircle(

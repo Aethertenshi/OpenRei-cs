@@ -8,7 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ReiStar.Core\ReiStar.Core.csproj" />
+    <PackageReference Include="ppy.SDL3-CS" Version="2026.722.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ReiStar.Maths\ReiStar.Maths.csproj" />
   </ItemGroup>
 

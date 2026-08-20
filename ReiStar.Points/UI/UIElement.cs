@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using reistar.Maths;
 using reistar.Graphics;
 using reistar.Shapes;
+using reistar.Input;
 
 public abstract class UIElement
 {
@@ -13,13 +14,40 @@ public abstract class UIElement
     private Anchor _anchor = Anchor.TopLeft;
     private Color _backgroundColor = Color.Transparent;
     private Color _borderColor = Color.Transparent;
+    private float _borderThickness = 1f;
     private int _zIndex = 0;
     private LayoutMode _layout = LayoutMode.None;
     private float _padding = 0f;
     private float _spacing = 0f;
     private bool _isDirty = true;
+    private bool _visible = true;
 
     public string Id { get; set; } = string.Empty;
+
+    public bool Visible
+    {
+        get => _visible;
+        set
+        {
+            if (_visible != value)
+            {
+                _visible = value;
+                MarkDirty();
+            }
+        }
+    }
+
+    public bool SkipDraw { get; set; } = false;
+    public bool InterceptsMouse { get; set; } = true;
+    public bool IsHovered { get; protected set; }
+    public bool IsPressed { get; protected set; }
+
+    public Action<UIElement>? OnHover { get; set; }
+    public Action<UIElement>? OnHoverLeave { get; set; }
+    public Action<UIElement, float, float, MouseButton>? OnMouseDown { get; set; }
+    public Action<UIElement, float, float, MouseButton>? OnMouseUp { get; set; }
+    public Action<UIElement>? OnClick { get; set; }
+    public Action<UIElement, float>? OnUpdate { get; set; }
 
     public UVect Position
     {
@@ -61,6 +89,12 @@ public abstract class UIElement
     {
         get => _borderColor;
         set => _borderColor = value;
+    }
+
+    public float BorderThickness
+    {
+        get => _borderThickness;
+        set => _borderThickness = value;
     }
 
     public int ZIndex
@@ -143,6 +177,102 @@ public abstract class UIElement
         }
     }
 
+    public bool ContainsPoint(Vect2D pt)
+    {
+        return pt.X >= ResolvedTopLeft.X && pt.X <= ResolvedTopLeft.X + ResolvedSize.X &&
+               pt.Y >= ResolvedTopLeft.Y && pt.Y <= ResolvedTopLeft.Y + ResolvedSize.Y;
+    }
+
+    public virtual void Update(float deltaTime)
+    {
+        if (!_visible) return;
+
+        OnUpdate?.Invoke(this, deltaTime);
+
+        for (int i = 0; i < Children.Count; i++)
+        {
+            Children[i].Update(deltaTime);
+        }
+    }
+
+    public virtual bool ProcessMouseMove(Vect2D mousePos)
+    {
+        if (!_visible) return false;
+
+        bool handled = false;
+        // Process children in reverse order (top-most first)
+        for (int i = Children.Count - 1; i >= 0; i--)
+        {
+            if (Children[i].ProcessMouseMove(mousePos))
+            {
+                handled = true;
+                break;
+            }
+        }
+
+        bool contains = ContainsPoint(mousePos);
+        if (contains && !IsHovered)
+        {
+            IsHovered = true;
+            OnHover?.Invoke(this);
+        }
+        else if (!contains && IsHovered)
+        {
+            IsHovered = false;
+            OnHoverLeave?.Invoke(this);
+        }
+
+        return handled || (contains && InterceptsMouse);
+    }
+
+    public virtual bool ProcessMouseDown(Vect2D mousePos, MouseButton button)
+    {
+        if (!_visible) return false;
+
+        for (int i = Children.Count - 1; i >= 0; i--)
+        {
+            if (Children[i].ProcessMouseDown(mousePos, button))
+            {
+                return true;
+            }
+        }
+
+        if (ContainsPoint(mousePos) && InterceptsMouse)
+        {
+            IsPressed = true;
+            OnMouseDown?.Invoke(this, mousePos.X, mousePos.Y, button);
+            return true;
+        }
+
+        return false;
+    }
+
+    public virtual bool ProcessMouseUp(Vect2D mousePos, MouseButton button)
+    {
+        if (!_visible) return false;
+
+        bool wasPressed = IsPressed;
+        IsPressed = false;
+
+        for (int i = Children.Count - 1; i >= 0; i--)
+        {
+            Children[i].ProcessMouseUp(mousePos, button);
+        }
+
+        bool contains = ContainsPoint(mousePos);
+        if (wasPressed)
+        {
+            OnMouseUp?.Invoke(this, mousePos.X, mousePos.Y, button);
+            if (contains)
+            {
+                OnClick?.Invoke(this);
+            }
+            return true;
+        }
+
+        return false;
+    }
+
     public virtual void CalculateLayout(Vect2D containerSize, Vect2D containerTopLeft = default, int depth = 0)
     {
         CalculatedDepth = depth;
@@ -168,7 +298,6 @@ public abstract class UIElement
             for (int i = 0; i < Children.Count; i++)
             {
                 var child = Children[i];
-                // Non-destructive: calculate layout passing stack cursor as containerTopLeft
                 Vect2D childTopLeft = new Vect2D(contentAreaTopLeft.X, currentY);
                 child.CalculateLayout(contentAreaSize, childTopLeft, depth + 1);
                 currentY += child.ResolvedSize.Y + Spacing;
@@ -180,7 +309,6 @@ public abstract class UIElement
             for (int i = 0; i < Children.Count; i++)
             {
                 var child = Children[i];
-                // Non-destructive: calculate layout passing stack cursor as containerTopLeft
                 Vect2D childTopLeft = new Vect2D(currentX, contentAreaTopLeft.Y);
                 child.CalculateLayout(contentAreaSize, childTopLeft, depth + 1);
                 currentX += child.ResolvedSize.X + Spacing;
@@ -197,6 +325,8 @@ public abstract class UIElement
 
     public virtual void Draw(IRenderer renderer)
     {
+        if (!_visible || SkipDraw) return;
+
         int effectiveZIndex = (CalculatedDepth * 10) + ZIndex;
 
         if (BackgroundColor.A > 0)
@@ -204,9 +334,9 @@ public abstract class UIElement
             Shapes.DrawRect(renderer, ResolvedTopLeft, ResolvedSize, BackgroundColor, Anchor.TopLeft, effectiveZIndex);
         }
 
-        if (BorderColor.A > 0)
+        if (BorderColor.A > 0 && BorderThickness > 0)
         {
-            Shapes.DrawRectOutline(renderer, ResolvedTopLeft, ResolvedSize, 1f, BorderColor, Anchor.TopLeft, effectiveZIndex + 1);
+            Shapes.DrawRectOutline(renderer, ResolvedTopLeft, ResolvedSize, BorderThickness, BorderColor, Anchor.TopLeft, effectiveZIndex + 1);
         }
 
         for (int i = 0; i < Children.Count; i++)

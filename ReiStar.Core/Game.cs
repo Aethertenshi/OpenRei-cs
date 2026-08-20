@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using reistar.Graphics;
 using reistar.Maths;
+using reistar.Input;
 
 public abstract class Game : IDisposable
 {
@@ -74,6 +75,9 @@ public abstract class Game : IDisposable
         {
             Initialize();
         }
+
+        Input.Update(deltaTime);
+        Tween.TickAll(deltaTime);
 
         OnUpdate(deltaTime);
         Points.UpdatePoints(deltaTime);

@@ -1,5 +1,6 @@
 namespace reistar.Graphics;
 
+using System;
 using System.Runtime.InteropServices;
 using reistar.Maths;
 
@@ -11,11 +12,13 @@ public enum RenderPrimitiveType : byte
     Line,
     Texture,
     TexturedQuad,
+    RotatedQuad,
+    CustomGeometry,
+    BackdropBlur,
     CustomPass
 }
 
-[StructLayout(LayoutKind.Sequential)]
-public struct RenderCommand : System.IComparable<RenderCommand>
+public struct RenderCommand : IComparable<RenderCommand>
 {
     public ulong SortKey; // (ZIndex << 32) | SubmissionID
     public RenderPrimitiveType Type;
@@ -29,8 +32,11 @@ public struct RenderCommand : System.IComparable<RenderCommand>
     public float V0;
     public float U1;
     public float V1;
+    public float Angle;
+    public Vect2D Pivot;
+    public Vertex2D[]? CustomVertices;
+    public int[]? CustomIndices;
     public bool RequiresPostProcessing;
 
     public int CompareTo(RenderCommand other) => SortKey.CompareTo(other.SortKey);
 }
-

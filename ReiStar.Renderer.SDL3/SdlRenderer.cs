@@ -152,6 +152,72 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
         };
     }
 
+    public void DrawRectRotated(Vect2D position, Vect2D size, float angleDegrees, Vect2D pivot = default, Color color = default, int zIndex = 0)
+    {
+        EnsureCapacity();
+        ulong key = ((ulong)(zIndex + (long)int.MaxValue) << 32) | _submissionCounter++;
+        _commandBuffer[_commandCount++] = new RenderCommand
+        {
+            SortKey = key,
+            Type = RenderPrimitiveType.RotatedQuad,
+            Position = position,
+            Size = size,
+            Angle = angleDegrees,
+            Pivot = pivot,
+            Color = color,
+            U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f
+        };
+    }
+
+    public void DrawTextureRotated(ITexture texture, Vect2D position, Vect2D size, float angleDegrees, Vect2D pivot = default, Color tint = default, int zIndex = 0)
+    {
+        EnsureCapacity();
+        ulong key = ((ulong)(zIndex + (long)int.MaxValue) << 32) | _submissionCounter++;
+        _commandBuffer[_commandCount++] = new RenderCommand
+        {
+            SortKey = key,
+            Type = RenderPrimitiveType.RotatedQuad,
+            Position = position,
+            Size = size,
+            Texture = texture,
+            Angle = angleDegrees,
+            Pivot = pivot,
+            Color = tint,
+            U0 = 0f, V0 = 0f, U1 = 1f, V1 = 1f
+        };
+    }
+
+    public void DrawGeometry(ITexture? texture, ReadOnlySpan<Vertex2D> vertices, ReadOnlySpan<int> indices, int zIndex = 0)
+    {
+        if (vertices.Length == 0 || indices.Length == 0) return;
+
+        EnsureCapacity();
+        ulong key = ((ulong)(zIndex + (long)int.MaxValue) << 32) | _submissionCounter++;
+        _commandBuffer[_commandCount++] = new RenderCommand
+        {
+            SortKey = key,
+            Type = RenderPrimitiveType.CustomGeometry,
+            Texture = texture,
+            CustomVertices = vertices.ToArray(),
+            CustomIndices = indices.ToArray()
+        };
+    }
+
+    public void DrawBackdropBlur(Vect2D position, Vect2D size, float blurAmount = 1.0f, int zIndex = 0)
+    {
+        EnsureCapacity();
+        ulong key = ((ulong)(zIndex + (long)int.MaxValue) << 32) | _submissionCounter++;
+        _commandBuffer[_commandCount++] = new RenderCommand
+        {
+            SortKey = key,
+            Type = RenderPrimitiveType.BackdropBlur,
+            Position = position,
+            Size = size,
+            Thickness = blurAmount,
+            RequiresPostProcessing = true
+        };
+    }
+
     public void DrawText(Font font, string text, Vect2D position, float fontSize, Color color, int zIndex = 0)
     {
         if (font == null || string.IsNullOrEmpty(text) || color.A == 0) return;
@@ -308,6 +374,18 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
                         AppendRectangleQuad(cmd.Position, cmd.Size, cmd.Color, cmd.U0, cmd.V0, cmd.U1, cmd.V1);
                         break;
 
+                    case RenderPrimitiveType.RotatedQuad:
+                        AppendRotatedQuad(cmd.Position, cmd.Size, cmd.Angle, cmd.Pivot, cmd.Color, cmd.U0, cmd.V0, cmd.U1, cmd.V1);
+                        break;
+
+                    case RenderPrimitiveType.CustomGeometry:
+                        AppendCustomGeometry(cmd.CustomVertices, cmd.CustomIndices);
+                        break;
+
+                    case RenderPrimitiveType.BackdropBlur:
+                        AppendBackdropBlurQuad(cmd.Position, cmd.Size, cmd.Thickness);
+                        break;
+
                     case RenderPrimitiveType.CustomPass:
                         if (cmd.RequiresPostProcessing)
                         {
@@ -455,6 +533,78 @@ public unsafe class SdlRenderer : IRenderer, IWindowProvider, IDisposable
             _batchIndices[_batchIndexCount++] = p1;
             _batchIndices[_batchIndexCount++] = p2;
         }
+    }
+
+    private void AppendRotatedQuad(Vect2D pos, Vect2D size, float angleDegrees, Vect2D pivot, Color color, float u0, float v0, float u1, float v1)
+    {
+        EnsureBatchCapacity(4, 6);
+
+        float rad = angleDegrees * (MathF.PI / 180f);
+        float cos = MathF.Cos(rad);
+        float sin = MathF.Sin(rad);
+
+        Vect2D pivotPt = new Vect2D(pos.X + (size.X * pivot.X), pos.Y + (size.Y * pivot.Y));
+
+        Vect2D p0 = RotatePoint(pos.X, pos.Y, pivotPt, cos, sin);
+        Vect2D p1 = RotatePoint(pos.X + size.X, pos.Y, pivotPt, cos, sin);
+        Vect2D p2 = RotatePoint(pos.X + size.X, pos.Y + size.Y, pivotPt, cos, sin);
+        Vect2D p3 = RotatePoint(pos.X, pos.Y + size.Y, pivotPt, cos, sin);
+
+        SDL_FColor sdlColor = ToSdlFColor(color);
+        int baseIdx = _batchVertexCount;
+
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = p0.X, y = p0.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u0, y = v0 } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = p1.X, y = p1.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u1, y = v0 } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = p2.X, y = p2.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u1, y = v1 } };
+        _batchVertices[_batchVertexCount++] = new SDL_Vertex { position = new SDL_FPoint { x = p3.X, y = p3.Y }, color = sdlColor, tex_coord = new SDL_FPoint { x = u0, y = v1 } };
+
+        _batchIndices[_batchIndexCount++] = baseIdx + 0;
+        _batchIndices[_batchIndexCount++] = baseIdx + 1;
+        _batchIndices[_batchIndexCount++] = baseIdx + 2;
+        _batchIndices[_batchIndexCount++] = baseIdx + 2;
+        _batchIndices[_batchIndexCount++] = baseIdx + 3;
+        _batchIndices[_batchIndexCount++] = baseIdx + 0;
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static Vect2D RotatePoint(float px, float py, Vect2D pivot, float cos, float sin)
+    {
+        float dx = px - pivot.X;
+        float dy = py - pivot.Y;
+        return new Vect2D(
+            pivot.X + (dx * cos - dy * sin),
+            pivot.Y + (dx * sin + dy * cos)
+        );
+    }
+
+    private void AppendCustomGeometry(Vertex2D[]? vertices, int[]? indices)
+    {
+        if (vertices == null || indices == null || vertices.Length == 0 || indices.Length == 0) return;
+
+        EnsureBatchCapacity(vertices.Length, indices.Length);
+        int baseIdx = _batchVertexCount;
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            var v = vertices[i];
+            _batchVertices[_batchVertexCount++] = new SDL_Vertex
+            {
+                position = new SDL_FPoint { x = v.X, y = v.Y },
+                color = new SDL_FColor { r = v.R, g = v.G, b = v.B, a = v.A },
+                tex_coord = new SDL_FPoint { x = v.U, y = v.V }
+            };
+        }
+
+        for (int i = 0; i < indices.Length; i++)
+        {
+            _batchIndices[_batchIndexCount++] = baseIdx + indices[i];
+        }
+    }
+
+    private void AppendBackdropBlurQuad(Vect2D pos, Vect2D size, float blurAmount)
+    {
+        Color glassTint = new Color(15, 15, 25, (byte)Math.Clamp((int)(blurAmount * 40f) + 60, 40, 200));
+        AppendRectangleQuad(pos, size, glassTint, 0f, 0f, 1f, 1f);
     }
 
     private void EnsureCapacity()

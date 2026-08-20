@@ -72,6 +72,8 @@ public unsafe class SdlWindow : IWindow
             {
                 _size = new Vect2D(ev.window.data1, ev.window.data2);
             }
+
+            reistar.Input.Input.ProcessEvent(in ev);
         }
     }
 
