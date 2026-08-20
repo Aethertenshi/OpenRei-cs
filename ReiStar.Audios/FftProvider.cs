@@ -59,8 +59,8 @@ public static class FftProvider
         // In-place Cooley-Tukey Radix-2 FFT
         TransformRadix2(real, imag);
 
-        // BASS visualizer scaling: 1.0 / sqrt(N) (reduced to 25% power)
-        float scale = 1.0f / MathF.Sqrt(fftSize);
+        // BASS visualizer scaling: 0.40 / sqrt(N) (10% of initial 4.0 power)
+        float scale = 0.40f / MathF.Sqrt(fftSize);
         for (int i = 0; i < outputBins; i++)
         {
             float mag = MathF.Sqrt(real[i] * real[i] + imag[i] * imag[i]) * scale;
