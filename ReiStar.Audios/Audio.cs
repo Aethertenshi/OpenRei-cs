@@ -44,6 +44,40 @@ public static class Audio
     }
 
     /// <summary>
+    /// Loads a pre-buffered polyphonic sound effect.
+    /// </summary>
+    public static SoundEffect LoadSfx(string filePath)
+    {
+        AudioEngine.Initialize();
+        return AudioCache.GetSound(filePath);
+    }
+
+    /// <summary>
+    /// Smoothly crossfades between two audio tracks.
+    /// </summary>
+    public static void Crossfade(IAudioTrack? from, IAudioTrack? to, float duration = 1.0f)
+    {
+        if (to != null)
+        {
+            to.Volume = 0f;
+            to.Play();
+        }
+
+        float fromVol = from?.Volume ?? 1f;
+        float toTargetVol = (to != null && to.Volume > 0f) ? to.Volume : 1f;
+
+        new reistar.Core.Tween(0f, 1f, duration, t =>
+        {
+            if (from != null) from.Volume = fromVol * (1f - t);
+            if (to != null) to.Volume = toTargetVol * t;
+            if (t >= 1f && from != null)
+            {
+                from.Stop();
+            }
+        }, reistar.Core.Easing.Linear).Start();
+    }
+
+    /// <summary>
     /// Plays background music, replacing any currently playing music track.
     /// </summary>
     public static void PlayMusic(string filePath, bool loop = true, float volume = 1f)

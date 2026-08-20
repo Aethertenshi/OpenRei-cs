@@ -24,6 +24,7 @@ public enum Keys
     // Control & Navigation
     Escape,
     Enter,
+    Return = Enter,
     Space,
     Tab,
     Backspace,

@@ -15,6 +15,7 @@ public class AudioStream : IAudioTrack
     private float _volume = 1.0f;
     private float _pitch = 1.0f;
     private bool _loop = false;
+    private bool _disposed;
 
     public float Pitch
     {
@@ -55,6 +56,12 @@ public class AudioStream : IAudioTrack
         }
     }
 
+    public float PlaybackSpeed
+    {
+        get => Pitch;
+        set => Pitch = value;
+    }
+
     public bool IsPlaying
     {
         get
@@ -64,6 +71,9 @@ public class AudioStream : IAudioTrack
             return state == (int)SourceState.Playing;
         }
     }
+
+    public bool IsDisposed => _disposed;
+    public Action? OnPlaying { get; set; }
 
     public double Position
     {
@@ -170,5 +180,6 @@ public class AudioStream : IAudioTrack
             al.DeleteBuffer(_bufferId);
             _bufferId = 0;
         }
+        _disposed = true;
     }
 }

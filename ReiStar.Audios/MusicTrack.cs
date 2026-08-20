@@ -56,6 +56,12 @@ public sealed unsafe class MusicTrack : IAudioTrack
         }
     }
 
+    public float PlaybackSpeed
+    {
+        get => Pitch;
+        set => Pitch = value;
+    }
+
     public bool Loop
     {
         get => _loop;
@@ -63,6 +69,8 @@ public sealed unsafe class MusicTrack : IAudioTrack
     }
 
     public bool IsPlaying => _isPlaying;
+    public bool IsDisposed => _disposed;
+    public Action? OnPlaying { get; set; }
 
     public double Length => _decoder.LengthSeconds;
     public double LengthMs => _decoder.LengthSeconds * 1000.0;

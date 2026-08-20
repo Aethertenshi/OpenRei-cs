@@ -28,6 +28,11 @@ public static unsafe class Input
     public static float MouseWheel { get; private set; } = 0f;
 
     /// <summary>
+    /// Legacy compatibility initializer (Input in OpenReiStar is event-driven automatically).
+    /// </summary>
+    public static void Initialize(int rate = 0) { }
+
+    /// <summary>
     /// When set to true (e.g. while a text input box is focused), global shortcut binds will be suppressed.
     /// </summary>
     public static bool BlockGlobalKeys { get; set; } = false;
@@ -74,6 +79,33 @@ public static unsafe class Input
             _keyReleasedBinds[key] = list;
         }
         list.Add(action);
+    }
+
+    public static void SimulateKeyDown(Keys key)
+    {
+        if (key == Keys.None) return;
+        if (!_heldKeys.Contains(key))
+        {
+            _pressedThisFrame.Add(key);
+            _heldKeys.Add(key);
+
+            if (!BlockGlobalKeys && _keyClickedBinds.TryGetValue(key, out var actions))
+            {
+                for (int i = 0; i < actions.Count; i++) actions[i]();
+            }
+        }
+    }
+
+    public static void SimulateKeyUp(Keys key)
+    {
+        if (key == Keys.None) return;
+        _heldKeys.Remove(key);
+        _releasedThisFrame.Add(key);
+
+        if (!BlockGlobalKeys && _keyReleasedBinds.TryGetValue(key, out var actions))
+        {
+            for (int i = 0; i < actions.Count; i++) actions[i]();
+        }
     }
 
     public static void OnMouseDown(MouseButton button, Action<Vect2D> action)
