@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 using Silk.NET.OpenAL;
 
 /// <summary>
-/// Streaming audio player for music tracks with background decoding and ring-buffered OpenAL queueing.
+/// Streaming audio player for music tracks with background decoding, ring-buffered OpenAL queueing,
+/// and live sub-millisecond synchronized FFT spectrum extraction.
 /// </summary>
 public sealed unsafe class MusicTrack : IAudioTrack
 {
-    private const int BufferCount = 4;
-    private const int BufferSizeBytes = 65536;
+    private const int BufferCount = 8;
+    private const int BufferSizeBytes = 16384;
 
     private readonly string _filePath;
     private readonly StreamingDecoder _decoder;
@@ -30,8 +31,8 @@ public sealed unsafe class MusicTrack : IAudioTrack
     private double _pausedPositionMs;
     private long _totalBytesPlayed;
 
-    private readonly short[] _ringBuffer = new short[32768];
-    private int _ringWritePos;
+    private readonly short[] _ringBuffer = new short[131072];
+    private long _totalSamplesWritten;
     private readonly object _ringLock = new();
 
     public float Volume
@@ -118,20 +119,22 @@ public sealed unsafe class MusicTrack : IAudioTrack
         _decoder = StreamingDecoder.Open(path);
         _seekOffsetMs = startPositionMs;
 
-        if (startPositionMs > 0)
-        {
-            _decoder.SeekSeconds(startPositionMs / 1000.0);
-        }
-
         var al = AudioEngine.AL;
         _sourceId = al.GenSource();
+
+        fixed (uint* bPtr = _bufferIds)
+        {
+            al.GenBuffers(BufferCount, bPtr);
+        }
+
         al.SetSourceProperty(_sourceId, SourceFloat.Gain, _volume);
         al.SetSourceProperty(_sourceId, SourceFloat.Pitch, _pitch);
         al.SetSourceProperty(_sourceId, SourceBoolean.SourceRelative, true);
 
-        for (int i = 0; i < BufferCount; i++)
+        if (startPositionMs > 0)
         {
-            _bufferIds[i] = al.GenBuffer();
+            _decoder.SeekSeconds(startPositionMs / 1000.0);
+            _totalSamplesWritten = (long)((startPositionMs / 1000.0) * _decoder.SampleRate) * _decoder.Channels;
         }
 
         PreloadBuffers();
@@ -145,8 +148,8 @@ public sealed unsafe class MusicTrack : IAudioTrack
             for (int i = 0; i < sampleCount; i++)
             {
                 short sample = (short)(pcmBytes[i * 2] | (pcmBytes[i * 2 + 1] << 8));
-                _ringBuffer[_ringWritePos] = sample;
-                _ringWritePos = (_ringWritePos + 1) % _ringBuffer.Length;
+                _ringBuffer[_totalSamplesWritten % _ringBuffer.Length] = sample;
+                _totalSamplesWritten++;
             }
         }
     }
@@ -228,6 +231,7 @@ public sealed unsafe class MusicTrack : IAudioTrack
         _totalBytesPlayed = 0;
         _pausedPositionMs = positionMs;
         _decoder.SeekSeconds(positionMs / 1000.0);
+        _totalSamplesWritten = (long)((positionMs / 1000.0) * _decoder.SampleRate) * _decoder.Channels;
 
         var al = AudioEngine.AL;
         al.SourceStop(_sourceId);
@@ -272,6 +276,7 @@ public sealed unsafe class MusicTrack : IAudioTrack
                             _decoder.SeekSeconds(0);
                             _seekOffsetMs = 0;
                             _totalBytesPlayed = 0;
+                            _totalSamplesWritten = 0;
                             read = _decoder.ReadPcm16(tempBuf, 0, tempBuf.Length);
                         }
                         else
@@ -306,7 +311,7 @@ public sealed unsafe class MusicTrack : IAudioTrack
                 al.SourcePlay(_sourceId);
             }
 
-            Thread.Sleep(15);
+            Thread.Sleep(10);
         }
     }
 
@@ -318,15 +323,41 @@ public sealed unsafe class MusicTrack : IAudioTrack
             return;
         }
 
+        int channels = _decoder.Channels;
+        int sampleRate = _decoder.SampleRate;
+        if (channels <= 0 || sampleRate <= 0)
+        {
+            fftBuffer.Clear();
+            return;
+        }
+
         int fftSize = fftBuffer.Length * 2;
         Span<short> samples = stackalloc short[fftSize];
 
+        double currentSec = Position;
+        long currentPlaySample = (long)(currentSec * sampleRate) * channels;
+
         lock (_ringLock)
         {
-            int start = (_ringWritePos - fftSize + _ringBuffer.Length) % _ringBuffer.Length;
             for (int i = 0; i < fftSize; i++)
             {
-                samples[i] = _ringBuffer[(start + i) % _ringBuffer.Length];
+                long sampleIdx = currentPlaySample + (i * channels);
+                if (sampleIdx >= 0 && sampleIdx < _totalSamplesWritten && (_totalSamplesWritten - sampleIdx) < _ringBuffer.Length)
+                {
+                    samples[i] = _ringBuffer[sampleIdx % _ringBuffer.Length];
+                }
+                else
+                {
+                    long fallbackStart = _totalSamplesWritten - (fftSize * channels);
+                    if (fallbackStart >= 0)
+                    {
+                        samples[i] = _ringBuffer[(fallbackStart + i * channels) % _ringBuffer.Length];
+                    }
+                    else
+                    {
+                        samples[i] = 0;
+                    }
+                }
             }
         }
 
@@ -337,13 +368,35 @@ public sealed unsafe class MusicTrack : IAudioTrack
     {
         if (!IsPlaying || _disposed) return 0f;
 
+        int channels = _decoder.Channels;
+        int sampleRate = _decoder.SampleRate;
+        if (channels <= 0 || sampleRate <= 0) return 0f;
+
         Span<short> samples = stackalloc short[512];
+        double currentSec = Position;
+        long currentPlaySample = (long)(currentSec * sampleRate) * channels;
+
         lock (_ringLock)
         {
-            int start = (_ringWritePos - 512 + _ringBuffer.Length) % _ringBuffer.Length;
             for (int i = 0; i < 512; i++)
             {
-                samples[i] = _ringBuffer[(start + i) % _ringBuffer.Length];
+                long sampleIdx = currentPlaySample + (i * channels);
+                if (sampleIdx >= 0 && sampleIdx < _totalSamplesWritten && (_totalSamplesWritten - sampleIdx) < _ringBuffer.Length)
+                {
+                    samples[i] = _ringBuffer[sampleIdx % _ringBuffer.Length];
+                }
+                else
+                {
+                    long fallbackStart = _totalSamplesWritten - (512 * channels);
+                    if (fallbackStart >= 0)
+                    {
+                        samples[i] = _ringBuffer[(fallbackStart + i * channels) % _ringBuffer.Length];
+                    }
+                    else
+                    {
+                        samples[i] = 0;
+                    }
+                }
             }
         }
 

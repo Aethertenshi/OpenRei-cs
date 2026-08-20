@@ -1,14 +1,12 @@
 namespace reistar.Audios;
 
 using System;
-using System.Numerics;
 
 /// <summary>
 /// High-performance zero-allocation Fast Fourier Transform (FFT) and spectrum analysis for real-time visualizers.
 /// </summary>
 public static class FftProvider
 {
-    private const int DefaultFftSize = 512;
     private static readonly float[] _hannWindow512 = new float[512];
     private static readonly float[] _hannWindow1024 = new float[1024];
 
@@ -23,8 +21,9 @@ public static class FftProvider
 
     /// <summary>
     /// Computes magnitude frequency spectrum from 16-bit PCM samples into an output magnitude buffer.
+    /// Matched to BASS audio spectrum visualizer scaling.
     /// </summary>
-    /// <param name="pcm16Samples">Input signed 16-bit mono or mixed-stereo PCM samples.</param>
+    /// <param name="pcm16Samples">Input signed 16-bit PCM samples.</param>
     /// <param name="outputSpectrum">Output array of frequency magnitudes (size = fftSize / 2).</param>
     public static void ComputeSpectrum(ReadOnlySpan<short> pcm16Samples, Span<float> outputSpectrum)
     {
@@ -46,7 +45,9 @@ public static class FftProvider
         for (int i = 0; i < available; i++)
         {
             float norm = pcm16Samples[i] / 32768f;
-            float win = i < window.Length ? window[i] : (0.5f * (1f - MathF.Cos(2f * MathF.PI * i / (fftSize - 1))));
+            float win = (i < window.Length && fftSize <= 1024) 
+                ? window[i] 
+                : (0.5f * (1f - MathF.Cos(2f * MathF.PI * i / (fftSize - 1))));
             real[i] = norm * win;
         }
 
@@ -58,8 +59,8 @@ public static class FftProvider
         // In-place Cooley-Tukey Radix-2 FFT
         TransformRadix2(real, imag);
 
-        // Compute normalized magnitudes for the first N/2 frequency bins
-        float scale = 2f / fftSize;
+        // BASS visualizer scaling: 4.0 / sqrt(N) gives natural 0.0 .. 1.0 range for music spectrums
+        float scale = 4.0f / MathF.Sqrt(fftSize);
         for (int i = 0; i < outputBins; i++)
         {
             float mag = MathF.Sqrt(real[i] * real[i] + imag[i] * imag[i]) * scale;
@@ -110,7 +111,7 @@ public static class FftProvider
             j += k;
         }
 
-        // Cooley-Tukey computation
+        // Cooley-Tukey Radix-2 butterflies
         for (int len = 2; len <= n; len <<= 1)
         {
             float angle = -2f * MathF.PI / len;
