@@ -59,8 +59,8 @@ public static class FftProvider
         // In-place Cooley-Tukey Radix-2 FFT
         TransformRadix2(real, imag);
 
-        // BASS visualizer scaling: 4.0 / sqrt(N) gives natural 0.0 .. 1.0 range for music spectrums
-        float scale = 4.0f / MathF.Sqrt(fftSize);
+        // BASS visualizer scaling: 1.0 / sqrt(N) (reduced to 25% power)
+        float scale = 1.0f / MathF.Sqrt(fftSize);
         for (int i = 0; i < outputBins; i++)
         {
             float mag = MathF.Sqrt(real[i] * real[i] + imag[i] * imag[i]) * scale;

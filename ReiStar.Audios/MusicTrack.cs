@@ -311,6 +311,7 @@ public sealed unsafe class MusicTrack : IAudioTrack
                 al.SourcePlay(_sourceId);
             }
 
+            OnPlaying?.Invoke();
             Thread.Sleep(10);
         }
     }
