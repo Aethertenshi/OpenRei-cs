@@ -68,7 +68,15 @@ public sealed unsafe class MusicTrack : IAudioTrack
         set => _loop = value;
     }
 
-    public bool IsPlaying => _isPlaying;
+    public bool IsPlaying
+    {
+        get
+        {
+            if (!_isPlaying || !AudioEngine.IsInitialized || _sourceId == 0) return false;
+            AudioEngine.AL.GetSourceProperty(_sourceId, GetSourceInteger.SourceState, out int state);
+            return state == (int)SourceState.Playing;
+        }
+    }
     public bool IsDisposed => _disposed;
     public Action? OnPlaying { get; set; }
 
@@ -153,8 +161,15 @@ public sealed unsafe class MusicTrack : IAudioTrack
     {
         if (_isPlaying || _disposed) return;
 
+        var al = AudioEngine.AL;
+        al.GetSourceProperty(_sourceId, GetSourceInteger.BuffersQueued, out int queued);
+        if (queued == 0)
+        {
+            PreloadBuffers();
+        }
+
         _isPlaying = true;
-        AudioEngine.AL.SourcePlay(_sourceId);
+        al.SourcePlay(_sourceId);
 
         _cts = new CancellationTokenSource();
         _streamTask = Task.Run(() => StreamLoop(_cts.Token));
@@ -177,7 +192,12 @@ public sealed unsafe class MusicTrack : IAudioTrack
         _isPlaying = false;
         _cts?.Cancel();
         _pausedPositionMs = 0;
-        AudioEngine.AL.SourceStop(_sourceId);
+        if (AudioEngine.IsInitialized && _sourceId != 0)
+        {
+            var al = AudioEngine.AL;
+            al.SourceStop(_sourceId);
+            al.SetSourceProperty(_sourceId, SourceInteger.Buffer, 0);
+        }
     }
 
     public void Seek(double positionMs)
@@ -190,15 +210,9 @@ public sealed unsafe class MusicTrack : IAudioTrack
         _pausedPositionMs = positionMs;
         _decoder.SeekSeconds(positionMs / 1000.0);
 
-        // Unqueue all buffers
         var al = AudioEngine.AL;
-        al.GetSourceProperty(_sourceId, GetSourceInteger.BuffersQueued, out int queued);
-        while (queued > 0)
-        {
-            uint unqueued = 0;
-            al.SourceUnqueueBuffers(_sourceId, 1, &unqueued);
-            queued--;
-        }
+        al.SourceStop(_sourceId);
+        al.SetSourceProperty(_sourceId, SourceInteger.Buffer, 0);
 
         PreloadBuffers();
 
@@ -213,6 +227,7 @@ public sealed unsafe class MusicTrack : IAudioTrack
         byte[] tempBuf = new byte[BufferSizeBytes];
         BufferFormat format = _decoder.Channels == 1 ? BufferFormat.Mono16 : BufferFormat.Stereo16;
         var al = AudioEngine.AL;
+        bool eof = false;
 
         while (!token.IsCancellationRequested && _isPlaying)
         {
@@ -227,13 +242,24 @@ public sealed unsafe class MusicTrack : IAudioTrack
                 al.GetBufferProperty(buffer, GetBufferInteger.Size, out int bufferSize);
                 _totalBytesPlayed += bufferSize;
 
-                int read = _decoder.ReadPcm16(tempBuf, 0, tempBuf.Length);
-                if (read <= 0 && _loop)
+                int read = 0;
+                if (!eof)
                 {
-                    _decoder.SeekSeconds(0);
-                    _seekOffsetMs = 0;
-                    _totalBytesPlayed = 0;
                     read = _decoder.ReadPcm16(tempBuf, 0, tempBuf.Length);
+                    if (read <= 0)
+                    {
+                        if (_loop)
+                        {
+                            _decoder.SeekSeconds(0);
+                            _seekOffsetMs = 0;
+                            _totalBytesPlayed = 0;
+                            read = _decoder.ReadPcm16(tempBuf, 0, tempBuf.Length);
+                        }
+                        else
+                        {
+                            eof = true;
+                        }
+                    }
                 }
 
                 if (read > 0)
@@ -246,9 +272,16 @@ public sealed unsafe class MusicTrack : IAudioTrack
                 }
             }
 
-            // If playback starved, restart it
+            al.GetSourceProperty(_sourceId, GetSourceInteger.BuffersQueued, out int queued);
             al.GetSourceProperty(_sourceId, GetSourceInteger.SourceState, out int state);
-            if (state == (int)SourceState.Stopped && _isPlaying)
+
+            if (eof && queued == 0 && state != (int)SourceState.Playing)
+            {
+                _isPlaying = false;
+                break;
+            }
+
+            if (!eof && state == (int)SourceState.Stopped && queued > 0 && _isPlaying)
             {
                 al.SourcePlay(_sourceId);
             }
