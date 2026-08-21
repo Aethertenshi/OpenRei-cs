@@ -68,6 +68,16 @@ public static class AudioDecoder
         using var ms = new MemoryStream();
         using var bw = new BinaryWriter(ms);
 
+        // Skip leading MP3 encoder delay padding (528 samples per channel) to eliminate audio latency
+        int paddingToSkip = 528 * channels;
+        while (paddingToSkip > 0)
+        {
+            int toRead = Math.Min(paddingToSkip, floatBuffer.Length);
+            int read = mpeg.ReadSamples(floatBuffer, 0, toRead);
+            if (read <= 0) break;
+            paddingToSkip -= read;
+        }
+
         int samplesRead;
         while ((samplesRead = mpeg.ReadSamples(floatBuffer, 0, floatBuffer.Length)) > 0)
         {

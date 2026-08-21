@@ -44,10 +44,26 @@ internal sealed class Mp3StreamingDecoder : StreamingDecoder
     public override double PositionSeconds => _mpeg.Time.TotalSeconds;
     public override bool CanSeek => _mpeg.CanSeek;
 
+    // Standard MP3 encoder delay (LAME/ISO MDCT filterbank delay is 528 samples per channel)
+    private const int Mp3EncoderDelaySamples = 528;
+
     public Mp3StreamingDecoder(string path)
     {
         _mpeg = new MpegFile(path);
         _floatBuf = new float[16384];
+        SkipEncoderPadding();
+    }
+
+    private void SkipEncoderPadding()
+    {
+        int paddingSamples = Mp3EncoderDelaySamples * _mpeg.Channels;
+        while (paddingSamples > 0)
+        {
+            int toRead = Math.Min(paddingSamples, _floatBuf.Length);
+            int read = _mpeg.ReadSamples(_floatBuf, 0, toRead);
+            if (read <= 0) break;
+            paddingSamples -= read;
+        }
     }
 
     public override int ReadPcm16(byte[] buffer, int offset, int maxBytes)
@@ -77,7 +93,16 @@ internal sealed class Mp3StreamingDecoder : StreamingDecoder
     {
         if (CanSeek)
         {
-            _mpeg.Time = TimeSpan.FromSeconds(Math.Clamp(seconds, 0, LengthSeconds));
+            if (seconds <= 0.001)
+            {
+                _mpeg.Time = TimeSpan.Zero;
+                SkipEncoderPadding();
+            }
+            else
+            {
+                double delaySec = (double)Mp3EncoderDelaySamples / _mpeg.SampleRate;
+                _mpeg.Time = TimeSpan.FromSeconds(Math.Clamp(seconds + delaySec, 0, LengthSeconds));
+            }
         }
     }
 
